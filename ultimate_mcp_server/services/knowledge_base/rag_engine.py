@@ -2,7 +2,6 @@
 import time
 from typing import Any, Dict, List, Optional, Set
 
-from ultimate_mcp_server.core.models.requests import CompletionRequest
 from ultimate_mcp_server.services.cache import get_cache_service
 from ultimate_mcp_server.services.knowledge_base.feedback import get_rag_feedback_service
 from ultimate_mcp_server.services.knowledge_base.retriever import KnowledgeBaseRetriever
@@ -502,15 +501,11 @@ class RAGEngine:
         generation_start = time.time()
         
         provider_service = self.provider_manager.get_provider(provider)
-        completion_request = CompletionRequest(
+        completion_result = await provider_service.generate_completion(
             prompt=rag_prompt,
             model=model,
             max_tokens=max_tokens,
-            temperature=temperature
-        )
-        
-        completion_result = await provider_service.generate_completion(
-            request=completion_request
+            temperature=temperature,
         )
         
         generation_time = time.time() - generation_start

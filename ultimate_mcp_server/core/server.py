@@ -2348,7 +2348,8 @@ def start_server(
 
         # === BEGIN NEW SPLIT-APP ARCHITECTURE ===
         from starlette.applications import Starlette
-        from starlette.routing import Mount
+        from starlette.routing import Mount, Route
+        from starlette.responses import RedirectResponse
 
         # 1) PRISTINE FastMCP wrapper – **NO** extra routes
         mcp_starlette = Starlette(
@@ -2384,8 +2385,12 @@ def start_server(
         # 3) Combined application – avoid overlapping mounts
         final_app = Starlette(
             routes=[
+                # MCP endpoint (no trailing slash)
                 Mount(endpoint_path, mcp_starlette),  # /mcp or /sse
-                Mount("/api", api_app),  # REST API under /api
+                # Also mount with trailing slash to avoid 404s from clients using /mcp/
+                Mount(f"{endpoint_path}/", mcp_starlette),
+                # REST API under /api
+                Mount("/api", api_app),
             ],
             lifespan=mcp_app.lifespan,
         )

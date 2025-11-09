@@ -101,6 +101,10 @@ ipython_config.py
 #   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
 #poetry.lock
 
+# uv.lock
+uv.lock
+
+
 # pdm
 #   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
 #pdm.lock
@@ -190,7 +194,6 @@ sec_filings.db-shm
 sec_filings.db-wal
 minified_code.js
 regenerate_markdown_progress.json.bak
-.env
 storage/tournaments/
 cache/cache.pkl
 cache/disk_cache/cache.db

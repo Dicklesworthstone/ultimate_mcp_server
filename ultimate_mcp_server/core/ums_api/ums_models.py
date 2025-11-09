@@ -1,5 +1,7 @@
 """Pydantic models for UMS API endpoints."""
 
+from __future__ import annotations
+
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -507,7 +509,7 @@ class BulkOperationRequest(BaseModel):
     operation_type: str = Field(
         ...,
         description="Type of bulk operation to perform",
-        regex="^(delete|archive|merge)$"
+        pattern="^(delete|archive|merge)$"
     )
     memory_ids: List[str] = Field(
         ...,
@@ -962,7 +964,7 @@ class RestoreStateRequest(BaseModel):
     """Request model for restoring a cognitive state"""
     restore_mode: str = Field(
         default="full",
-        regex="^(full|partial|snapshot)$",
+        pattern="^(full|partial|snapshot)$",
         description="Type of restoration to perform",
         example="full"
     )
