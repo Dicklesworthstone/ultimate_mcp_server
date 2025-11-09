@@ -648,8 +648,21 @@ async def recommend_model(
         max_candidate_quality = max(m['quality'] for m in candidate_models_data)
         max_candidate_tps = max(m['measured_speed_tps'] for m in candidate_models_data)
 
+        def _score_label(val: float) -> str:
+            try:
+                v = float(val)
+            except Exception:
+                v = 0.0
+            if v >= 0.80:
+                return "High overall score"
+            if v >= 0.60:
+                return "Good overall score"
+            if v >= 0.40:
+                return "Moderate overall score"
+            return "Low overall score"
+
         for cand in sorted_candidates:
-            reason = f"High overall score ({cand['score']:.2f}) according to '{priority}' priority."
+            reason = f"{_score_label(cand['score'])} ({cand['score']:.2f}) according to '{priority}' priority."
             # Adjust reason phrasing for TPS
             if priority == 'cost' and cand['cost'] <= min_candidate_cost:
                 reason = f"Lowest estimated cost (${cand['cost']:.6f}) and meets requirements."

@@ -705,7 +705,11 @@ def _get_docling_converter(device, threads: int):
     opts = PdfPipelineOptions()
     opts.do_ocr = False
     opts.generate_page_images = False
-    opts.do_table_extraction = True # Explicitly enable table extraction in the pipeline options
+    # Some versions of docling may not expose this flag; set only if supported.
+    try:
+        setattr(opts, "do_table_extraction", True)
+    except Exception:
+        logger.warning("Docling PdfPipelineOptions does not support 'do_table_extraction'; continuing without explicit table extraction flag.")
     opts.accelerator_options = AcceleratorOptions(num_threads=threads, device=device)
     try:
         converter_options = {InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}

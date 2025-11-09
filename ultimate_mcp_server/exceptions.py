@@ -143,22 +143,22 @@ class ToolInputError(ToolError):
 class ToolExecutionError(ToolError):
     """Exception raised when a tool execution fails."""
     
-    def __init__(self, message, cause=None, details=None):
+    def __init__(self, message, cause=None, details=None, error_code: str | None = None):
         """Initialize the tool execution error.
         
         Args:
             message: Error message
             cause: Original exception that caused the error
             details: Additional error details
+            error_code: Optional specific execution error code (e.g., CMD_NOT_FOUND)
         """
         error_details = details or {}
         if cause:
             error_details["cause"] = str(cause)
             error_details["traceback"] = traceback.format_exc()
-            
         super().__init__(
             message,
-            error_code="EXECUTION_ERROR",
+            error_code=error_code or "EXECUTION_ERROR",
             details=error_details
         )
 
