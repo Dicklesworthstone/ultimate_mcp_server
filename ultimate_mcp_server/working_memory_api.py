@@ -1187,6 +1187,127 @@ working_memory_manager = WorkingMemoryManager()
 memory_quality_inspector = MemoryQualityInspector()
 
 
+def _ensure_parent_dir(path: str) -> None:
+    """Ensure the parent directory for a filesystem path exists."""
+    try:
+        import os
+
+        parent = os.path.dirname(os.path.abspath(path))
+        if parent and not os.path.exists(parent):
+            os.makedirs(parent, exist_ok=True)
+    except Exception:
+        # Best-effort; downstream open() will raise if still invalid
+        pass
+
+
+def initialize_unified_memory_schema(db_path: str) -> None:
+    """Create required SQLite tables if they don't exist.
+
+    This prevents 500 errors like 'no such table: actions/artifacts/cognitive_timeline_states'.
+    The schema is intentionally minimal and compatible with usages in this codebase.
+    """
+    _ensure_parent_dir(db_path)
+    conn = sqlite3.connect(db_path)
+    try:
+        cur = conn.cursor()
+
+        # Core memories table used throughout UMS
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memories (
+                memory_id TEXT PRIMARY KEY,
+                content TEXT NOT NULL,
+                memory_type TEXT,
+                memory_level TEXT,
+                importance INTEGER DEFAULT 1,
+                confidence REAL DEFAULT 0.5,
+                created_at REAL,
+                last_accessed_at REAL,
+                access_count INTEGER DEFAULT 0,
+                workflow_id TEXT,
+                archived INTEGER DEFAULT 0
+            )
+            """
+        )
+
+        # Links between memories
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS memory_links (
+                source_memory_id TEXT,
+                target_memory_id TEXT
+            )
+            """
+        )
+
+        # Actions table (referenced by analysis and API endpoints)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS actions (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                memory_id TEXT,
+                action_type TEXT,
+                status TEXT,
+                input_data TEXT,
+                output_data TEXT,
+                created_at REAL,
+                updated_at REAL
+            )
+            """
+        )
+
+        # Goals table (lightweight; referenced in orphan checks)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                memory_id TEXT,
+                description TEXT,
+                status TEXT,
+                created_at REAL
+            )
+            """
+        )
+
+        # Artifacts registry (URIs, file paths, metadata)
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS artifacts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uri TEXT,
+                path TEXT,
+                kind TEXT,
+                size INTEGER,
+                checksum TEXT,
+                metadata TEXT,
+                created_at REAL
+            )
+            """
+        )
+
+        # Cognitive timeline states used by explorer endpoints
+        cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS cognitive_timeline_states (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts REAL,
+                kind TEXT,
+                label TEXT,
+                details TEXT
+            )
+            """
+        )
+
+        # Simple indexes to speed up common lookups
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_actions_memory ON actions(memory_id)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_memories_created ON memories(created_at)")
+        cur.execute("CREATE INDEX IF NOT EXISTS idx_artifacts_created ON artifacts(created_at)")
+
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def setup_working_memory_routes(app: FastAPI):
     """Setup working memory API routes."""
     
@@ -1620,6 +1741,15 @@ def start_background_tasks(app: FastAPI):
     
     @app.on_event("startup")
     async def startup_event():
+        # Ensure SQLite schema exists before any API request hits it
+        try:
+            # Use both managers' configured db paths in case they diverge
+            initialize_unified_memory_schema(working_memory_manager.db_path)
+            initialize_unified_memory_schema(memory_quality_inspector.db_path)
+            print(f"✅ Initialized unified memory DB schema at: {working_memory_manager.db_path}")
+        except Exception as e:
+            print(f"⚠️ Failed to initialize DB schema: {e}")
+
         # Start background task
         asyncio.create_task(working_memory_background_task())
         
