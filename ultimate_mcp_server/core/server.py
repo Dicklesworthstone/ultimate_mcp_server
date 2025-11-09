@@ -2325,7 +2325,8 @@ def start_server(
             # Mark the gateway instance as SSE mode for lifespan management
             _gateway_instance._sse_mode = True
             
-            mcp_app = _gateway_instance.mcp.http_app(transport="sse", path="/sse")
+            # IMPORTANT: Use root path here and mount at /sse below to avoid double-prefix issues
+            mcp_app = _gateway_instance.mcp.http_app(transport="sse", path="/")
             print("Note: Running in legacy SSE mode.", file=sys.stderr)
             
             # Add SSE keepalive mechanism to prevent automatic shutdown
@@ -2347,7 +2348,8 @@ def start_server(
             print("SSE keepalive thread started to prevent automatic shutdown.", file=sys.stderr)
             
         else:  # This path is for streamable-http
-            mcp_app = _gateway_instance.mcp.http_app(path="/mcp")
+            # IMPORTANT: Use root path here and mount at /mcp below to avoid double-prefix issues
+            mcp_app = _gateway_instance.mcp.http_app(path="/")
 
         print(f"Running in {transport_mode} mode...", file=sys.stderr)
         print(f"[DEBUG] {transport_mode} app type: {type(mcp_app)}", file=sys.stderr)
@@ -2357,13 +2359,7 @@ def start_server(
         from starlette.routing import Mount, Route
         from starlette.responses import RedirectResponse
 
-        # 1) PRISTINE FastMCP wrapper – **NO** extra routes
-        mcp_starlette = Starlette(
-            routes=[Mount("/", mcp_app)],
-            lifespan=mcp_app.lifespan,
-        )
-
-        # 2) FastAPI application for rich REST APIs & automatic docs
+        # 1) FastAPI application for rich REST APIs & automatic docs
         api_app = FastAPI(
             title="Ultimate MCP Server API",
             description="REST API endpoints for the Ultimate MCP Server",
@@ -2388,13 +2384,12 @@ def start_server(
         setup_ums_api(api_app)
 
         # --- UMS Explorer Placeholder ---
-        # 3) Combined application – avoid overlapping mounts
+        # 2) Combined application – avoid overlapping mounts and trailing-slash redirects
         final_app = Starlette(
             routes=[
-                # MCP endpoint (no trailing slash)
-                Mount(endpoint_path, mcp_starlette),  # /mcp or /sse
-                # Also mount with trailing slash to avoid 404s from clients using /mcp/
-                Mount(f"{endpoint_path}/", mcp_starlette),
+                # MCP endpoint mounted once at both variants, underlying app expects root
+                Mount(endpoint_path, mcp_app),           # /mcp or /sse
+                Mount(f"{endpoint_path}/", mcp_app),    # /mcp/ or /sse/
                 # REST API under /api
                 Mount("/api", api_app),
             ],

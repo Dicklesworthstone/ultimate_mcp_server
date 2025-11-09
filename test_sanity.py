@@ -3,21 +3,173 @@ import argparse
 import asyncio
 import json
 import sys
-from typing import Any, Dict
+from typing import Any, Dict, List, Tuple
+from urllib import request, error as urlerror
+from urllib.parse import urlparse
 
-# Try both client imports to be robust
+# Try both client imports to be robust (optional)
 Client = None  # type: ignore
+MCP_AVAILABLE = False
 try:
     from mcp.client import Client  # fastmcp client under "mcp"
+    MCP_AVAILABLE = True
 except Exception:
     try:
         from fastmcp.client import Client  # alternate import path
-    except Exception as e:
-        print("Could not import MCP client. Install one of:\n  pip install fastmcp", file=sys.stderr)
-        raise
+        MCP_AVAILABLE = True
+    except Exception:
+        # MCP client not installed; we'll skip MCP checks and still run HTTP API checks
+        Client = None  # type: ignore
+        MCP_AVAILABLE = False
 
 def pretty(obj: Any) -> str:
     return json.dumps(obj, indent=2, ensure_ascii=False)
+
+def _derive_api_base_from_mcp_url(mcp_url: str) -> str:
+    """Given an MCP URL (likely .../mcp), derive the API base (likely .../api)."""
+    try:
+        parsed = urlparse(mcp_url)
+        base = f"{parsed.scheme}://{parsed.netloc}"
+        path = parsed.path or ""
+        if path.endswith("/mcp"):
+            path = path[: -len("/mcp")] + "/api"
+        elif "/mcp" in path:
+            path = path.replace("/mcp", "/api")
+        else:
+            # If no mcp segment, ensure single /api suffix
+            path = (path.rstrip("/") + "/api").replace("//", "/")
+        return base + path
+    except Exception:
+        # Fallback: naive replace
+        return mcp_url.rstrip("/").rsplit("/mcp", 1)[0] + "/api"
+
+def http_get_json(url: str, timeout: int = 30) -> Tuple[int, Any, Dict[str, str]]:
+    """Simple HTTP GET returning (status_code, json_or_text, headers)."""
+    req = request.Request(url, method="GET", headers={"Accept": "application/json"})
+    try:
+        with request.urlopen(req, timeout=timeout) as resp:
+            data = resp.read()
+            status = getattr(resp, "status", resp.getcode())
+            ctype = resp.headers.get("content-type", "")
+            body: Any
+            if "json" in ctype:
+                body = json.loads(data.decode("utf-8", errors="replace"))
+            else:
+                # Try json anyway, else return text
+                try:
+                    body = json.loads(data.decode("utf-8", errors="replace"))
+                except Exception:
+                    body = data.decode("utf-8", errors="replace")
+            return status, body, dict(resp.headers.items())
+    except urlerror.HTTPError as e:
+        try:
+            raw = e.read()
+            body = raw.decode("utf-8", errors="replace")
+            try:
+                body = json.loads(body)
+            except Exception:
+                pass
+        except Exception:
+            body = str(e)
+        return e.code, body, dict(getattr(e, "headers", {}) or {})
+    except Exception as e:
+        return 0, {"error": str(e)}, {}
+
+async def ahttp_get_json(url: str, timeout: int = 30) -> Tuple[int, Any, Dict[str, str]]:
+    return await asyncio.to_thread(http_get_json, url, timeout)
+
+async def exercise_http_api(api_base: str, timeout: int = 30) -> None:
+    print(f"\nHTTP API base: {api_base}\n")
+
+    # 0) Fetch OpenAPI spec
+    openapi_urls: List[str] = [
+        f"{api_base.rstrip('/')}/openapi.json",
+    ]
+    # Also try without the /api prefix if first fails
+    parsed = urlparse(api_base)
+    openapi_urls.append(f"{parsed.scheme}://{parsed.netloc}/openapi.json")
+
+    spec = None
+    last_status = None
+    for ou in openapi_urls:
+        status, body, _ = await ahttp_get_json(ou, timeout)
+        last_status = status
+        if status == 200 and isinstance(body, dict) and body.get("openapi"):
+            spec = body
+            print("== GET /openapi.json ==")
+            print(f"status: {status}")
+            print(f"title: {body.get('info', {}).get('title')}")
+            print(f"version: {body.get('info', {}).get('version')}")
+            print()
+            break
+    if spec is None:
+        print(f"Warning: could not fetch OpenAPI spec (last status: {last_status}). Skipping generic API checks.\n")
+        # Still try a direct hit to /cognitive_states below
+    else:
+        # Summary of tags and paths
+        paths = spec.get("paths", {}) if isinstance(spec, dict) else {}
+        tags = [t.get("name") for t in spec.get("tags", [])] if isinstance(spec.get("tags", []), list) else []
+        print("OpenAPI summary:")
+        print(f"  paths: {len(paths)}")
+        if tags:
+            print("  tags: " + ", ".join(tags))
+        print()
+
+        # 1) Call GET endpoints that require no parameters (up to 10)
+        simple_gets: List[str] = []
+        for p, ops in paths.items():
+            if not isinstance(ops, dict):
+                continue
+            get_op = ops.get("get")
+            if not isinstance(get_op, dict):
+                continue
+            # Skip if path contains template params
+            if "{" in p and "}" in p:
+                continue
+            params = get_op.get("parameters", [])
+            has_required = False
+            for prm in params or []:
+                if prm and prm.get("required") is True:
+                    has_required = True
+                    break
+            if has_required:
+                continue
+            simple_gets.append(p)
+        # De-dup and limit
+        simple_gets = sorted(set(simple_gets))[:10]
+
+        if simple_gets:
+            print("== Simple GET endpoint checks ==")
+            for p in simple_gets:
+                url = f"{api_base.rstrip('/')}{p}"
+                status, body, _ = await ahttp_get_json(url, timeout)
+                # print compact summary
+                summary = body
+                if isinstance(body, (dict, list)):
+                    try:
+                        txt = pretty(body)
+                        summary = txt[:400] + ("..." if len(txt) > 400 else "")
+                    except Exception:
+                        summary = str(type(body))
+                else:
+                    summary = str(body)[:200]
+                print(f"GET {p} -> {status}")
+                print(summary)
+                print()
+        else:
+            print("No simple GET endpoints detected in OpenAPI spec.")
+            print()
+
+    # 2) Direct check for Cognitive States endpoint
+    print("== Cognitive States (direct) ==")
+    cog_url = f"{api_base.rstrip('/')}/cognitive_states"
+    status, body, _ = await ahttp_get_json(cog_url, timeout)
+    print(f"GET /cognitive_states -> {status}")
+    try:
+        print(pretty(body)[:800] + ("..." if isinstance(body, (dict, list)) and len(pretty(body)) > 800 else ""))
+    except Exception:
+        print(str(body)[:400])
+    print()
 
 async def main():
     parser = argparse.ArgumentParser(description="UMCP crash course")
@@ -25,9 +177,25 @@ async def main():
     parser.add_argument("--timeout", type=int, default=30, help="Request timeout seconds")
     parser.add_argument("--provider", default="openai", help="Provider to demo (default: openai)")
     parser.add_argument("--model", default=None, help="Optional explicit model id for completion")
+    parser.add_argument("--api-base", default=None, help="Base URL for the REST API (e.g., http://host:port/api). If not set, derived from --url.")
     args = parser.parse_args()
 
+    # Normalize the MCP URL to avoid trailing-slash 404s on POST
+    original_url = args.url
+    args.url = args.url.rstrip("/")
+    if original_url != args.url:
+        print(f"Note: normalized MCP URL from '{original_url}' to '{args.url}' to avoid trailing-slash issues.")
+
     print(f"\nConnecting to MCP server: {args.url}\n")
+
+    # Derive API base
+    api_base = args.api_base or _derive_api_base_from_mcp_url(args.url)
+
+    # If MCP client isn't available, skip MCP section but still run HTTP API checks
+    if not MCP_AVAILABLE:
+        print("MCP client not installed. Skipping MCP checks. To enable, install: pip install fastmcp")
+        await exercise_http_api(api_base, args.timeout)
+        return
 
     # Create client and connect
     base_client = Client(args.url, timeout=args.timeout)
@@ -184,6 +352,9 @@ async def main():
         else:
             print("Skipping multi_completion (need at least two available providers).")
             print()
+
+        # 8) Exercise the HTTP API endpoints (OpenAPI + Cognitive States)
+        await exercise_http_api(api_base, args.timeout)
 
     finally:
         # Gracefully close using any supported method
