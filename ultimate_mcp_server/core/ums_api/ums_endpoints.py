@@ -422,7 +422,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     # ---------- Detailed state endpoint ----------
     @app.get(
-        "/cognitive-states/{state_id}",
+        "/cognitive-states/id/{state_id}",
         response_model=DetailedCognitiveState,
         tags=["Cognitive States"],
         summary="Get detailed cognitive state information",
@@ -1855,15 +1855,22 @@ def setup_ums_api(app: FastAPI) -> None:
             )
 
             overall_result = cursor.fetchone()
-            overall_dict = dict(
+            raw_overall = dict(
                 zip([d[0] for d in cursor.description], overall_result, strict=False)
-            )
+            ) if overall_result else {}
+            # Sanitize None -> 0 for numeric fields
+            overall_dict = {
+                "total_actions": int(raw_overall.get("total_actions") or 0),
+                "successful_actions": int(raw_overall.get("successful_actions") or 0),
+                "failed_actions": int(raw_overall.get("failed_actions") or 0),
+                "avg_duration": raw_overall.get("avg_duration"),
+            }
 
             # Create overall metrics
             success_rate = (
-                (overall_dict["successful_actions"] / overall_dict["total_actions"] * 100)
+                (overall_dict["successful_actions"] / overall_dict["total_actions"] * 100.0)
                 if overall_dict["total_actions"] > 0
-                else 0
+                else 0.0
             )
 
             overall_metrics = OverallMetrics(
@@ -1930,8 +1937,14 @@ def setup_ums_api(app: FastAPI) -> None:
             # Generate performance insights
             tool_stats_dicts = [t.dict() for t in tool_stats]
             hourly_metrics_dicts = [h.dict() for h in hourly_metrics]
+            # Pass a safe dict to avoid None arithmetic in insights
+            # Ensure denominator safety for insight success rate calculation
+            insights_overall = {
+                "total_actions": max(1, overall_dict["total_actions"]),
+                "successful_actions": overall_dict["successful_actions"],
+            }
             insights_data = generate_performance_insights(
-                overall_dict, tool_stats_dicts, hourly_metrics_dicts
+                insights_overall, tool_stats_dicts, hourly_metrics_dicts
             )
 
             performance_insights = [PerformanceInsight(**insight) for insight in insights_data]
@@ -2342,12 +2355,12 @@ def setup_ums_api(app: FastAPI) -> None:
             )
 
             overall = ArtifactOverallStats(
-                total_artifacts=overall_dict.get("total_artifacts", 0),
-                unique_types=overall_dict.get("unique_types", 0),
-                unique_workflows=overall_dict.get("unique_workflows", 0),
-                total_size=overall_dict.get("total_size", 0),
-                total_size_human=format_file_size(overall_dict.get("total_size", 0)),
-                avg_size=overall_dict.get("avg_size", 0),
+                total_artifacts=int(overall_dict.get("total_artifacts") or 0),
+                unique_types=int(overall_dict.get("unique_types") or 0),
+                unique_workflows=int(overall_dict.get("unique_workflows") or 0),
+                total_size=int(overall_dict.get("total_size") or 0),
+                total_size_human=format_file_size(int(overall_dict.get("total_size") or 0)),
+                avg_size=float(overall_dict.get("avg_size") or 0.0),
                 latest_created=overall_dict.get("latest_created"),
                 earliest_created=overall_dict.get("earliest_created"),
             )

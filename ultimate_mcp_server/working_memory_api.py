@@ -1232,8 +1232,12 @@ def initialize_unified_memory_schema(db_path: str) -> None:
             existing.add(column)
 
         legacy_cols = [col for col in legacy_column_candidates if col in existing]
-        coalesce_args = legacy_cols + ["rowid"]
-        legacy_expr = "COALESCE(" + ", ".join(coalesce_args) + ")"
+        # SQLite COALESCE requires at least 2 args; if no legacy cols, just use rowid directly
+        if legacy_cols:
+            coalesce_args = legacy_cols + ["rowid"]
+            legacy_expr = "COALESCE(" + ", ".join(coalesce_args) + ")"
+        else:
+            legacy_expr = "rowid"
         cursor.execute(
             f"UPDATE {table} SET {column} = printf(?, {legacy_expr}) "
             f"WHERE {column} IS NULL OR {column} = ''",
@@ -1500,13 +1504,17 @@ def initialize_unified_memory_schema(db_path: str) -> None:
                     artifact_type TEXT,
                     name TEXT,
                     description TEXT,
-                    path TEXT,
+                    file_path TEXT,
                     content TEXT,
                     metadata TEXT,
                     tags TEXT,
-                    size INTEGER,
+                    file_size INTEGER,
                     checksum TEXT,
                     created_at REAL,
+                    updated_at REAL,
+                    importance REAL,
+                    access_count INTEGER DEFAULT 0,
+                    parent_artifact_id TEXT,
                     FOREIGN KEY (workflow_id) REFERENCES workflows(workflow_id),
                     FOREIGN KEY (action_id) REFERENCES actions(action_id)
                 )
@@ -1523,15 +1531,26 @@ def initialize_unified_memory_schema(db_path: str) -> None:
                     "artifact_type": "artifact_type TEXT",
                     "name": "name TEXT",
                     "description": "description TEXT",
-                    "path": "path TEXT",
+                    "file_path": "file_path TEXT",
                     "content": "content TEXT",
                     "metadata": "metadata TEXT",
                     "tags": "tags TEXT",
-                    "size": "size INTEGER",
+                    "file_size": "file_size INTEGER",
                     "checksum": "checksum TEXT",
                     "created_at": "created_at REAL",
+                    "updated_at": "updated_at REAL",
+                    "importance": "importance REAL",
+                    "access_count": "access_count INTEGER",
+                    "parent_artifact_id": "parent_artifact_id TEXT",
                 },
             )
+
+            # Backfill from legacy columns if present
+            existing_art_cols = _existing_columns(cur, "artifacts")
+            if "size" in existing_art_cols and "file_size" in existing_art_cols:
+                cur.execute("UPDATE artifacts SET file_size = COALESCE(file_size, size)")
+            if "path" in existing_art_cols and "file_path" in existing_art_cols:
+                cur.execute("UPDATE artifacts SET file_path = COALESCE(file_path, path)")
 
         _ensure_unique_ids(cur, "artifacts", "artifact_id", ["id"], "artifact")
         cur.execute(
@@ -1539,6 +1558,42 @@ def initialize_unified_memory_schema(db_path: str) -> None:
         )
         cur.execute(
             "CREATE INDEX IF NOT EXISTS idx_artifacts_action ON artifacts(action_id)"
+        )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_artifacts_parent ON artifacts(parent_artifact_id)"
+        )
+
+        # --- Artifact relationships (for graph/relationships) ----------------
+        if not _table_exists(cur, "artifact_relationships"):
+            cur.execute(
+                """
+                CREATE TABLE artifact_relationships (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    source_artifact_id TEXT,
+                    target_artifact_id TEXT,
+                    relation_type TEXT,
+                    created_at REAL,
+                    FOREIGN KEY (source_artifact_id) REFERENCES artifacts(artifact_id),
+                    FOREIGN KEY (target_artifact_id) REFERENCES artifacts(artifact_id)
+                )
+                """
+            )
+        else:
+            _ensure_columns(
+                cur,
+                "artifact_relationships",
+                {
+                    "source_artifact_id": "source_artifact_id TEXT",
+                    "target_artifact_id": "target_artifact_id TEXT",
+                    "relation_type": "relation_type TEXT",
+                    "created_at": "created_at REAL",
+                },
+            )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_artrel_src ON artifact_relationships(source_artifact_id)"
+        )
+        cur.execute(
+            "CREATE INDEX IF NOT EXISTS idx_artrel_tgt ON artifact_relationships(target_artifact_id)"
         )
 
         # --- Cognitive timeline states --------------------------------------
