@@ -204,6 +204,8 @@ cache/disk_cache/cache.db-shm
 cache/disk_cache/cache.db-wal
 demo_database.db
 models/
+# But don't ignore the code models directory
+!ultimate_mcp_server/core/models/
 test_input.wav
 browser_demo_outputs/
 examples/redline_outputs
