@@ -243,3 +243,9 @@ storage/unified_agent_memory.db-journal
 storage/exercise_mental_health_quiz.html
 storage/exercise_mental_health_report.md
 storage/unified_agent_memory.dbOLD
+
+# NTM agent coordination
+.ntm/
+
+# Compiled binaries
+a.out
