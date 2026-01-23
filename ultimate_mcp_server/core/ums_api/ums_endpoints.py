@@ -20,17 +20,17 @@ from .ums_services import *
 def setup_ums_api(app: FastAPI) -> None:
     """
     Set up all UMS API endpoints on the provided FastAPI app.
-    
+
     This function registers all the UMS (Unified Memory System) API endpoints
     including cognitive states, action monitoring, performance profiling,
     working memory, artifacts, and memory quality management.
-    
+
     Args:
         app: FastAPI application instance to register endpoints on
     """
-    
+
     # ---------- Setup and Helper Functions ----------
-    
+
     # Legacy alias for older route-registration code
     app = api_app  # DO NOT REMOVE – keeps backward-compatibility  # noqa: F841
     # Note: app parameter is passed to this function
@@ -70,9 +70,7 @@ def setup_ums_api(app: FastAPI) -> None:
     def calculate_state_complexity(state_data: Dict[str, Any]) -> float:
         if not state_data:
             return 0.0
-        comp = (
-            len(state_data) * 5 + _dict_depth(state_data) * 10 + _count_values(state_data) * 0.5
-        )
+        comp = len(state_data) * 5 + _dict_depth(state_data) * 10 + _count_values(state_data) * 0.5
         return round(min(100.0, comp), 2)
 
     def compute_state_diff(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
@@ -163,9 +161,7 @@ def setup_ums_api(app: FastAPI) -> None:
         return RedirectResponse(url="/api/tools/ums_explorer.html")
 
     # ---------- Cognitive-states endpoint ----------
-    @app.get(
-        "/cognitive-states", response_model=CognitiveStatesResponse, tags=["Cognitive States"]
-    )
+    @app.get("/cognitive-states", response_model=CognitiveStatesResponse, tags=["Cognitive States"])
     async def get_cognitive_states(
         start_time: Optional[float] = Query(None, ge=0),
         end_time: Optional[float] = Query(None, ge=0),
@@ -263,9 +259,9 @@ def setup_ums_api(app: FastAPI) -> None:
                         "avg_complexity": sum(s["complexity_score"] for s in seg_states)
                         / len(seg_states),
                         "max_change_magnitude": max(s["change_magnitude"] for s in seg_states),
-                        "dominant_type": Counter(
-                            s["state_type"] for s in seg_states
-                        ).most_common(1)[0][0],
+                        "dominant_type": Counter(s["state_type"] for s in seg_states).most_common(
+                            1
+                        )[0][0],
                     }
                 )
             current = seg_end
@@ -527,9 +523,7 @@ def setup_ums_api(app: FastAPI) -> None:
             total_similarity += state_sim
         return total_similarity / len(seq1)
 
-    def calculate_single_state_similarity(
-        state1: Dict[str, Any], state2: Dict[str, Any]
-    ) -> float:
+    def calculate_single_state_similarity(state1: Dict[str, Any], state2: Dict[str, Any]) -> float:
         """Calculate similarity between two individual states"""
         data1 = state1.get("state_data", {})
         data2 = state2.get("state_data", {})
@@ -579,9 +573,7 @@ def setup_ums_api(app: FastAPI) -> None:
         ) ** 0.5
         for i, state in enumerate(states):
             complexity = complexities[i]
-            z_score = (
-                (complexity - avg_complexity) / std_complexity if std_complexity > 0 else 0
-            )
+            z_score = (complexity - avg_complexity) / std_complexity if std_complexity > 0 else 0
             if abs(z_score) > 2:
                 anomalies.append(
                     {
@@ -694,14 +686,10 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class StateComparisonRequest(BaseModel):
         state_id_1: str = Field(
-            ...,
-            description="First cognitive state ID for comparison",
-            example="state_abc123"
+            ..., description="First cognitive state ID for comparison", example="state_abc123"
         )
         state_id_2: str = Field(
-            ...,
-            description="Second cognitive state ID for comparison", 
-            example="state_xyz789"
+            ..., description="Second cognitive state ID for comparison", example="state_xyz789"
         )
 
     class StateComparisonResponse(BaseModel):
@@ -734,33 +722,31 @@ def setup_ums_api(app: FastAPI) -> None:
                             "state_1": {
                                 "state_id": "state_abc123",
                                 "timestamp": 1703980800.0,
-                                "formatted_timestamp": "2024-01-01T00:00:00"
+                                "formatted_timestamp": "2024-01-01T00:00:00",
                             },
                             "state_2": {
-                                "state_id": "state_xyz789", 
+                                "state_id": "state_xyz789",
                                 "timestamp": 1703984400.0,
-                                "formatted_timestamp": "2024-01-01T01:00:00"
+                                "formatted_timestamp": "2024-01-01T01:00:00",
                             },
                             "time_diff_minutes": 60.0,
                             "diff": {
                                 "added": {
                                     "new_insight": "PDF contains financial data",
-                                    "confidence": 0.95
+                                    "confidence": 0.95,
                                 },
-                                "removed": {
-                                    "initial_assumption": "Document is text-only"
-                                },
+                                "removed": {"initial_assumption": "Document is text-only"},
                                 "modified": {
                                     "tool_preference": {
                                         "before": "file_reader",
-                                        "after": "smart_browser"
+                                        "after": "smart_browser",
                                     }
                                 },
-                                "magnitude": 45.5
-                            }
+                                "magnitude": 45.5,
+                            },
                         }
                     }
-                }
+                },
             },
             400: {
                 "description": "Invalid request - both state IDs required",
@@ -768,7 +754,7 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "Both state_id_1 and state_id_2 are required"}
                     }
-                }
+                },
             },
             404: {
                 "description": "One or both states not found",
@@ -776,10 +762,10 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "State with ID 'state_abc123' not found"}
                     }
-                }
+                },
             },
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def compare_cognitive_states(
         request: StateComparisonRequest,
@@ -827,16 +813,12 @@ def setup_ums_api(app: FastAPI) -> None:
                 state_1=StateComparisonInfo(
                     state_id=state_1["state_id"],
                     timestamp=state_1["timestamp"],
-                    formatted_timestamp=datetime.fromtimestamp(
-                        state_1["timestamp"]
-                    ).isoformat(),
+                    formatted_timestamp=datetime.fromtimestamp(state_1["timestamp"]).isoformat(),
                 ),
                 state_2=StateComparisonInfo(
                     state_id=state_2["state_id"],
                     timestamp=state_2["timestamp"],
-                    formatted_timestamp=datetime.fromtimestamp(
-                        state_2["timestamp"]
-                    ).isoformat(),
+                    formatted_timestamp=datetime.fromtimestamp(state_2["timestamp"]).isoformat(),
                 ),
                 time_diff_minutes=time_diff_minutes,
                 diff=StateDiff(**diff_result),
@@ -862,18 +844,12 @@ def setup_ums_api(app: FastAPI) -> None:
             "timeout": {"color": "yellow", "icon": "timer-off", "label": "Timeout"},
         }
 
-        indicator = indicators.get(
-            status, {"color": "gray", "icon": "help", "label": "Unknown"}
-        )
+        indicator = indicators.get(status, {"color": "gray", "icon": "help", "label": "Unknown"})
 
         # Add urgency flag for long-running actions
-        if (
-            status in ["running", "executing", "in_progress"] and execution_time > 120
-        ):  # 2 minutes
+        if status in ["running", "executing", "in_progress"] and execution_time > 120:  # 2 minutes
             indicator["urgency"] = "high"
-        elif (
-            status in ["running", "executing", "in_progress"] and execution_time > 60
-        ):  # 1 minute
+        elif status in ["running", "executing", "in_progress"] and execution_time > 60:  # 1 minute
             indicator["urgency"] = "medium"
         else:
             indicator["urgency"] = "low"
@@ -978,7 +954,6 @@ def setup_ums_api(app: FastAPI) -> None:
         best_action = max(actions, key=lambda a: a.get("performance_score", 0))
         worst_action = min(actions, key=lambda a: a.get("performance_score", 0))
 
-
         efficiency_counts = Counter(a.get("efficiency_rating", "unknown") for a in actions)
 
         return {
@@ -1076,9 +1051,7 @@ def setup_ums_api(app: FastAPI) -> None:
         status_indicator: StatusIndicator = Field(..., description="Visual status indicator")
         performance_category: str = Field(..., description="Performance categorization")
         resource_usage: ResourceUsage = Field(..., description="Current resource usage")
-        tool_data: Dict[str, Any] = Field(
-            default_factory=dict, description="Tool-specific data"
-        )
+        tool_data: Dict[str, Any] = Field(default_factory=dict, description="Tool-specific data")
 
     class RunningActionsResponse(BaseModel):
         """Response for currently running actions"""
@@ -1107,9 +1080,7 @@ def setup_ums_api(app: FastAPI) -> None:
         estimated_wait_time: float = Field(..., description="Estimated wait time in seconds")
         priority: int = Field(..., description="Numeric priority value")
         priority_label: str = Field(..., description="Human-readable priority label")
-        tool_data: Dict[str, Any] = Field(
-            default_factory=dict, description="Tool-specific data"
-        )
+        tool_data: Dict[str, Any] = Field(default_factory=dict, description="Tool-specific data")
 
     class ActionQueueResponse(BaseModel):
         """Response for action queue status"""
@@ -1117,9 +1088,7 @@ def setup_ums_api(app: FastAPI) -> None:
         queued_actions: List[QueuedAction] = Field(..., description="List of queued actions")
         total_queued: int = Field(..., description="Total number of queued actions")
         avg_queue_time: float = Field(..., description="Average time in queue")
-        next_action: Optional[QueuedAction] = Field(
-            None, description="Next action to be executed"
-        )
+        next_action: Optional[QueuedAction] = Field(None, description="Next action to be executed")
         timestamp: str = Field(..., description="Response timestamp")
 
     # ---------- Action Monitor Endpoints ----------
@@ -1209,9 +1178,7 @@ def setup_ums_api(app: FastAPI) -> None:
             """)
 
             columns = [description[0] for description in cursor.description]
-            running_actions = [
-                dict(zip(columns, row, strict=False)) for row in cursor.fetchall()
-            ]
+            running_actions = [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
             # Enhance with real-time metrics
             enhanced_actions = []
@@ -1236,9 +1203,7 @@ def setup_ums_api(app: FastAPI) -> None:
                     tool_name=action["tool_name"],
                     status=action["status"],
                     started_at=action["started_at"],
-                    formatted_start_time=datetime.fromtimestamp(
-                        action["started_at"]
-                    ).isoformat(),
+                    formatted_start_time=datetime.fromtimestamp(action["started_at"]).isoformat(),
                     execution_time_seconds=execution_time,
                     estimated_duration=estimated_duration,
                     progress_percentage=progress_percentage,
@@ -1248,9 +1213,7 @@ def setup_ums_api(app: FastAPI) -> None:
                     performance_category=categorize_action_performance(
                         execution_time, estimated_duration
                     ),
-                    resource_usage=ResourceUsage(
-                        **get_action_resource_usage(action["action_id"])
-                    ),
+                    resource_usage=ResourceUsage(**get_action_resource_usage(action["action_id"])),
                     tool_data=tool_data,
                 )
                 enhanced_actions.append(enhanced_action)
@@ -1270,9 +1233,7 @@ def setup_ums_api(app: FastAPI) -> None:
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     @app.get(
         "/actions/queue",
@@ -1349,9 +1310,7 @@ def setup_ums_api(app: FastAPI) -> None:
             """)
 
             columns = [description[0] for description in cursor.description]
-            queued_actions = [
-                dict(zip(columns, row, strict=False)) for row in cursor.fetchall()
-            ]
+            queued_actions = [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
             # Enhance queue data
             enhanced_queue = []
@@ -1368,9 +1327,7 @@ def setup_ums_api(app: FastAPI) -> None:
                     tool_name=action["tool_name"],
                     status=action["status"],
                     created_at=action["created_at"],
-                    formatted_queue_time=datetime.fromtimestamp(
-                        action["created_at"]
-                    ).isoformat(),
+                    formatted_queue_time=datetime.fromtimestamp(action["created_at"]).isoformat(),
                     queue_position=i + 1,
                     queue_time_seconds=action.get("queue_time", 0),
                     estimated_wait_time=estimate_wait_time(i, queued_actions),
@@ -1396,9 +1353,7 @@ def setup_ums_api(app: FastAPI) -> None:
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Action History Pydantic Models ----------
 
@@ -1418,9 +1373,7 @@ def setup_ums_api(app: FastAPI) -> None:
         execution_duration_seconds: float = Field(
             ..., description="Total execution time in seconds"
         )
-        performance_score: float = Field(
-            ..., description="Calculated performance score (0-100)"
-        )
+        performance_score: float = Field(..., description="Calculated performance score (0-100)")
         efficiency_rating: str = Field(
             ..., description="Efficiency rating based on time and output"
         )
@@ -1429,24 +1382,16 @@ def setup_ums_api(app: FastAPI) -> None:
         formatted_completion_time: Optional[str] = Field(
             None, description="ISO formatted completion time"
         )
-        tool_data: Dict[str, Any] = Field(
-            default_factory=dict, description="Tool-specific data"
-        )
-        result_data: Dict[str, Any] = Field(
-            default_factory=dict, description="Action result data"
-        )
+        tool_data: Dict[str, Any] = Field(default_factory=dict, description="Tool-specific data")
+        result_data: Dict[str, Any] = Field(default_factory=dict, description="Action result data")
         result_size: int = Field(0, description="Size of the result data")
 
     class PerformanceSummary(BaseModel):
         """Performance summary statistics"""
 
         avg_score: float = Field(..., description="Average performance score")
-        top_performer: Optional[Dict[str, Any]] = Field(
-            None, description="Best performing tool"
-        )
-        worst_performer: Optional[Dict[str, Any]] = Field(
-            None, description="Worst performing tool"
-        )
+        top_performer: Optional[Dict[str, Any]] = Field(None, description="Best performing tool")
+        worst_performer: Optional[Dict[str, Any]] = Field(None, description="Worst performing tool")
         efficiency_distribution: Dict[str, int] = Field(
             ..., description="Distribution of efficiency ratings"
         )
@@ -1457,9 +1402,7 @@ def setup_ums_api(app: FastAPI) -> None:
         action_history: List[ActionHistoryItem] = Field(
             ..., description="List of completed actions"
         )
-        total_actions: int = Field(
-            ..., description="Total number of actions in the time period"
-        )
+        total_actions: int = Field(..., description="Total number of actions in the time period")
         success_rate: float = Field(..., description="Overall success rate percentage")
         avg_execution_time: float = Field(..., description="Average execution time in seconds")
         performance_summary: PerformanceSummary = Field(
@@ -1596,9 +1539,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
             cursor.execute(query, params)
             columns = [description[0] for description in cursor.description]
-            completed_actions = [
-                dict(zip(columns, row, strict=False)) for row in cursor.fetchall()
-            ]
+            completed_actions = [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
             # Calculate performance metrics
             enhanced_history = []
@@ -1654,18 +1595,14 @@ def setup_ums_api(app: FastAPI) -> None:
 
             # Create performance summary
             action_dicts = [a.dict() for a in enhanced_history]
-            performance_summary = PerformanceSummary(
-                **calculate_performance_summary(action_dicts)
-            )
+            performance_summary = PerformanceSummary(**calculate_performance_summary(action_dicts))
 
             conn.close()
 
             return ActionHistoryResponse(
                 action_history=enhanced_history,
                 total_actions=total_actions,
-                success_rate=(successful_actions / total_actions * 100)
-                if total_actions > 0
-                else 0,
+                success_rate=(successful_actions / total_actions * 100) if total_actions > 0 else 0,
                 avg_execution_time=avg_duration,
                 performance_summary=performance_summary,
                 timestamp=datetime.now().isoformat(),
@@ -1674,9 +1611,7 @@ def setup_ums_api(app: FastAPI) -> None:
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Action Metrics Pydantic Models ----------
 
@@ -1684,9 +1619,7 @@ def setup_ums_api(app: FastAPI) -> None:
         """Overall action execution metrics"""
 
         total_actions: int = Field(..., description="Total number of actions executed")
-        successful_actions: int = Field(
-            ..., description="Number of successfully completed actions"
-        )
+        successful_actions: int = Field(..., description="Number of successfully completed actions")
         failed_actions: int = Field(..., description="Number of failed actions")
         avg_duration: Optional[float] = Field(
             None, description="Average execution duration in seconds"
@@ -1705,18 +1638,14 @@ def setup_ums_api(app: FastAPI) -> None:
         tool_name: str = Field(..., description="Name of the tool")
         usage_count: int = Field(..., description="Number of times the tool was used")
         success_count: int = Field(..., description="Number of successful executions")
-        avg_duration: Optional[float] = Field(
-            None, description="Average execution time in seconds"
-        )
+        avg_duration: Optional[float] = Field(None, description="Average execution time in seconds")
 
     class HourlyMetric(BaseModel):
         """Hourly performance metrics"""
 
         hour: str = Field(..., description="Hour of the day (0-23)")
         action_count: int = Field(..., description="Number of actions in this hour")
-        avg_duration: Optional[float] = Field(
-            None, description="Average duration for this hour"
-        )
+        avg_duration: Optional[float] = Field(None, description="Average duration for this hour")
         success_count: int = Field(..., description="Number of successful actions")
 
     class PerformanceInsight(BaseModel):
@@ -1731,9 +1660,7 @@ def setup_ums_api(app: FastAPI) -> None:
         """Response model for action metrics"""
 
         overall_metrics: OverallMetrics = Field(..., description="Overall execution metrics")
-        tool_usage_stats: List[ToolUsageStat] = Field(
-            ..., description="Per-tool usage statistics"
-        )
+        tool_usage_stats: List[ToolUsageStat] = Field(..., description="Per-tool usage statistics")
         hourly_performance: List[HourlyMetric] = Field(
             ..., description="Hourly performance breakdown"
         )
@@ -1940,9 +1867,7 @@ def setup_ums_api(app: FastAPI) -> None:
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Artifacts Helper Functions ----------
 
@@ -1978,9 +1903,7 @@ def setup_ums_api(app: FastAPI) -> None:
         importance: Optional[float] = Field(None, description="Importance score (1-10)")
         access_count: int = Field(0, description="Number of times accessed")
         tags: List[str] = Field(default_factory=list, description="Associated tags")
-        metadata: Dict[str, Any] = Field(
-            default_factory=dict, description="Additional metadata"
-        )
+        metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
         relationship_count: int = Field(0, description="Number of related artifacts")
         version_count: int = Field(0, description="Number of versions")
         formatted_created_at: str = Field(..., description="ISO formatted creation date")
@@ -2090,12 +2013,8 @@ def setup_ums_api(app: FastAPI) -> None:
             description="Field to sort results by",
             regex="^(created_at|updated_at|name|importance|access_count)$",
         ),
-        sort_order: str = Query(
-            "desc", description="Sort order direction", regex="^(asc|desc)$"
-        ),
-        limit: int = Query(
-            50, description="Maximum number of artifacts to return", ge=1, le=200
-        ),
+        sort_order: str = Query("desc", description="Sort order direction", regex="^(asc|desc)$"),
+        limit: int = Query(50, description="Maximum number of artifacts to return", ge=1, le=200),
         offset: int = Query(0, description="Number of artifacts to skip for pagination", ge=0),
     ) -> ArtifactsResponse:
         """List artifacts with filtering and search"""
@@ -2143,9 +2062,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
             cursor.execute(query, params)
             columns = [description[0] for description in cursor.description]
-            artifacts_data = [
-                dict(zip(columns, row, strict=False)) for row in cursor.fetchall()
-            ]
+            artifacts_data = [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
 
             # Enhance artifacts with metadata
             artifacts = []
@@ -2213,9 +2130,7 @@ def setup_ums_api(app: FastAPI) -> None:
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Artifacts Statistics Models ----------
 
@@ -2240,17 +2155,13 @@ def setup_ums_api(app: FastAPI) -> None:
         latest_created: Optional[float] = Field(
             None, description="Timestamp of most recent artifact"
         )
-        earliest_created: Optional[float] = Field(
-            None, description="Timestamp of oldest artifact"
-        )
+        earliest_created: Optional[float] = Field(None, description="Timestamp of oldest artifact")
 
     class ArtifactStatsResponse(BaseModel):
         """Response model for artifact statistics"""
 
         overall: ArtifactOverallStats = Field(..., description="Overall statistics")
-        by_type: List[ArtifactTypeStats] = Field(
-            ..., description="Statistics broken down by type"
-        )
+        by_type: List[ArtifactTypeStats] = Field(..., description="Statistics broken down by type")
 
     # ---------- Artifacts Statistics Endpoint ----------
 
@@ -2376,14 +2287,13 @@ def setup_ums_api(app: FastAPI) -> None:
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(
-                status_code=500, detail=f"Internal server error: {str(e)}"
-            ) from e
+            raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Memory Quality Pydantic Models ----------
 
     class MemoryDetail(BaseModel):
         """Detailed information about a memory"""
+
         memory_id: str = Field(..., description="Unique memory identifier")
         workflow_id: Optional[str] = Field(None, description="Associated workflow ID")
         memory_type: str = Field(..., description="Type of memory")
@@ -2392,6 +2302,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class DuplicateGroup(BaseModel):
         """Group of duplicate memories"""
+
         cluster_id: str = Field(..., description="Unique identifier for this duplicate cluster")
         content_preview: str = Field(..., description="Preview of the duplicated content")
         duplicate_count: int = Field(..., description="Number of duplicates in this group")
@@ -2405,14 +2316,18 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class DuplicatesResponse(BaseModel):
         """Response model for duplicate analysis"""
+
         success: bool = Field(..., description="Whether analysis completed successfully")
         clusters: List[DuplicateGroup] = Field(..., description="List of duplicate groups")
-        duplicate_groups: List[DuplicateGroup] = Field(..., description="Alias for clusters (backward compatibility)")
+        duplicate_groups: List[DuplicateGroup] = Field(
+            ..., description="Alias for clusters (backward compatibility)"
+        )
         total_groups: int = Field(..., description="Total number of duplicate groups found")
         total_duplicates: int = Field(..., description="Total number of duplicate memories")
 
     class OrphanedMemory(BaseModel):
         """Model for an orphaned memory"""
+
         memory_id: str = Field(..., description="Unique memory identifier")
         content: str = Field(..., description="Memory content")
         memory_type: str = Field(..., description="Type of memory")
@@ -2421,30 +2336,30 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class OrphanedMemoriesResponse(BaseModel):
         """Response model for orphaned memories"""
+
         success: bool = Field(..., description="Whether query completed successfully")
-        orphaned_memories: List[OrphanedMemory] = Field(..., description="List of orphaned memories")
+        orphaned_memories: List[OrphanedMemory] = Field(
+            ..., description="List of orphaned memories"
+        )
         total_orphaned: int = Field(..., description="Total count of orphaned memories")
         recommendation: str = Field(..., description="Recommended action for orphaned memories")
 
     class BulkOperationRequest(BaseModel):
         """Request model for bulk operations"""
+
         operation_type: str = Field(
-            ...,
-            description="Type of bulk operation to perform",
-            regex="^(delete|archive|merge)$"
+            ..., description="Type of bulk operation to perform", regex="^(delete|archive|merge)$"
         )
         memory_ids: List[str] = Field(
-            ...,
-            description="List of memory IDs to operate on",
-            min_items=1
+            ..., description="List of memory IDs to operate on", min_items=1
         )
         target_memory_id: Optional[str] = Field(
-            None,
-            description="Target memory ID for merge operations"
+            None, description="Target memory ID for merge operations"
         )
 
     class BulkOperationResponse(BaseModel):
         """Response model for bulk operations"""
+
         success: bool = Field(..., description="Whether operation completed successfully")
         operation_type: str = Field(..., description="Type of operation performed")
         memory_ids: List[str] = Field(..., description="Memory IDs that were operated on")
@@ -2452,10 +2367,13 @@ def setup_ums_api(app: FastAPI) -> None:
         error_count: int = Field(..., description="Number of failed operations")
         message: str = Field(..., description="Summary message of the operation")
         errors: List[str] = Field(default_factory=list, description="List of error messages")
-        merged_into: Optional[str] = Field(None, description="Target memory ID for merge operations")
+        merged_into: Optional[str] = Field(
+            None, description="Target memory ID for merge operations"
+        )
 
     class PreviewMemory(BaseModel):
         """Memory preview for bulk operations"""
+
         memory_id: str = Field(..., description="Memory ID")
         content: str = Field(..., description="Memory content")
         memory_type: str = Field(..., description="Type of memory")
@@ -2464,15 +2382,21 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class BulkOperationPreview(BaseModel):
         """Preview of bulk operation effects"""
+
         operation_type: str = Field(..., description="Type of operation to be performed")
         total_affected: int = Field(..., description="Total memories that will be affected")
         preview_description: str = Field(..., description="Description of what will happen")
-        affected_memories: List[PreviewMemory] = Field(..., description="Details of affected memories")
+        affected_memories: List[PreviewMemory] = Field(
+            ..., description="Details of affected memories"
+        )
         merge_target: Optional[PreviewMemory] = Field(None, description="Target memory for merge")
-        will_be_deleted: Optional[List[PreviewMemory]] = Field(None, description="Memories to be deleted in merge")
+        will_be_deleted: Optional[List[PreviewMemory]] = Field(
+            None, description="Memories to be deleted in merge"
+        )
 
     class BulkPreviewResponse(BaseModel):
         """Response model for bulk operation preview"""
+
         success: bool = Field(..., description="Whether preview generated successfully")
         operation: BulkOperationPreview = Field(..., description="Preview of the operation")
 
@@ -2513,31 +2437,31 @@ def setup_ums_api(app: FastAPI) -> None:
                                             "workflow_id": "workflow_001",
                                             "memory_type": "system",
                                             "importance": 8.0,
-                                            "created_at": 1703980800.0
+                                            "created_at": 1703980800.0,
                                         }
                                     ],
                                     "first_created": 1703980800.0,
                                     "last_created": 1703984400.0,
                                     "avg_importance": 7.5,
-                                    "recommendation": "merge"
+                                    "recommendation": "merge",
                                 }
                             ],
                             "duplicate_groups": [],
                             "total_groups": 1,
-                            "total_duplicates": 3
+                            "total_duplicates": 3,
                         }
                     }
-                }
+                },
             },
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def get_duplicate_memories() -> DuplicatesResponse:
         """Get detailed duplicate memory analysis"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT content, COUNT(*) as count, GROUP_CONCAT(memory_id) as memory_ids,
                        MIN(created_at) as first_created, MAX(created_at) as last_created,
@@ -2548,32 +2472,37 @@ def setup_ums_api(app: FastAPI) -> None:
                 HAVING count > 1
                 ORDER BY count DESC
             """)
-            
+
             duplicate_groups = []
             for i, row in enumerate(cursor.fetchall()):
-                memory_ids = row[2].split(',')
-                
+                memory_ids = row[2].split(",")
+
                 # Get detailed info for each memory in the group
                 memory_details = []
                 for memory_id in memory_ids:
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT memory_id, workflow_id, memory_type, importance, created_at
                         FROM memories WHERE memory_id = ?
-                    """, (memory_id,))
-                    
+                    """,
+                        (memory_id,),
+                    )
+
                     detail = cursor.fetchone()
                     if detail:
-                        memory_details.append(MemoryDetail(
-                            memory_id=detail[0],
-                            workflow_id=detail[1],
-                            memory_type=detail[2],
-                            importance=detail[3],
-                            created_at=detail[4]
-                        ))
-                
+                        memory_details.append(
+                            MemoryDetail(
+                                memory_id=detail[0],
+                                workflow_id=detail[1],
+                                memory_type=detail[2],
+                                importance=detail[3],
+                                created_at=detail[4],
+                            )
+                        )
+
                 duplicate_group = DuplicateGroup(
                     cluster_id=f"dup_cluster_{i}",
-                    content_preview=row[0][:200] + '...' if len(row[0]) > 200 else row[0],
+                    content_preview=row[0][:200] + "..." if len(row[0]) > 200 else row[0],
                     duplicate_count=row[1],
                     memory_ids=memory_ids,
                     primary_memory_id=memory_ids[0] if memory_ids else "",
@@ -2581,22 +2510,22 @@ def setup_ums_api(app: FastAPI) -> None:
                     first_created=row[3],
                     last_created=row[4],
                     avg_importance=round(row[5], 1) if row[5] else 0.0,
-                    recommendation='merge' if row[1] > 2 else 'review'
+                    recommendation="merge" if row[1] > 2 else "review",
                 )
                 duplicate_groups.append(duplicate_group)
-            
+
             conn.close()
-            
+
             total_duplicates = sum(group.duplicate_count for group in duplicate_groups)
-            
+
             return DuplicatesResponse(
                 success=True,
                 clusters=duplicate_groups,
                 duplicate_groups=duplicate_groups,  # For backward compatibility
                 total_groups=len(duplicate_groups),
-                total_duplicates=total_duplicates
+                total_duplicates=total_duplicates,
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
@@ -2630,24 +2559,24 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "content": "Important insight that got disconnected from workflow",
                                     "memory_type": "analysis",
                                     "importance": 7.5,
-                                    "created_at": 1703980800.0
+                                    "created_at": 1703980800.0,
                                 }
                             ],
                             "total_orphaned": 1,
-                            "recommendation": "Assign to appropriate workflows or archive if no longer needed"
+                            "recommendation": "Assign to appropriate workflows or archive if no longer needed",
                         }
                     }
-                }
+                },
             },
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def get_orphaned_memories() -> OrphanedMemoriesResponse:
         """Get orphaned memories (not associated with workflows)"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("""
                 SELECT m.memory_id, m.content, m.memory_type, m.importance, m.created_at
                 FROM memories m
@@ -2655,27 +2584,27 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE w.workflow_id IS NULL
                 ORDER BY m.created_at DESC
             """)
-            
+
             orphaned_memories = [
                 OrphanedMemory(
                     memory_id=row[0],
                     content=row[1],
                     memory_type=row[2],
                     importance=row[3],
-                    created_at=row[4]
+                    created_at=row[4],
                 )
                 for row in cursor.fetchall()
             ]
-            
+
             conn.close()
-            
+
             return OrphanedMemoriesResponse(
                 success=True,
                 orphaned_memories=orphaned_memories,
                 total_orphaned=len(orphaned_memories),
-                recommendation='Assign to appropriate workflows or archive if no longer needed'
+                recommendation="Assign to appropriate workflows or archive if no longer needed",
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
@@ -2709,73 +2638,81 @@ def setup_ums_api(app: FastAPI) -> None:
                             "error_count": 0,
                             "message": "Operation completed: 2 succeeded, 0 failed",
                             "errors": [],
-                            "merged_into": "mem_123"
+                            "merged_into": "mem_123",
                         }
                     }
-                }
+                },
             },
             400: {"description": "Invalid request parameters"},
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def execute_bulk_memory_operations(
-        bulk_request: BulkOperationRequest
+        bulk_request: BulkOperationRequest,
     ) -> BulkOperationResponse:
         """Execute bulk operations on memories"""
         if not bulk_request.memory_ids:
             raise HTTPException(status_code=400, detail="No memory IDs provided")
-        
+
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             success_count = 0
             errors = []
-            
-            placeholders = ','.join(['?' for _ in bulk_request.memory_ids])
-            
-            if bulk_request.operation_type == 'delete':
+
+            placeholders = ",".join(["?" for _ in bulk_request.memory_ids])
+
+            if bulk_request.operation_type == "delete":
                 try:
-                    cursor.execute(f"DELETE FROM memories WHERE memory_id IN ({placeholders})", bulk_request.memory_ids)
+                    cursor.execute(
+                        f"DELETE FROM memories WHERE memory_id IN ({placeholders})",
+                        bulk_request.memory_ids,
+                    )
                     success_count = cursor.rowcount
                 except Exception as e:
                     errors.append(str(e))
-            
-            elif bulk_request.operation_type == 'archive':
+
+            elif bulk_request.operation_type == "archive":
                 # Add metadata to mark as archived
                 try:
-                    cursor.execute(f"""
+                    cursor.execute(
+                        f"""
                         UPDATE memories 
                         SET metadata = json_set(COALESCE(metadata, '{{}}'), '$.archived', 'true', '$.archived_at', ?)
                         WHERE memory_id IN ({placeholders})
-                    """, [datetime.now().isoformat()] + bulk_request.memory_ids)
+                    """,
+                        [datetime.now().isoformat()] + bulk_request.memory_ids,
+                    )
                     success_count = cursor.rowcount
                 except Exception as e:
                     errors.append(str(e))
-            
-            elif bulk_request.operation_type == 'merge':
+
+            elif bulk_request.operation_type == "merge":
                 # For merge operations, keep the first memory and delete others
                 if len(bulk_request.memory_ids) > 1:
                     try:
                         # Keep the first memory, delete the rest
                         target_id = bulk_request.target_memory_id or bulk_request.memory_ids[0]
-                        memories_to_delete = [mid for mid in bulk_request.memory_ids if mid != target_id]
-                        
+                        memories_to_delete = [
+                            mid for mid in bulk_request.memory_ids if mid != target_id
+                        ]
+
                         if memories_to_delete:
                             cursor.execute(
-                                f"DELETE FROM memories WHERE memory_id IN ({','.join(['?' for _ in memories_to_delete])})", 
-                                memories_to_delete
+                                f"DELETE FROM memories WHERE memory_id IN ({','.join(['?' for _ in memories_to_delete])})",
+                                memories_to_delete,
                             )
                             success_count = len(memories_to_delete)
                     except Exception as e:
                         errors.append(str(e))
-            
+
             # Commit changes
             conn.commit()
             conn.close()
-            
+
             error_count = len(bulk_request.memory_ids) - success_count
-            
+
             return BulkOperationResponse(
                 success=len(errors) == 0,
                 operation_type=bulk_request.operation_type,
@@ -2784,9 +2721,11 @@ def setup_ums_api(app: FastAPI) -> None:
                 error_count=error_count,
                 message=f"Operation completed: {success_count} succeeded, {error_count} failed",
                 errors=errors,
-                merged_into=bulk_request.target_memory_id if bulk_request.operation_type == 'merge' else None
+                merged_into=bulk_request.target_memory_id
+                if bulk_request.operation_type == "merge"
+                else None,
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
@@ -2824,7 +2763,7 @@ def setup_ums_api(app: FastAPI) -> None:
                                         "content": "System initialized successfully",
                                         "memory_type": "system",
                                         "importance": 8.0,
-                                        "workflow_id": "workflow_001"
+                                        "workflow_id": "workflow_001",
                                     }
                                 ],
                                 "merge_target": {
@@ -2832,72 +2771,70 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "content": "System initialized successfully",
                                     "memory_type": "system",
                                     "importance": 8.0,
-                                    "workflow_id": "workflow_001"
+                                    "workflow_id": "workflow_001",
                                 },
-                                "will_be_deleted": []
-                            }
+                                "will_be_deleted": [],
+                            },
                         }
                     }
-                }
+                },
             },
             400: {"description": "Invalid request parameters"},
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
-    async def preview_bulk_operations(
-        bulk_request: BulkOperationRequest
-    ) -> BulkPreviewResponse:
+    async def preview_bulk_operations(bulk_request: BulkOperationRequest) -> BulkPreviewResponse:
         """Preview bulk operations before execution"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             # Get memory details for preview
-            placeholders = ','.join(['?' for _ in bulk_request.memory_ids])
-            cursor.execute(f"""
+            placeholders = ",".join(["?" for _ in bulk_request.memory_ids])
+            cursor.execute(
+                f"""
                 SELECT memory_id, content, memory_type, importance, workflow_id
                 FROM memories 
                 WHERE memory_id IN ({placeholders})
-            """, bulk_request.memory_ids)
-            
+            """,
+                bulk_request.memory_ids,
+            )
+
             memories = [
                 PreviewMemory(
                     memory_id=row[0],
                     content=row[1],
                     memory_type=row[2],
                     importance=row[3],
-                    workflow_id=row[4]
+                    workflow_id=row[4],
                 )
                 for row in cursor.fetchall()
             ]
-            
+
             preview = BulkOperationPreview(
                 operation_type=bulk_request.operation_type,
                 total_affected=len(memories),
-                preview_description=f'This will {bulk_request.operation_type} {len(memories)} memories',
-                affected_memories=memories
+                preview_description=f"This will {bulk_request.operation_type} {len(memories)} memories",
+                affected_memories=memories,
             )
-            
-            if bulk_request.operation_type == 'merge' and len(memories) > 1:
+
+            if bulk_request.operation_type == "merge" and len(memories) > 1:
                 target_id = bulk_request.target_memory_id or memories[0].memory_id
-                preview.merge_target = next((m for m in memories if m.memory_id == target_id), memories[0])
+                preview.merge_target = next(
+                    (m for m in memories if m.memory_id == target_id), memories[0]
+                )
                 preview.will_be_deleted = [m for m in memories if m.memory_id != target_id]
-            
+
             conn.close()
-            
-            return BulkPreviewResponse(
-                success=True,
-                operation=preview
-            )
-            
+
+            return BulkPreviewResponse(success=True, operation=preview)
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Working Memory System Implementation ----------
-
-
 
     # Global working memory instance
     _working_memory_system = None
@@ -2906,11 +2843,11 @@ def setup_ums_api(app: FastAPI) -> None:
     class WorkingMemorySystem:
         """
         Working memory system for managing active memories with focus capabilities.
-        
+
         This system maintains a pool of recent memories with relevance scoring
         and focus mode for filtering based on keywords or patterns.
         """
-        
+
         def __init__(self, capacity: int = 100, focus_threshold: float = 0.7):
             self.capacity = capacity
             self.focus_threshold = focus_threshold
@@ -2924,162 +2861,171 @@ def setup_ums_api(app: FastAPI) -> None:
             self.initialized_at = datetime.now()
             self.last_optimization = datetime.now()
             self.optimization_count = 0
-            
+
         def add_memory(self, memory_id: str, content: str, category: str, importance: float = 5.0):
             """Add a memory to the working pool"""
             memory = {
-                'memory_id': memory_id,
-                'content': content,
-                'category': category,
-                'importance': importance,
-                'added_at': datetime.now().timestamp(),
-                'last_accessed': datetime.now().timestamp()
+                "memory_id": memory_id,
+                "content": content,
+                "category": category,
+                "importance": importance,
+                "added_at": datetime.now().timestamp(),
+                "last_accessed": datetime.now().timestamp(),
             }
-            
+
             # Remove old memory if exists
             if memory_id in self.memory_index:
                 self.remove_memory(memory_id)
-            
+
             # Add to pool
             self.memory_pool.append(memory)
             self.memory_index[memory_id] = memory
             self.category_index[category].append(memory_id)
-            
+
             # Calculate initial relevance
             self._calculate_relevance(memory)
-            
+
         def remove_memory(self, memory_id: str):
             """Remove a memory from the working pool"""
             if memory_id in self.memory_index:
                 memory = self.memory_index[memory_id]
                 self.memory_pool.remove(memory)
                 del self.memory_index[memory_id]
-                self.category_index[memory['category']].remove(memory_id)
+                self.category_index[memory["category"]].remove(memory_id)
                 if memory_id in self.relevance_scores:
                     del self.relevance_scores[memory_id]
                 if memory_id in self.access_counts:
                     del self.access_counts[memory_id]
-        
+
         def access_memory(self, memory_id: str):
             """Record memory access and update relevance"""
             if memory_id in self.memory_index:
                 self.access_counts[memory_id] += 1
-                self.memory_index[memory_id]['last_accessed'] = datetime.now().timestamp()
+                self.memory_index[memory_id]["last_accessed"] = datetime.now().timestamp()
                 self._calculate_relevance(self.memory_index[memory_id])
-        
+
         def set_focus_mode(self, enabled: bool, keywords: List[str] = None):
             """Enable or disable focus mode with optional keywords"""
             self.focus_mode_enabled = enabled
             self.focus_keywords = keywords or []
-            
+
             # Recalculate relevance for all memories
             for memory in self.memory_pool:
                 self._calculate_relevance(memory)
-        
+
         def _calculate_relevance(self, memory: dict):
             """Calculate relevance score for a memory"""
-            base_score = memory['importance'] / 10.0  # Normalize to 0-1
-            
+            base_score = memory["importance"] / 10.0  # Normalize to 0-1
+
             # Recency factor
-            age_hours = (datetime.now().timestamp() - memory['added_at']) / 3600
+            age_hours = (datetime.now().timestamp() - memory["added_at"]) / 3600
             recency_factor = max(0.1, 1.0 - (age_hours / 24))  # Decay over 24 hours
-            
+
             # Access frequency factor
-            access_factor = min(1.0, self.access_counts[memory['memory_id']] / 10.0)
-            
+            access_factor = min(1.0, self.access_counts[memory["memory_id"]] / 10.0)
+
             # Focus mode factor
             focus_factor = 1.0
             if self.focus_mode_enabled and self.focus_keywords:
-                content_lower = memory['content'].lower()
-                keyword_matches = sum(1 for kw in self.focus_keywords if kw.lower() in content_lower)
+                content_lower = memory["content"].lower()
+                keyword_matches = sum(
+                    1 for kw in self.focus_keywords if kw.lower() in content_lower
+                )
                 focus_factor = min(2.0, 1.0 + (keyword_matches * 0.5))
-            
+
             # Calculate final score
             relevance = base_score * recency_factor * (0.5 + 0.5 * access_factor) * focus_factor
-            self.relevance_scores[memory['memory_id']] = min(1.0, relevance)
-        
+            self.relevance_scores[memory["memory_id"]] = min(1.0, relevance)
+
         def get_active_memories(self, limit: int = None) -> List[dict]:
             """Get active memories sorted by relevance"""
             memories = list(self.memory_pool)
-            
+
             # Filter by focus threshold if in focus mode
             if self.focus_mode_enabled:
-                memories = [m for m in memories if self.relevance_scores.get(m['memory_id'], 0) >= self.focus_threshold]
-            
+                memories = [
+                    m
+                    for m in memories
+                    if self.relevance_scores.get(m["memory_id"], 0) >= self.focus_threshold
+                ]
+
             # Sort by relevance
-            memories.sort(key=lambda m: self.relevance_scores.get(m['memory_id'], 0), reverse=True)
-            
+            memories.sort(key=lambda m: self.relevance_scores.get(m["memory_id"], 0), reverse=True)
+
             if limit:
                 memories = memories[:limit]
-            
+
             return memories
-        
+
         def get_statistics(self) -> dict:
             """Get working memory statistics"""
             active_memories = self.get_active_memories()
-            
+
             # Category distribution
             category_dist = {}
             for category, memory_ids in self.category_index.items():
                 category_dist[category] = len(memory_ids)
-            
+
             # Calculate average relevance
             relevance_values = list(self.relevance_scores.values())
             avg_relevance = sum(relevance_values) / len(relevance_values) if relevance_values else 0
-            
+
             return {
-                'total_memories': len(self.memory_pool),
-                'active_memories': len(active_memories),
-                'capacity_used': len(self.memory_pool) / self.capacity * 100,
-                'avg_relevance_score': avg_relevance,
-                'category_distribution': category_dist,
-                'total_accesses': sum(self.access_counts.values()),
-                'optimization_suggestions': self._get_optimization_suggestions()
+                "total_memories": len(self.memory_pool),
+                "active_memories": len(active_memories),
+                "capacity_used": len(self.memory_pool) / self.capacity * 100,
+                "avg_relevance_score": avg_relevance,
+                "category_distribution": category_dist,
+                "total_accesses": sum(self.access_counts.values()),
+                "optimization_suggestions": self._get_optimization_suggestions(),
             }
-        
+
         def _get_optimization_suggestions(self) -> int:
             """Count optimization suggestions"""
             suggestions = 0
-            
+
             # Check for low relevance memories
             low_relevance = sum(1 for score in self.relevance_scores.values() if score < 0.3)
             if low_relevance > self.capacity * 0.2:  # More than 20% low relevance
                 suggestions += 1
-            
+
             # Check for stale memories
             now = datetime.now().timestamp()
-            stale_memories = sum(1 for m in self.memory_pool if (now - m['last_accessed']) > 3600)  # 1 hour
+            stale_memories = sum(
+                1 for m in self.memory_pool if (now - m["last_accessed"]) > 3600
+            )  # 1 hour
             if stale_memories > self.capacity * 0.3:  # More than 30% stale
                 suggestions += 1
-            
+
             # Check for unbalanced categories
             if self.category_index:
                 sizes = [len(ids) for ids in self.category_index.values()]
                 if max(sizes) > sum(sizes) * 0.5:  # One category has more than 50%
                     suggestions += 1
-            
+
             return suggestions
-        
+
         def optimize(self):
             """Optimize working memory by removing low-relevance memories"""
             # Remove memories below threshold
             to_remove = [
-                m['memory_id'] for m in self.memory_pool 
-                if self.relevance_scores.get(m['memory_id'], 0) < 0.2
+                m["memory_id"]
+                for m in self.memory_pool
+                if self.relevance_scores.get(m["memory_id"], 0) < 0.2
             ]
-            
+
             for memory_id in to_remove:
                 self.remove_memory(memory_id)
-            
+
             self.last_optimization = datetime.now()
             self.optimization_count += 1
-            
+
             return len(to_remove)
 
     def get_working_memory_system() -> WorkingMemorySystem:
         """Get or create the global working memory system instance"""
         global _working_memory_system
-        
+
         with _working_memory_lock:
             if _working_memory_system is None:
                 _working_memory_system = WorkingMemorySystem()
@@ -3089,49 +3035,55 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class FocusMode(BaseModel):
         """Focus mode configuration"""
+
         enabled: bool = Field(..., description="Whether focus mode is enabled")
-        focus_keywords: List[str] = Field(default_factory=list, description="Keywords for focus filtering")
+        focus_keywords: List[str] = Field(
+            default_factory=list, description="Keywords for focus filtering"
+        )
 
     class PerformanceMetrics(BaseModel):
         """Working memory performance metrics"""
-        avg_relevance_score: float = Field(..., description="Average relevance score across all memories")
+
+        avg_relevance_score: float = Field(
+            ..., description="Average relevance score across all memories"
+        )
         optimization_suggestions: int = Field(..., description="Number of optimization suggestions")
 
     class WorkingMemoryStatus(BaseModel):
         """Complete working memory system status"""
+
         initialized: bool = Field(..., description="Whether the system is initialized")
         total_capacity: int = Field(..., description="Maximum memory capacity")
         current_size: int = Field(..., description="Current number of memories in pool")
         utilization_percentage: float = Field(..., description="Percentage of capacity used")
         focus_mode: FocusMode = Field(..., description="Focus mode configuration")
         performance_metrics: PerformanceMetrics = Field(..., description="Performance metrics")
-        category_distribution: Dict[str, int] = Field(default_factory=dict, description="Memory count by category")
+        category_distribution: Dict[str, int] = Field(
+            default_factory=dict, description="Memory count by category"
+        )
         last_optimization: str = Field(..., description="ISO timestamp of last optimization")
         optimization_count: int = Field(..., description="Total number of optimizations performed")
 
     class InitializeRequest(BaseModel):
         """Request model for initializing working memory"""
+
         capacity: int = Field(
-            100,
-            ge=10,
-            le=1000,
-            description="Maximum number of memories in working pool"
+            100, ge=10, le=1000, description="Maximum number of memories in working pool"
         )
         focus_threshold: float = Field(
-            0.7,
-            ge=0.0,
-            le=1.0,
-            description="Relevance threshold for focus mode"
+            0.7, ge=0.0, le=1.0, description="Relevance threshold for focus mode"
         )
 
     class InitializeResponse(BaseModel):
         """Response model for initialization"""
+
         success: bool = Field(..., description="Whether initialization was successful")
         message: str = Field(..., description="Status message")
         configuration: Dict[str, Any] = Field(..., description="Applied configuration")
 
     class MemoryItem(BaseModel):
         """Model for a memory in the working pool"""
+
         memory_id: str = Field(..., description="Unique memory identifier")
         content: str = Field(..., description="Memory content")
         category: str = Field(..., description="Memory category")
@@ -3143,17 +3095,24 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class ActiveMemoriesResponse(BaseModel):
         """Response for active memories query"""
-        memories: List[MemoryItem] = Field(..., description="List of active memories sorted by relevance")
+
+        memories: List[MemoryItem] = Field(
+            ..., description="List of active memories sorted by relevance"
+        )
         total_count: int = Field(..., description="Total number of memories matching criteria")
         focus_active: bool = Field(..., description="Whether focus mode filtering is active")
 
     class SetFocusModeRequest(BaseModel):
         """Request to set focus mode"""
+
         enabled: bool = Field(..., description="Enable or disable focus mode")
-        keywords: List[str] = Field(default_factory=list, description="Keywords for focus filtering", max_items=20)
+        keywords: List[str] = Field(
+            default_factory=list, description="Keywords for focus filtering", max_items=20
+        )
 
     class OptimizeResponse(BaseModel):
         """Response for optimization operation"""
+
         success: bool = Field(..., description="Whether optimization was successful")
         removed_count: int = Field(..., description="Number of memories removed")
         message: str = Field(..., description="Optimization result message")
@@ -3187,22 +3146,22 @@ def setup_ums_api(app: FastAPI) -> None:
                             "utilization_percentage": 45.0,
                             "focus_mode": {
                                 "enabled": True,
-                                "focus_keywords": ["document", "analysis", "pdf"]
+                                "focus_keywords": ["document", "analysis", "pdf"],
                             },
                             "performance_metrics": {
                                 "avg_relevance_score": 0.72,
-                                "optimization_suggestions": 2
+                                "optimization_suggestions": 2,
                             },
                             "category_distribution": {
                                 "reasoning": 15,
                                 "observation": 20,
-                                "decision": 10
+                                "decision": 10,
                             },
                             "last_optimization": "2024-01-01T12:30:00",
-                            "optimization_count": 5
+                            "optimization_count": 5,
                         }
                     }
-                }
+                },
             },
             500: {
                 "description": "Internal server error",
@@ -3210,36 +3169,37 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "Failed to retrieve working memory status"}
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     )
     async def get_working_memory_status() -> WorkingMemoryStatus:
         """Get working memory system status"""
         try:
             wm_system = get_working_memory_system()
             stats = wm_system.get_statistics()
-            
+
             return WorkingMemoryStatus(
                 initialized=True,
                 total_capacity=wm_system.capacity,
-                current_size=stats['total_memories'],
-                utilization_percentage=stats['capacity_used'],
+                current_size=stats["total_memories"],
+                utilization_percentage=stats["capacity_used"],
                 focus_mode=FocusMode(
-                    enabled=wm_system.focus_mode_enabled,
-                    focus_keywords=wm_system.focus_keywords
+                    enabled=wm_system.focus_mode_enabled, focus_keywords=wm_system.focus_keywords
                 ),
                 performance_metrics=PerformanceMetrics(
-                    avg_relevance_score=stats['avg_relevance_score'],
-                    optimization_suggestions=stats['optimization_suggestions']
+                    avg_relevance_score=stats["avg_relevance_score"],
+                    optimization_suggestions=stats["optimization_suggestions"],
                 ),
-                category_distribution=stats['category_distribution'],
+                category_distribution=stats["category_distribution"],
                 last_optimization=wm_system.last_optimization.isoformat(),
-                optimization_count=wm_system.optimization_count
+                optimization_count=wm_system.optimization_count,
             )
-            
+
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to retrieve working memory status: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to retrieve working memory status: {str(e)}"
+            ) from e
 
     @app.post(
         "/working-memory/initialize",
@@ -3267,11 +3227,11 @@ def setup_ums_api(app: FastAPI) -> None:
                             "configuration": {
                                 "capacity": 150,
                                 "focus_threshold": 0.8,
-                                "initialized_at": "2024-01-01T12:00:00"
-                            }
+                                "initialized_at": "2024-01-01T12:00:00",
+                            },
                         }
                     }
-                }
+                },
             },
             400: {
                 "description": "Invalid configuration parameters",
@@ -3279,70 +3239,67 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "Capacity must be between 10 and 1000"}
                     }
-                }
+                },
             },
-            500: {
-                "description": "Internal server error"
-            }
-        }
+            500: {"description": "Internal server error"},
+        },
     )
-    async def initialize_working_memory(
-        request: InitializeRequest
-    ) -> InitializeResponse:
+    async def initialize_working_memory(request: InitializeRequest) -> InitializeResponse:
         """Initialize working memory system"""
         try:
             global _working_memory_system
-            
+
             with _working_memory_lock:
                 # Create new instance with specified configuration
                 _working_memory_system = WorkingMemorySystem(
-                    capacity=request.capacity,
-                    focus_threshold=request.focus_threshold
+                    capacity=request.capacity, focus_threshold=request.focus_threshold
                 )
-                
+
                 # Optionally load recent memories from database
                 try:
                     conn = get_db_connection()
                     cursor = conn.cursor()
-                    
+
                     # Load most recent memories up to capacity
-                    cursor.execute("""
+                    cursor.execute(
+                        """
                         SELECT memory_id, content, memory_type, importance
                         FROM memories
                         WHERE created_at >= ?
                         ORDER BY importance DESC, created_at DESC
                         LIMIT ?
-                    """, (datetime.now().timestamp() - 86400, request.capacity))  # Last 24 hours
-                    
+                    """,
+                        (datetime.now().timestamp() - 86400, request.capacity),
+                    )  # Last 24 hours
+
                     loaded_count = 0
                     for row in cursor.fetchall():
                         _working_memory_system.add_memory(
-                            memory_id=row[0],
-                            content=row[1],
-                            category=row[2],
-                            importance=row[3]
+                            memory_id=row[0], content=row[1], category=row[2], importance=row[3]
                         )
                         loaded_count += 1
-                    
+
                     conn.close()
-                    
+
                     message = f"Working memory system initialized with capacity {request.capacity}, loaded {loaded_count} recent memories"
                 except Exception as e:
                     # Continue even if loading fails
                     message = f"Working memory system initialized with capacity {request.capacity} (memory loading failed: {str(e)})"
-            
+
             return InitializeResponse(
                 success=True,
                 message=message,
                 configuration={
                     "capacity": request.capacity,
                     "focus_threshold": request.focus_threshold,
-                    "initialized_at": _working_memory_system.initialized_at.isoformat()
-                }
+                    "initialized_at": _working_memory_system.initialized_at.isoformat(),
+                },
             )
-            
+
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to initialize working memory: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to initialize working memory: {str(e)}"
+            ) from e
 
     @app.get(
         "/working-memory/active",
@@ -3370,52 +3327,56 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "relevance_score": 0.92,
                                     "added_at": 1703980800.0,
                                     "last_accessed": 1703981400.0,
-                                    "access_count": 5
+                                    "access_count": 5,
                                 }
                             ],
                             "total_count": 1,
-                            "focus_active": True
+                            "focus_active": True,
                         }
                     }
-                }
+                },
             }
-        }
+        },
     )
     async def get_active_memories(
         limit: int = Query(50, ge=1, le=200, description="Maximum number of memories to return"),
-        category: Optional[str] = Query(None, description="Filter by memory category")
+        category: Optional[str] = Query(None, description="Filter by memory category"),
     ) -> ActiveMemoriesResponse:
         """Get active memories from working pool"""
         try:
             wm_system = get_working_memory_system()
             memories = wm_system.get_active_memories(limit=limit)
-            
+
             # Filter by category if specified
             if category:
-                memories = [m for m in memories if m['category'] == category]
-            
+                memories = [m for m in memories if m["category"] == category]
+
             # Convert to response format
             memory_items = []
             for mem in memories:
-                memory_items.append(MemoryItem(
-                    memory_id=mem['memory_id'],
-                    content=mem['content'],
-                    category=mem['category'],
-                    importance=mem['importance'],
-                    relevance_score=wm_system.relevance_scores.get(mem['memory_id'], 0),
-                    added_at=mem['added_at'],
-                    last_accessed=mem['last_accessed'],
-                    access_count=wm_system.access_counts.get(mem['memory_id'], 0)
-                ))
-            
+                memory_items.append(
+                    MemoryItem(
+                        memory_id=mem["memory_id"],
+                        content=mem["content"],
+                        category=mem["category"],
+                        importance=mem["importance"],
+                        relevance_score=wm_system.relevance_scores.get(mem["memory_id"], 0),
+                        added_at=mem["added_at"],
+                        last_accessed=mem["last_accessed"],
+                        access_count=wm_system.access_counts.get(mem["memory_id"], 0),
+                    )
+                )
+
             return ActiveMemoriesResponse(
                 memories=memory_items,
                 total_count=len(memory_items),
-                focus_active=wm_system.focus_mode_enabled
+                focus_active=wm_system.focus_mode_enabled,
             )
-            
+
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to retrieve active memories: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to retrieve active memories: {str(e)}"
+            ) from e
 
     @app.post(
         "/working-memory/focus",
@@ -3427,32 +3388,32 @@ def setup_ums_api(app: FastAPI) -> None:
 
     Focus mode filters memories based on relevance to specified keywords,
     helping to narrow attention to specific topics or contexts.
-        """
+        """,
     )
-    async def set_focus_mode(
-        request: SetFocusModeRequest
-    ) -> InitializeResponse:
+    async def set_focus_mode(request: SetFocusModeRequest) -> InitializeResponse:
         """Set focus mode configuration"""
         try:
             wm_system = get_working_memory_system()
             wm_system.set_focus_mode(request.enabled, request.keywords)
-            
+
             message = f"Focus mode {'enabled' if request.enabled else 'disabled'}"
             if request.enabled and request.keywords:
                 message += f" with keywords: {', '.join(request.keywords)}"
-            
+
             return InitializeResponse(
                 success=True,
                 message=message,
                 configuration={
                     "focus_enabled": request.enabled,
                     "focus_keywords": request.keywords,
-                    "focus_threshold": wm_system.focus_threshold
-                }
+                    "focus_threshold": wm_system.focus_threshold,
+                },
             )
-            
+
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to set focus mode: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to set focus mode: {str(e)}"
+            ) from e
 
     @app.post(
         "/working-memory/optimize",
@@ -3464,27 +3425,30 @@ def setup_ums_api(app: FastAPI) -> None:
 
     This operation helps maintain memory pool quality by removing memories
     with relevance scores below the optimization threshold (0.2).
-        """
+        """,
     )
     async def optimize_working_memory() -> OptimizeResponse:
         """Optimize working memory pool"""
         try:
             wm_system = get_working_memory_system()
             removed_count = wm_system.optimize()
-            
+
             return OptimizeResponse(
                 success=True,
                 removed_count=removed_count,
-                message=f"Optimization complete. Removed {removed_count} low-relevance memories."
+                message=f"Optimization complete. Removed {removed_count} low-relevance memories.",
             )
-            
+
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to optimize working memory: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to optimize working memory: {str(e)}"
+            ) from e
 
     # ---------- Performance Profiler Pydantic Models ----------
 
     class PerformanceOverviewStats(BaseModel):
         """Overall performance statistics"""
+
         total_actions: int = Field(..., description="Total number of actions executed")
         active_workflows: int = Field(..., description="Number of unique workflows")
         avg_execution_time: float = Field(..., description="Average execution time in seconds")
@@ -3500,6 +3464,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class TimelineBucket(BaseModel):
         """Performance metrics for a time bucket"""
+
         time_bucket: str = Field(..., description="Time bucket identifier")
         action_count: int = Field(..., description="Number of actions in this bucket")
         avg_duration: Optional[float] = Field(None, description="Average duration in seconds")
@@ -3509,6 +3474,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class ToolUtilization(BaseModel):
         """Tool utilization metrics"""
+
         tool_name: str = Field(..., description="Name of the tool")
         usage_count: int = Field(..., description="Number of times used")
         avg_duration: Optional[float] = Field(None, description="Average execution duration")
@@ -3517,6 +3483,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class Bottleneck(BaseModel):
         """Performance bottleneck information"""
+
         tool_name: str = Field(..., description="Tool causing the bottleneck")
         workflow_id: Optional[str] = Field(None, description="Associated workflow")
         action_id: str = Field(..., description="Action identifier")
@@ -3528,6 +3495,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class PerformanceOverviewResponse(BaseModel):
         """Response model for performance overview"""
+
         overview: PerformanceOverviewStats
         timeline: List[TimelineBucket]
         tool_utilization: List[ToolUtilization]
@@ -3537,6 +3505,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class ToolBottleneck(BaseModel):
         """Tool performance bottleneck analysis"""
+
         tool_name: str = Field(..., description="Name of the tool")
         total_calls: int = Field(..., description="Total number of calls")
         avg_duration: float = Field(..., description="Average execution duration")
@@ -3549,6 +3518,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class WorkflowBottleneck(BaseModel):
         """Workflow performance bottleneck"""
+
         workflow_id: str = Field(..., description="Workflow identifier")
         title: Optional[str] = Field(None, description="Workflow title")
         action_count: int = Field(..., description="Number of actions")
@@ -3561,22 +3531,29 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class ParallelizationOpportunity(BaseModel):
         """Workflow parallelization opportunity"""
+
         workflow_id: str = Field(..., description="Workflow identifier")
         sequential_actions: int = Field(..., description="Number of sequential actions")
         total_sequential_time: float = Field(..., description="Total sequential execution time")
         actual_elapsed_time: float = Field(..., description="Actual elapsed time")
         potential_time_savings: float = Field(..., description="Potential time savings in seconds")
-        parallelization_efficiency: float = Field(..., description="Current parallelization efficiency percentage")
+        parallelization_efficiency: float = Field(
+            ..., description="Current parallelization efficiency percentage"
+        )
         optimization_score: float = Field(..., description="Optimization potential score (0-10)")
 
     class ResourceContention(BaseModel):
         """Resource contention analysis"""
+
         tool_name: str = Field(..., description="Tool name")
         concurrent_usage: int = Field(..., description="Number of concurrent usages")
-        avg_duration_under_contention: float = Field(..., description="Average duration when contended")
+        avg_duration_under_contention: float = Field(
+            ..., description="Average duration when contended"
+        )
 
     class OptimizationRecommendation(BaseModel):
         """Performance optimization recommendation"""
+
         type: str = Field(..., description="Type of optimization")
         priority: str = Field(..., description="Priority level (high, medium, low)")
         title: str = Field(..., description="Recommendation title")
@@ -3586,6 +3563,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class BottleneckAnalysisResponse(BaseModel):
         """Response model for bottleneck analysis"""
+
         tool_bottlenecks: List[ToolBottleneck]
         workflow_bottlenecks: List[WorkflowBottleneck]
         parallelization_opportunities: List[ParallelizationOpportunity]
@@ -3623,7 +3601,7 @@ def setup_ums_api(app: FastAPI) -> None:
                                 "active_workflows": 45,
                                 "avg_execution_time": 12.5,
                                 "success_rate_percentage": 92.5,
-                                "throughput_per_hour": 52.1
+                                "throughput_per_hour": 52.1,
                             },
                             "timeline": [
                                 {
@@ -3631,14 +3609,14 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "action_count": 45,
                                     "avg_duration": 11.2,
                                     "successful_count": 42,
-                                    "failed_count": 3
+                                    "failed_count": 3,
                                 }
-                            ]
+                            ],
                         }
                     }
-                }
+                },
             }
-        }
+        },
     )
     async def get_performance_overview(
         hours_back: int = Query(
@@ -3646,24 +3624,25 @@ def setup_ums_api(app: FastAPI) -> None:
             description="Number of hours back to analyze performance data",
             ge=1,
             le=720,
-            example=24
+            example=24,
         ),
         granularity: str = Query(
             "hour",
             description="Time granularity for timeline data aggregation",
             regex="^(minute|hour|day)$",
-            example="hour"
-        )
+            example="hour",
+        ),
     ) -> PerformanceOverviewResponse:
         """Get comprehensive performance overview with metrics and trends"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             since_timestamp = datetime.now().timestamp() - (hours_back * 3600)
-            
+
             # Overall performance metrics
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     COUNT(*) as total_actions,
                     COUNT(DISTINCT workflow_id) as active_workflows,
@@ -3675,32 +3654,43 @@ def setup_ums_api(app: FastAPI) -> None:
                     COUNT(DISTINCT tool_name) as tools_used
                 FROM actions 
                 WHERE started_at >= ?
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             overview_result = cursor.fetchone()
-            overview_data = dict(zip([d[0] for d in cursor.description], overview_result, strict=False)) if overview_result else {}
-            
+            overview_data = (
+                dict(zip([d[0] for d in cursor.description], overview_result, strict=False))
+                if overview_result
+                else {}
+            )
+
             # Calculate derived metrics
-            success_rate = (overview_data.get('successful_actions', 0) / max(1, overview_data.get('total_actions', 1))) * 100
-            throughput = overview_data.get('total_actions', 0) / max(1, hours_back)
-            
+            success_rate = (
+                overview_data.get("successful_actions", 0)
+                / max(1, overview_data.get("total_actions", 1))
+            ) * 100
+            throughput = overview_data.get("total_actions", 0) / max(1, hours_back)
+
             overview_stats = PerformanceOverviewStats(
                 **overview_data,
                 success_rate_percentage=success_rate,
                 throughput_per_hour=throughput,
                 error_rate_percentage=100 - success_rate,
-                avg_workflow_size=overview_data.get('total_actions', 0) / max(1, overview_data.get('active_workflows', 1))
+                avg_workflow_size=overview_data.get("total_actions", 0)
+                / max(1, overview_data.get("active_workflows", 1)),
             )
-            
+
             # Performance timeline
-            if granularity == 'hour':
+            if granularity == "hour":
                 time_format = "strftime('%Y-%m-%d %H:00:00', datetime(started_at, 'unixepoch'))"
-            elif granularity == 'minute':
+            elif granularity == "minute":
                 time_format = "strftime('%Y-%m-%d %H:%M:00', datetime(started_at, 'unixepoch'))"
             else:  # day
                 time_format = "strftime('%Y-%m-%d', datetime(started_at, 'unixepoch'))"
-            
-            cursor.execute(f"""
+
+            cursor.execute(
+                f"""
                 SELECT 
                     {time_format} as time_bucket,
                     COUNT(*) as action_count,
@@ -3712,15 +3702,18 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ?
                 GROUP BY {time_format}
                 ORDER BY time_bucket
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             timeline_data = [
                 TimelineBucket(**dict(zip([d[0] for d in cursor.description], row, strict=False)))
                 for row in cursor.fetchall()
             ]
-            
+
             # Resource utilization by tool
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     tool_name,
                     COUNT(*) as usage_count,
@@ -3731,15 +3724,18 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ?
                 GROUP BY tool_name
                 ORDER BY usage_count DESC
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             tool_utilization = [
                 ToolUtilization(**dict(zip([d[0] for d in cursor.description], row, strict=False)))
                 for row in cursor.fetchall()
             ]
-            
+
             # Top bottlenecks (slowest operations)
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     tool_name,
                     workflow_id,
@@ -3753,29 +3749,31 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ? AND completed_at IS NOT NULL
                 ORDER BY duration DESC
                 LIMIT 10
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             bottlenecks = [
                 Bottleneck(**dict(zip([d[0] for d in cursor.description], row, strict=False)))
                 for row in cursor.fetchall()
             ]
-            
+
             conn.close()
-            
+
             return PerformanceOverviewResponse(
                 overview=overview_stats,
                 timeline=timeline_data,
                 tool_utilization=tool_utilization,
                 bottlenecks=bottlenecks,
                 analysis_period={
-                    'hours_back': hours_back,
-                    'granularity': granularity,
-                    'start_time': since_timestamp,
-                    'end_time': datetime.now().timestamp()
+                    "hours_back": hours_back,
+                    "granularity": granularity,
+                    "start_time": since_timestamp,
+                    "end_time": datetime.now().timestamp(),
                 },
-                timestamp=datetime.now().isoformat()
+                timestamp=datetime.now().isoformat(),
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
@@ -3801,31 +3799,29 @@ def setup_ums_api(app: FastAPI) -> None:
             200: {
                 "description": "Comprehensive bottleneck analysis with optimization opportunities"
             }
-        }
+        },
     )
     async def get_performance_bottlenecks(
         hours_back: int = Query(
-            24,
-            description="Hours back to analyze for bottlenecks",
-            ge=1,
-            le=720
+            24, description="Hours back to analyze for bottlenecks", ge=1, le=720
         ),
         min_duration: float = Query(
             1.0,
             description="Minimum execution duration (seconds) to consider as potential bottleneck",
-            ge=0.1
-        )
+            ge=0.1,
+        ),
     ) -> BottleneckAnalysisResponse:
         """Identify and analyze performance bottlenecks with detailed insights"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             since_timestamp = datetime.now().timestamp() - (hours_back * 3600)
-            
+
             # Identify bottlenecks by tool with percentile calculations
             # Note: SQLite doesn't have PERCENTILE_CONT, so we'll approximate
-            cursor.execute("""
+            cursor.execute(
+                """
                 WITH tool_durations AS (
                     SELECT 
                         tool_name,
@@ -3848,18 +3844,21 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE a.started_at >= ? AND a.completed_at IS NOT NULL
                 GROUP BY tool_name
                 ORDER BY avg_duration DESC
-            """, (since_timestamp, min_duration, since_timestamp))
-            
+            """,
+                (since_timestamp, min_duration, since_timestamp),
+            )
+
             tool_bottlenecks = []
             for row in cursor.fetchall():
                 data = dict(zip([d[0] for d in cursor.description], row, strict=False))
                 # Approximate percentiles (in production, you'd calculate these properly)
-                data['p95_duration'] = data['avg_duration'] * 1.5  # Approximation
-                data['p99_duration'] = data['avg_duration'] * 2.0  # Approximation
+                data["p95_duration"] = data["avg_duration"] * 1.5  # Approximation
+                data["p99_duration"] = data["avg_duration"] * 2.0  # Approximation
                 tool_bottlenecks.append(ToolBottleneck(**data))
-            
+
             # Identify workflow bottlenecks
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     w.workflow_id,
                     w.title,
@@ -3877,15 +3876,20 @@ def setup_ums_api(app: FastAPI) -> None:
                 HAVING COUNT(a.action_id) > 1
                 ORDER BY total_workflow_time DESC
                 LIMIT 20
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             workflow_bottlenecks = [
-                WorkflowBottleneck(**dict(zip([d[0] for d in cursor.description], row, strict=False)))
+                WorkflowBottleneck(
+                    **dict(zip([d[0] for d in cursor.description], row, strict=False))
+                )
                 for row in cursor.fetchall()
             ]
-            
+
             # Calculate parallelization opportunities
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     workflow_id,
                     COUNT(*) as sequential_actions,
@@ -3895,22 +3899,32 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ? AND completed_at IS NOT NULL
                 GROUP BY workflow_id
                 HAVING COUNT(*) > 2
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             parallelization_opportunities = []
             for row in cursor.fetchall():
                 data = dict(zip([d[0] for d in cursor.description], row, strict=False))
-                potential_savings = data['total_sequential_time'] - data['actual_elapsed_time']
+                potential_savings = data["total_sequential_time"] - data["actual_elapsed_time"]
                 if potential_savings > 0:
-                    parallelization_opportunities.append(ParallelizationOpportunity(
-                        **data,
-                        potential_time_savings=potential_savings,
-                        parallelization_efficiency=(data['actual_elapsed_time'] / data['total_sequential_time']) * 100,
-                        optimization_score=min(10, potential_savings / data['actual_elapsed_time'] * 10)
-                    ))
-            
+                    parallelization_opportunities.append(
+                        ParallelizationOpportunity(
+                            **data,
+                            potential_time_savings=potential_savings,
+                            parallelization_efficiency=(
+                                data["actual_elapsed_time"] / data["total_sequential_time"]
+                            )
+                            * 100,
+                            optimization_score=min(
+                                10, potential_savings / data["actual_elapsed_time"] * 10
+                            ),
+                        )
+                    )
+
             # Resource contention analysis
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     tool_name,
                     COUNT(*) as concurrent_usage,
@@ -3925,49 +3939,59 @@ def setup_ums_api(app: FastAPI) -> None:
                 )
                 GROUP BY tool_name
                 ORDER BY concurrent_usage DESC
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             resource_contention = [
-                ResourceContention(**dict(zip([d[0] for d in cursor.description], row, strict=False)))
+                ResourceContention(
+                    **dict(zip([d[0] for d in cursor.description], row, strict=False))
+                )
                 for row in cursor.fetchall()
             ]
-            
+
             conn.close()
-            
+
             # Generate optimization recommendations
             recommendations = []
-            
+
             # Tool-based recommendations
             for tool in tool_bottlenecks[:5]:
                 if tool.avg_duration > 10:  # More than 10 seconds average
-                    recommendations.append(OptimizationRecommendation(
-                        type='tool_optimization',
-                        priority='high' if tool.avg_duration > 30 else 'medium',
-                        title=f"Optimize {tool.tool_name} performance",
-                        description=f"Tool {tool.tool_name} has high average duration of {tool.avg_duration:.2f}s",
-                        impact=f"Could save ~{tool.total_time_spent * 0.3:.2f}s per execution period",
-                        actions=[
-                            'Review tool implementation for optimization opportunities',
-                            'Consider caching strategies for repeated operations',
-                            'Evaluate if tool can be replaced with faster alternative'
-                        ]
-                    ))
-            
+                    recommendations.append(
+                        OptimizationRecommendation(
+                            type="tool_optimization",
+                            priority="high" if tool.avg_duration > 30 else "medium",
+                            title=f"Optimize {tool.tool_name} performance",
+                            description=f"Tool {tool.tool_name} has high average duration of {tool.avg_duration:.2f}s",
+                            impact=f"Could save ~{tool.total_time_spent * 0.3:.2f}s per execution period",
+                            actions=[
+                                "Review tool implementation for optimization opportunities",
+                                "Consider caching strategies for repeated operations",
+                                "Evaluate if tool can be replaced with faster alternative",
+                            ],
+                        )
+                    )
+
             # Parallelization recommendations
-            for opp in sorted(parallelization_opportunities, key=lambda x: x.potential_time_savings, reverse=True)[:3]:
-                recommendations.append(OptimizationRecommendation(
-                    type='parallelization',
-                    priority='high' if opp.potential_time_savings > 20 else 'medium',
-                    title=f"Parallelize workflow {opp.workflow_id}",
-                    description=f"Workflow could save {opp.potential_time_savings:.2f}s through parallel execution",
-                    impact=f"Up to {opp.parallelization_efficiency:.1f}% efficiency improvement",
-                    actions=[
-                        'Analyze action dependencies to identify parallelizable segments',
-                        'Implement async execution where possible',
-                        'Consider workflow restructuring for better parallelization'
-                    ]
-                ))
-            
+            for opp in sorted(
+                parallelization_opportunities, key=lambda x: x.potential_time_savings, reverse=True
+            )[:3]:
+                recommendations.append(
+                    OptimizationRecommendation(
+                        type="parallelization",
+                        priority="high" if opp.potential_time_savings > 20 else "medium",
+                        title=f"Parallelize workflow {opp.workflow_id}",
+                        description=f"Workflow could save {opp.potential_time_savings:.2f}s through parallel execution",
+                        impact=f"Up to {opp.parallelization_efficiency:.1f}% efficiency improvement",
+                        actions=[
+                            "Analyze action dependencies to identify parallelizable segments",
+                            "Implement async execution where possible",
+                            "Consider workflow restructuring for better parallelization",
+                        ],
+                    )
+                )
+
             return BottleneckAnalysisResponse(
                 tool_bottlenecks=tool_bottlenecks,
                 workflow_bottlenecks=workflow_bottlenecks,
@@ -3975,14 +3999,20 @@ def setup_ums_api(app: FastAPI) -> None:
                 resource_contention=resource_contention,
                 recommendations=recommendations,
                 analysis_summary={
-                    'total_bottlenecks_identified': len(tool_bottlenecks) + len(workflow_bottlenecks),
-                    'highest_impact_tool': tool_bottlenecks[0].tool_name if tool_bottlenecks else None,
-                    'avg_tool_duration': sum(t.avg_duration for t in tool_bottlenecks) / len(tool_bottlenecks) if tool_bottlenecks else 0,
-                    'parallelization_potential': len(parallelization_opportunities)
+                    "total_bottlenecks_identified": len(tool_bottlenecks)
+                    + len(workflow_bottlenecks),
+                    "highest_impact_tool": tool_bottlenecks[0].tool_name
+                    if tool_bottlenecks
+                    else None,
+                    "avg_tool_duration": sum(t.avg_duration for t in tool_bottlenecks)
+                    / len(tool_bottlenecks)
+                    if tool_bottlenecks
+                    else 0,
+                    "parallelization_potential": len(parallelization_opportunities),
                 },
-                timestamp=datetime.now().isoformat()
+                timestamp=datetime.now().isoformat(),
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
@@ -3992,98 +4022,109 @@ def setup_ums_api(app: FastAPI) -> None:
 
     def build_flame_graph_structure(actions: List[Dict], workflow_id: str) -> Dict:
         """Build hierarchical flame graph structure from actions"""
-        total_duration = sum(action.get('duration', 0) for action in actions if action.get('duration'))
-        
+        total_duration = sum(
+            action.get("duration", 0) for action in actions if action.get("duration")
+        )
+
         flame_graph_data = {
-            'name': f'Workflow {workflow_id}',
-            'value': total_duration,
-            'children': []
+            "name": f"Workflow {workflow_id}",
+            "value": total_duration,
+            "children": [],
         }
-        
+
         # Group actions by tool for flame graph hierarchy
         tool_groups = {}
         for action in actions:
-            tool_name = action.get('tool_name', 'unknown')
+            tool_name = action.get("tool_name", "unknown")
             if tool_name not in tool_groups:
                 tool_groups[tool_name] = []
             tool_groups[tool_name].append(action)
-        
+
         # Build hierarchical structure
         for tool_name, tool_actions in tool_groups.items():
-            tool_duration = sum(action.get('duration', 0) for action in tool_actions if action.get('duration'))
-            
-            tool_node = {
-                'name': tool_name,
-                'value': tool_duration,
-                'children': []
-            }
-            
+            tool_duration = sum(
+                action.get("duration", 0) for action in tool_actions if action.get("duration")
+            )
+
+            tool_node = {"name": tool_name, "value": tool_duration, "children": []}
+
             # Add individual actions as children
             for action in tool_actions:
-                if action.get('duration'):
+                if action.get("duration"):
                     action_node = {
-                        'name': f"Action {action['action_id']}",
-                        'value': action['duration'],
-                        'action_id': action['action_id'],
-                        'status': action.get('status'),
-                        'reasoning': action.get('reasoning', ''),
-                        'started_at': action.get('started_at'),
-                        'completed_at': action.get('completed_at')
+                        "name": f"Action {action['action_id']}",
+                        "value": action["duration"],
+                        "action_id": action["action_id"],
+                        "status": action.get("status"),
+                        "reasoning": action.get("reasoning", ""),
+                        "started_at": action.get("started_at"),
+                        "completed_at": action.get("completed_at"),
                     }
-                    tool_node['children'].append(action_node)
-            
-            flame_graph_data['children'].append(tool_node)
-        
+                    tool_node["children"].append(action_node)
+
+            flame_graph_data["children"].append(tool_node)
+
         return flame_graph_data
 
     def calculate_critical_path(actions: List[Dict]) -> List[Dict]:
         """Calculate the critical path through the workflow"""
         if not actions:
             return []
-        
+
         # Sort actions by start time
-        sorted_actions = sorted(actions, key=lambda x: x.get('started_at', 0))
-        
+        sorted_actions = sorted(actions, key=lambda x: x.get("started_at", 0))
+
         critical_path = []
-        current_time = min(action['started_at'] for action in sorted_actions if action.get('started_at'))
-        workflow_end = max(action['completed_at'] for action in sorted_actions if action.get('completed_at'))
-        
+        current_time = min(
+            action["started_at"] for action in sorted_actions if action.get("started_at")
+        )
+        workflow_end = max(
+            action["completed_at"] for action in sorted_actions if action.get("completed_at")
+        )
+
         while current_time < workflow_end:
             # Find action that was running at current_time and ends latest
             running_actions = [
-                a for a in sorted_actions 
-                if a.get('started_at', 0) <= current_time and a.get('completed_at', 0) > current_time
+                a
+                for a in sorted_actions
+                if a.get("started_at", 0) <= current_time
+                and a.get("completed_at", 0) > current_time
             ]
-            
+
             if running_actions:
                 # Find the action that ends latest (most critical)
-                critical_action = max(running_actions, key=lambda x: x.get('completed_at', 0))
-                if critical_action not in [cp['action_id'] for cp in critical_path]:
-                    critical_path.append({
-                        'action_id': critical_action['action_id'],
-                        'tool_name': critical_action.get('tool_name'),
-                        'duration': critical_action.get('duration', 0),
-                        'start_time': critical_action.get('started_at'),
-                        'end_time': critical_action.get('completed_at')
-                    })
-                current_time = critical_action.get('completed_at', current_time + 1)
+                critical_action = max(running_actions, key=lambda x: x.get("completed_at", 0))
+                if critical_action not in [cp["action_id"] for cp in critical_path]:
+                    critical_path.append(
+                        {
+                            "action_id": critical_action["action_id"],
+                            "tool_name": critical_action.get("tool_name"),
+                            "duration": critical_action.get("duration", 0),
+                            "start_time": critical_action.get("started_at"),
+                            "end_time": critical_action.get("completed_at"),
+                        }
+                    )
+                current_time = critical_action.get("completed_at", current_time + 1)
             else:
                 # No action running, find next action start
-                future_actions = [a for a in sorted_actions if a.get('started_at', 0) > current_time]
+                future_actions = [
+                    a for a in sorted_actions if a.get("started_at", 0) > current_time
+                ]
                 if future_actions:
-                    current_time = min(a['started_at'] for a in future_actions)
+                    current_time = min(a["started_at"] for a in future_actions)
                 else:
                     break
-        
+
         return critical_path
 
     # ---------- Flame Graph Pydantic Models ----------
 
     class FlameGraphNode(BaseModel):
         """Model for a flame graph node"""
+
         name: str = Field(..., description="Name of the node (workflow, tool, or action)")
         value: float = Field(..., description="Duration in seconds")
-        children: List['FlameGraphNode'] = Field(default_factory=list, description="Child nodes")
+        children: List["FlameGraphNode"] = Field(default_factory=list, description="Child nodes")
         action_id: Optional[str] = Field(None, description="Action ID if this is an action node")
         status: Optional[str] = Field(None, description="Execution status")
         reasoning: Optional[str] = Field(None, description="Reasoning for the action")
@@ -4094,6 +4135,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class CriticalPathAction(BaseModel):
         """Model for a critical path action"""
+
         action_id: str = Field(..., description="Action identifier")
         tool_name: str = Field(..., description="Tool used for the action")
         duration: float = Field(..., description="Duration in seconds")
@@ -4102,8 +4144,11 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class WorkflowMetrics(BaseModel):
         """Workflow performance metrics"""
+
         total_actions: int = Field(..., description="Total number of actions in workflow")
-        total_cpu_time: float = Field(..., description="Total CPU time (sum of all action durations)")
+        total_cpu_time: float = Field(
+            ..., description="Total CPU time (sum of all action durations)"
+        )
         wall_clock_time: float = Field(..., description="Total wall clock time from start to end")
         parallelization_efficiency: float = Field(..., description="Efficiency percentage (0-100)")
         avg_action_duration: float = Field(..., description="Average duration per action")
@@ -4112,15 +4157,21 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class WorkflowAnalysis(BaseModel):
         """Analysis results for workflow optimization"""
+
         bottleneck_tool: Optional[str] = Field(None, description="Tool causing the main bottleneck")
-        parallelization_potential: float = Field(..., description="Potential time savings through parallelization")
+        parallelization_potential: float = Field(
+            ..., description="Potential time savings through parallelization"
+        )
         optimization_score: float = Field(..., description="Overall optimization score (0-10)")
 
     class FlameGraphResponse(BaseModel):
         """Response model for flame graph generation"""
+
         flame_graph: FlameGraphNode = Field(..., description="Hierarchical flame graph data")
         metrics: WorkflowMetrics = Field(..., description="Workflow performance metrics")
-        critical_path: List[CriticalPathAction] = Field(..., description="Critical path through the workflow")
+        critical_path: List[CriticalPathAction] = Field(
+            ..., description="Critical path through the workflow"
+        )
         analysis: WorkflowAnalysis = Field(..., description="Workflow optimization analysis")
         timestamp: str = Field(..., description="Response generation timestamp")
 
@@ -4128,9 +4179,12 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class DailyTrend(BaseModel):
         """Model for daily performance metrics"""
+
         date: str = Field(..., description="Date in YYYY-MM-DD format")
         action_count: int = Field(..., description="Number of actions executed")
-        avg_duration: Optional[float] = Field(None, description="Average action duration in seconds")
+        avg_duration: Optional[float] = Field(
+            None, description="Average action duration in seconds"
+        )
         success_rate: float = Field(..., description="Success rate percentage (0-100)")
         throughput: float = Field(..., description="Actions per hour")
         error_rate: float = Field(..., description="Error rate percentage (0-100)")
@@ -4141,6 +4195,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class ToolTrend(BaseModel):
         """Model for tool-specific performance trends"""
+
         tool_name: str = Field(..., description="Name of the tool")
         date: str = Field(..., description="Date in YYYY-MM-DD format")
         usage_count: int = Field(..., description="Number of times used")
@@ -4149,6 +4204,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class WorkflowComplexityTrend(BaseModel):
         """Model for workflow complexity trends"""
+
         date: str = Field(..., description="Date in YYYY-MM-DD format")
         workflow_id: str = Field(..., description="Workflow identifier")
         action_count: int = Field(..., description="Number of actions in workflow")
@@ -4157,6 +4213,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class Pattern(BaseModel):
         """Detected performance pattern"""
+
         type: str = Field(..., description="Type of pattern detected")
         description: str = Field(..., description="Description of the pattern")
         impact: str = Field(..., description="Impact level (high/medium/low)")
@@ -4165,23 +4222,39 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class TrendAnalysis(BaseModel):
         """Trend analysis results"""
-        performance_trend: str = Field(..., description="Overall performance trend (improving/degrading/stable/insufficient_data)")
-        success_trend: str = Field(..., description="Success rate trend (improving/degrading/stable/insufficient_data)")
+
+        performance_trend: str = Field(
+            ...,
+            description="Overall performance trend (improving/degrading/stable/insufficient_data)",
+        )
+        success_trend: str = Field(
+            ..., description="Success rate trend (improving/degrading/stable/insufficient_data)"
+        )
         data_points: int = Field(..., description="Number of data points analyzed")
         analysis_period_days: int = Field(..., description="Analysis period in days")
 
     class InsightMetrics(BaseModel):
         """Performance insight metrics"""
-        best_performing_day: Optional[DailyTrend] = Field(None, description="Day with best performance")
-        worst_performing_day: Optional[DailyTrend] = Field(None, description="Day with worst performance")
-        peak_throughput_day: Optional[DailyTrend] = Field(None, description="Day with highest throughput")
+
+        best_performing_day: Optional[DailyTrend] = Field(
+            None, description="Day with best performance"
+        )
+        worst_performing_day: Optional[DailyTrend] = Field(
+            None, description="Day with worst performance"
+        )
+        peak_throughput_day: Optional[DailyTrend] = Field(
+            None, description="Day with highest throughput"
+        )
         avg_daily_actions: float = Field(..., description="Average actions per day")
 
     class PerformanceTrendsResponse(BaseModel):
         """Response model for performance trends analysis"""
+
         daily_trends: List[DailyTrend] = Field(..., description="Daily performance metrics")
         tool_trends: List[ToolTrend] = Field(..., description="Tool-specific performance trends")
-        workflow_complexity: List[WorkflowComplexityTrend] = Field(..., description="Workflow complexity trends")
+        workflow_complexity: List[WorkflowComplexityTrend] = Field(
+            ..., description="Workflow complexity trends"
+        )
         trend_analysis: TrendAnalysis = Field(..., description="Overall trend analysis")
         patterns: List[Pattern] = Field(..., description="Detected performance patterns")
         insights: InsightMetrics = Field(..., description="Key performance insights")
@@ -4226,16 +4299,12 @@ def setup_ums_api(app: FastAPI) -> None:
                                                 "status": "completed",
                                                 "reasoning": "Navigate to documentation site",
                                                 "started_at": 1703980800.0,
-                                                "completed_at": 1703980845.2
+                                                "completed_at": 1703980845.2,
                                             }
-                                        ]
+                                        ],
                                     },
-                                    {
-                                        "name": "execute_python",
-                                        "value": 60.2,
-                                        "children": []
-                                    }
-                                ]
+                                    {"name": "execute_python", "value": 60.2, "children": []},
+                                ],
                             },
                             "metrics": {
                                 "total_actions": 5,
@@ -4244,7 +4313,7 @@ def setup_ums_api(app: FastAPI) -> None:
                                 "parallelization_efficiency": 67.8,
                                 "avg_action_duration": 29.1,
                                 "workflow_start": 1703980800.0,
-                                "workflow_end": 1703980898.7
+                                "workflow_end": 1703980898.7,
                             },
                             "critical_path": [
                                 {
@@ -4252,26 +4321,24 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "tool_name": "smart_browser",
                                     "duration": 45.2,
                                     "start_time": 1703980800.0,
-                                    "end_time": 1703980845.2
+                                    "end_time": 1703980845.2,
                                 }
                             ],
                             "analysis": {
                                 "bottleneck_tool": "smart_browser",
                                 "parallelization_potential": 46.8,
-                                "optimization_score": 6.8
+                                "optimization_score": 6.8,
                             },
-                            "timestamp": "2024-01-01T00:00:00Z"
+                            "timestamp": "2024-01-01T00:00:00Z",
                         }
                     }
-                }
+                },
             },
             400: {
                 "description": "Missing required workflow_id parameter",
                 "content": {
-                    "application/json": {
-                        "example": {"detail": "workflow_id parameter is required"}
-                    }
-                }
+                    "application/json": {"example": {"detail": "workflow_id parameter is required"}}
+                },
             },
             404: {
                 "description": "No actions found for specified workflow",
@@ -4279,37 +4346,36 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "No actions found for workflow 'workflow_abc123'"}
                     }
-                }
+                },
             },
-            500: {
-                "description": "Internal server error"
-            }
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def get_performance_flame_graph(
         workflow_id: str = Query(
             ...,
             description="Workflow ID to generate flame graph for",
             example="workflow_abc123",
-            regex="^[a-zA-Z0-9_-]+$"
+            regex="^[a-zA-Z0-9_-]+$",
         ),
         hours_back: int = Query(
             24,
             description="Hours back to search for workflow execution data",
             ge=1,
             le=720,  # Max 30 days
-            example=24
-        )
+            example=24,
+        ),
     ) -> FlameGraphResponse:
         """Generate flame graph data for workflow performance visualization"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             since_timestamp = datetime.now().timestamp() - (hours_back * 3600)
-            
+
             # Get workflow actions with timing data
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     action_id,
                     tool_name,
@@ -4323,61 +4389,79 @@ def setup_ums_api(app: FastAPI) -> None:
                 FROM actions 
                 WHERE workflow_id = ? AND started_at >= ?
                 ORDER BY started_at
-            """, (workflow_id, since_timestamp))
-            
-            actions = [dict(zip([d[0] for d in cursor.description], row, strict=False)) for row in cursor.fetchall()]
-            
+            """,
+                (workflow_id, since_timestamp),
+            )
+
+            actions = [
+                dict(zip([d[0] for d in cursor.description], row, strict=False))
+                for row in cursor.fetchall()
+            ]
+
             if not actions:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"No actions found for workflow '{workflow_id}'"
+                    status_code=404, detail=f"No actions found for workflow '{workflow_id}'"
                 )
-            
+
             # Build flame graph structure
             flame_graph_data = build_flame_graph_structure(actions, workflow_id)
-            
+
             # Calculate performance metrics
-            total_duration = sum(action.get('duration', 0) for action in actions if action.get('duration'))
-            workflow_start = min(action['started_at'] for action in actions if action.get('started_at'))
-            workflow_end = max(action['completed_at'] for action in actions if action.get('completed_at'))
-            wall_clock_time = workflow_end - workflow_start if workflow_end and workflow_start else 0
-            
+            total_duration = sum(
+                action.get("duration", 0) for action in actions if action.get("duration")
+            )
+            workflow_start = min(
+                action["started_at"] for action in actions if action.get("started_at")
+            )
+            workflow_end = max(
+                action["completed_at"] for action in actions if action.get("completed_at")
+            )
+            wall_clock_time = (
+                workflow_end - workflow_start if workflow_end and workflow_start else 0
+            )
+
             # Parallelization efficiency
-            parallelization_efficiency = (wall_clock_time / total_duration * 100) if total_duration > 0 else 0
-            
+            parallelization_efficiency = (
+                (wall_clock_time / total_duration * 100) if total_duration > 0 else 0
+            )
+
             # Critical path analysis
             critical_path = calculate_critical_path(actions)
-            
+
             # Find bottleneck tool
             tool_durations = {}
             for action in actions:
-                tool_name = action.get('tool_name', 'unknown')
-                duration = action.get('duration', 0)
+                tool_name = action.get("tool_name", "unknown")
+                duration = action.get("duration", 0)
                 if tool_name not in tool_durations:
                     tool_durations[tool_name] = 0
                 tool_durations[tool_name] += duration
-            
-            bottleneck_tool = max(tool_durations.keys(), key=lambda t: tool_durations[t]) if tool_durations else None
-            
+
+            bottleneck_tool = (
+                max(tool_durations.keys(), key=lambda t: tool_durations[t])
+                if tool_durations
+                else None
+            )
+
             # Calculate optimization potential
             parallelization_potential = max(0, total_duration - wall_clock_time)
             optimization_score = min(10, parallelization_efficiency / 10)
-            
+
             conn.close()
-            
+
             # Convert flame graph to Pydantic model
             def convert_to_model(node: Dict) -> FlameGraphNode:
                 return FlameGraphNode(
-                    name=node['name'],
-                    value=node['value'],
-                    children=[convert_to_model(child) for child in node.get('children', [])],
-                    action_id=node.get('action_id'),
-                    status=node.get('status'),
-                    reasoning=node.get('reasoning'),
-                    started_at=node.get('started_at'),
-                    completed_at=node.get('completed_at')
+                    name=node["name"],
+                    value=node["value"],
+                    children=[convert_to_model(child) for child in node.get("children", [])],
+                    action_id=node.get("action_id"),
+                    status=node.get("status"),
+                    reasoning=node.get("reasoning"),
+                    started_at=node.get("started_at"),
+                    completed_at=node.get("completed_at"),
                 )
-            
+
             return FlameGraphResponse(
                 flame_graph=convert_to_model(flame_graph_data),
                 metrics=WorkflowMetrics(
@@ -4387,17 +4471,17 @@ def setup_ums_api(app: FastAPI) -> None:
                     parallelization_efficiency=parallelization_efficiency,
                     avg_action_duration=total_duration / len(actions) if actions else 0,
                     workflow_start=workflow_start,
-                    workflow_end=workflow_end
+                    workflow_end=workflow_end,
                 ),
                 critical_path=[CriticalPathAction(**cp) for cp in critical_path],
                 analysis=WorkflowAnalysis(
                     bottleneck_tool=bottleneck_tool,
                     parallelization_potential=parallelization_potential,
-                    optimization_score=optimization_score
+                    optimization_score=optimization_score,
                 ),
-                timestamp=datetime.now().isoformat()
+                timestamp=datetime.now().isoformat(),
             )
-            
+
         except HTTPException:
             raise
         except sqlite3.Error as e:
@@ -4438,7 +4522,7 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "successful_actions": 139,
                                     "failed_actions": 11,
                                     "workflow_count": 15,
-                                    "tool_count": 8
+                                    "tool_count": 8,
                                 }
                             ],
                             "tool_trends": [
@@ -4447,7 +4531,7 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "date": "2024-01-01",
                                     "usage_count": 45,
                                     "avg_duration": 35.2,
-                                    "success_count": 42
+                                    "success_count": 42,
                                 }
                             ],
                             "workflow_complexity": [],
@@ -4455,14 +4539,14 @@ def setup_ums_api(app: FastAPI) -> None:
                                 "performance_trend": "improving",
                                 "success_trend": "stable",
                                 "data_points": 7,
-                                "analysis_period_days": 7
+                                "analysis_period_days": 7,
                             },
                             "patterns": [
                                 {
                                     "type": "weekly_pattern",
                                     "description": "Performance varies significantly between weekdays (25.5s) and weekends (35.2s)",
                                     "impact": "medium",
-                                    "recommendation": "Consider different optimization strategies for weekend vs weekday operations"
+                                    "recommendation": "Consider different optimization strategies for weekend vs weekday operations",
                                 }
                             ],
                             "insights": {
@@ -4470,19 +4554,17 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "date": "2024-01-03",
                                     "action_count": 180,
                                     "avg_duration": 22.3,
-                                    "success_rate": 95.5
+                                    "success_rate": 95.5,
                                 },
-                                "avg_daily_actions": 150.5
+                                "avg_daily_actions": 150.5,
                             },
-                            "timestamp": "2024-01-07T12:00:00Z"
+                            "timestamp": "2024-01-07T12:00:00Z",
                         }
                     }
-                }
+                },
             },
-            500: {
-                "description": "Internal server error"
-            }
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def get_performance_trends(
         days_back: int = Query(
@@ -4490,24 +4572,25 @@ def setup_ums_api(app: FastAPI) -> None:
             description="Number of days back to analyze trends",
             ge=1,
             le=90,  # Max 3 months
-            example=7
+            example=7,
         ),
         metric: str = Query(
             "duration",
             description="Primary metric to analyze for trends",
             regex="^(duration|success_rate|throughput)$",
-            example="duration"
-        )
+            example="duration",
+        ),
     ) -> PerformanceTrendsResponse:
         """Analyze performance trends and patterns over time"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             since_timestamp = datetime.now().timestamp() - (days_back * 24 * 3600)
-            
+
             # Daily trends
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     DATE(datetime(started_at, 'unixepoch')) as date,
                     COUNT(*) as action_count,
@@ -4520,31 +4603,44 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ?
                 GROUP BY DATE(datetime(started_at, 'unixepoch'))
                 ORDER BY date
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             daily_trends = []
             for row in cursor.fetchall():
-                date, action_count, avg_duration, successful_actions, failed_actions, workflow_count, tool_count = row
-                
+                (
+                    date,
+                    action_count,
+                    avg_duration,
+                    successful_actions,
+                    failed_actions,
+                    workflow_count,
+                    tool_count,
+                ) = row
+
                 success_rate = (successful_actions / max(1, action_count)) * 100
                 throughput = action_count / 24  # actions per hour
                 error_rate = (failed_actions / max(1, action_count)) * 100
-                
-                daily_trends.append(DailyTrend(
-                    date=date,
-                    action_count=action_count,
-                    avg_duration=avg_duration,
-                    success_rate=success_rate,
-                    throughput=throughput,
-                    error_rate=error_rate,
-                    successful_actions=successful_actions,
-                    failed_actions=failed_actions,
-                    workflow_count=workflow_count,
-                    tool_count=tool_count
-                ))
-            
+
+                daily_trends.append(
+                    DailyTrend(
+                        date=date,
+                        action_count=action_count,
+                        avg_duration=avg_duration,
+                        success_rate=success_rate,
+                        throughput=throughput,
+                        error_rate=error_rate,
+                        successful_actions=successful_actions,
+                        failed_actions=failed_actions,
+                        workflow_count=workflow_count,
+                        tool_count=tool_count,
+                    )
+                )
+
             # Tool performance trends
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     tool_name,
                     DATE(datetime(started_at, 'unixepoch')) as date,
@@ -4555,21 +4651,24 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ?
                 GROUP BY tool_name, DATE(datetime(started_at, 'unixepoch'))
                 ORDER BY tool_name, date
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             tool_trends = [
                 ToolTrend(
                     tool_name=row[0],
                     date=row[1],
                     usage_count=row[2],
                     avg_duration=row[3],
-                    success_count=row[4]
+                    success_count=row[4],
                 )
                 for row in cursor.fetchall()
             ]
-            
+
             # Workflow complexity trends
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     DATE(datetime(started_at, 'unixepoch')) as date,
                     workflow_id,
@@ -4580,85 +4679,123 @@ def setup_ums_api(app: FastAPI) -> None:
                 WHERE started_at >= ? AND workflow_id IS NOT NULL
                 GROUP BY DATE(datetime(started_at, 'unixepoch')), workflow_id
                 ORDER BY date, workflow_id
-            """, (since_timestamp,))
-            
+            """,
+                (since_timestamp,),
+            )
+
             workflow_complexity = [
                 WorkflowComplexityTrend(
                     date=row[0],
                     workflow_id=row[1],
                     action_count=row[2],
                     total_duration=row[3],
-                    elapsed_time=row[4]
+                    elapsed_time=row[4],
                 )
                 for row in cursor.fetchall()
             ]
-            
+
             # Calculate trend analysis
             if len(daily_trends) >= 2:
                 # Performance trend (improving, degrading, stable)
-                recent_avg = sum(d.avg_duration or 0 for d in daily_trends[-3:]) / min(3, len(daily_trends))
-                earlier_avg = sum(d.avg_duration or 0 for d in daily_trends[:3]) / min(3, len(daily_trends))
-                
+                recent_avg = sum(d.avg_duration or 0 for d in daily_trends[-3:]) / min(
+                    3, len(daily_trends)
+                )
+                earlier_avg = sum(d.avg_duration or 0 for d in daily_trends[:3]) / min(
+                    3, len(daily_trends)
+                )
+
                 if recent_avg > earlier_avg * 1.1:
-                    performance_trend = 'degrading'
+                    performance_trend = "degrading"
                 elif recent_avg < earlier_avg * 0.9:
-                    performance_trend = 'improving'
+                    performance_trend = "improving"
                 else:
-                    performance_trend = 'stable'
-                
+                    performance_trend = "stable"
+
                 # Success rate trend
-                recent_success = sum(d.success_rate for d in daily_trends[-3:]) / min(3, len(daily_trends))
-                earlier_success = sum(d.success_rate for d in daily_trends[:3]) / min(3, len(daily_trends))
-                
-                success_trend = 'improving' if recent_success > earlier_success else 'degrading' if recent_success < earlier_success else 'stable'
+                recent_success = sum(d.success_rate for d in daily_trends[-3:]) / min(
+                    3, len(daily_trends)
+                )
+                earlier_success = sum(d.success_rate for d in daily_trends[:3]) / min(
+                    3, len(daily_trends)
+                )
+
+                success_trend = (
+                    "improving"
+                    if recent_success > earlier_success
+                    else "degrading"
+                    if recent_success < earlier_success
+                    else "stable"
+                )
             else:
-                performance_trend = 'insufficient_data'
-                success_trend = 'insufficient_data'
-            
+                performance_trend = "insufficient_data"
+                success_trend = "insufficient_data"
+
             # Identify performance patterns
             patterns = []
-            
+
             # Weekly pattern detection
             if len(daily_trends) >= 7:
-                weekend_performance = [d for d in daily_trends if datetime.strptime(d.date, '%Y-%m-%d').weekday() >= 5]
-                weekday_performance = [d for d in daily_trends if datetime.strptime(d.date, '%Y-%m-%d').weekday() < 5]
-                
+                weekend_performance = [
+                    d for d in daily_trends if datetime.strptime(d.date, "%Y-%m-%d").weekday() >= 5
+                ]
+                weekday_performance = [
+                    d for d in daily_trends if datetime.strptime(d.date, "%Y-%m-%d").weekday() < 5
+                ]
+
                 if weekend_performance and weekday_performance:
-                    weekend_avg = sum(d.avg_duration or 0 for d in weekend_performance) / len(weekend_performance)
-                    weekday_avg = sum(d.avg_duration or 0 for d in weekday_performance) / len(weekday_performance)
-                    
+                    weekend_avg = sum(d.avg_duration or 0 for d in weekend_performance) / len(
+                        weekend_performance
+                    )
+                    weekday_avg = sum(d.avg_duration or 0 for d in weekday_performance) / len(
+                        weekday_performance
+                    )
+
                     if abs(weekend_avg - weekday_avg) > weekday_avg * 0.2:
-                        patterns.append(Pattern(
-                            type='weekly_pattern',
-                            description=f"Performance varies significantly between weekdays ({weekday_avg:.2f}s) and weekends ({weekend_avg:.2f}s)",
-                            impact='medium',
-                            recommendation='Consider different optimization strategies for weekend vs weekday operations'
-                        ))
-            
+                        patterns.append(
+                            Pattern(
+                                type="weekly_pattern",
+                                description=f"Performance varies significantly between weekdays ({weekday_avg:.2f}s) and weekends ({weekend_avg:.2f}s)",
+                                impact="medium",
+                                recommendation="Consider different optimization strategies for weekend vs weekday operations",
+                            )
+                        )
+
             # Anomaly detection (simple outlier detection)
             if daily_trends:
                 durations = [d.avg_duration or 0 for d in daily_trends]
                 mean_duration = sum(durations) / len(durations)
-                
-                outliers = [d for d in daily_trends if abs((d.avg_duration or 0) - mean_duration) > mean_duration * 0.5]
-                
+
+                outliers = [
+                    d
+                    for d in daily_trends
+                    if abs((d.avg_duration or 0) - mean_duration) > mean_duration * 0.5
+                ]
+
                 for outlier in outliers:
-                    patterns.append(Pattern(
-                        type='performance_anomaly',
-                        date=outlier.date,
-                        description=f"Unusual performance on {outlier.date}: {outlier.avg_duration:.2f}s vs normal {mean_duration:.2f}s",
-                        impact='high' if abs((outlier.avg_duration or 0) - mean_duration) > mean_duration else 'medium',
-                        recommendation='Investigate system conditions and workload on this date'
-                    ))
-            
+                    patterns.append(
+                        Pattern(
+                            type="performance_anomaly",
+                            date=outlier.date,
+                            description=f"Unusual performance on {outlier.date}: {outlier.avg_duration:.2f}s vs normal {mean_duration:.2f}s",
+                            impact="high"
+                            if abs((outlier.avg_duration or 0) - mean_duration) > mean_duration
+                            else "medium",
+                            recommendation="Investigate system conditions and workload on this date",
+                        )
+                    )
+
             # Generate insights
             best_day = max(daily_trends, key=lambda x: x.success_rate) if daily_trends else None
             worst_day = min(daily_trends, key=lambda x: x.success_rate) if daily_trends else None
-            peak_throughput_day = max(daily_trends, key=lambda x: x.throughput) if daily_trends else None
-            avg_daily_actions = sum(d.action_count for d in daily_trends) / len(daily_trends) if daily_trends else 0
-            
+            peak_throughput_day = (
+                max(daily_trends, key=lambda x: x.throughput) if daily_trends else None
+            )
+            avg_daily_actions = (
+                sum(d.action_count for d in daily_trends) / len(daily_trends) if daily_trends else 0
+            )
+
             conn.close()
-            
+
             return PerformanceTrendsResponse(
                 daily_trends=daily_trends,
                 tool_trends=tool_trends,
@@ -4667,18 +4804,18 @@ def setup_ums_api(app: FastAPI) -> None:
                     performance_trend=performance_trend,
                     success_trend=success_trend,
                     data_points=len(daily_trends),
-                    analysis_period_days=days_back
+                    analysis_period_days=days_back,
                 ),
                 patterns=patterns,
                 insights=InsightMetrics(
                     best_performing_day=best_day,
                     worst_performing_day=worst_day,
                     peak_throughput_day=peak_throughput_day,
-                    avg_daily_actions=avg_daily_actions
+                    avg_daily_actions=avg_daily_actions,
                 ),
-                timestamp=datetime.now().isoformat()
+                timestamp=datetime.now().isoformat(),
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
@@ -4688,76 +4825,116 @@ def setup_ums_api(app: FastAPI) -> None:
 
     def calculate_tool_reliability_score(tool_stats: dict) -> float:
         """Calculate reliability score for a tool"""
-        total_calls = tool_stats.get('total_calls', 0)
-        successful_calls = tool_stats.get('successful_calls', 0)
-        
+        total_calls = tool_stats.get("total_calls", 0)
+        successful_calls = tool_stats.get("successful_calls", 0)
+
         if total_calls == 0:
             return 0.0
-        
+
         success_rate = successful_calls / total_calls
         volume_factor = min(1.0, total_calls / 100)  # Normalize by 100 calls
-        
+
         return round(success_rate * volume_factor * 100, 2)
 
     def categorize_tool_performance(avg_execution_time: float) -> str:
         """Categorize tool performance based on average execution time"""
         if avg_execution_time is None:
-            return 'unknown'
-        
+            return "unknown"
+
         if avg_execution_time <= 5:
-            return 'fast'
+            return "fast"
         elif avg_execution_time <= 15:
-            return 'normal'
+            return "normal"
         elif avg_execution_time <= 30:
-            return 'slow'
+            return "slow"
         else:
-            return 'very_slow'
+            return "very_slow"
 
     # ---------- Performance Recommendations Pydantic Models ----------
 
     class ImpactEstimate(BaseModel):
         """Model for recommendation impact estimates"""
+
         time_savings_potential: float = Field(..., description="Estimated time savings in seconds")
         affected_actions: int = Field(..., description="Number of actions that would benefit")
-        cost_benefit_ratio: float = Field(..., description="Ratio of benefit to implementation cost")
+        cost_benefit_ratio: float = Field(
+            ..., description="Ratio of benefit to implementation cost"
+        )
         affected_workflows: Optional[int] = Field(None, description="Number of affected workflows")
-        efficiency_improvement: Optional[float] = Field(None, description="Percentage efficiency improvement")
-        reliability_improvement: Optional[float] = Field(None, description="Percentage reliability improvement")
-        user_experience_impact: Optional[str] = Field(None, description="Impact on user experience (high/medium/low)")
+        efficiency_improvement: Optional[float] = Field(
+            None, description="Percentage efficiency improvement"
+        )
+        reliability_improvement: Optional[float] = Field(
+            None, description="Percentage reliability improvement"
+        )
+        user_experience_impact: Optional[str] = Field(
+            None, description="Impact on user experience (high/medium/low)"
+        )
 
     class PerformanceRecommendation(BaseModel):
         """Model for a single performance recommendation"""
+
         id: str = Field(..., description="Unique identifier for the recommendation")
-        type: str = Field(..., description="Type of recommendation (tool_optimization, parallelization, reliability_improvement)")
+        type: str = Field(
+            ...,
+            description="Type of recommendation (tool_optimization, parallelization, reliability_improvement)",
+        )
         priority: str = Field(..., description="Priority level (high, medium, low)")
         title: str = Field(..., description="Brief title of the recommendation")
-        description: str = Field(..., description="Detailed description of the issue and recommendation")
-        impact_estimate: ImpactEstimate = Field(..., description="Estimated impact of implementing this recommendation")
-        implementation_steps: List[str] = Field(..., description="Step-by-step implementation guide")
-        estimated_effort: str = Field(..., description="Estimated implementation effort (low, medium, high)")
+        description: str = Field(
+            ..., description="Detailed description of the issue and recommendation"
+        )
+        impact_estimate: ImpactEstimate = Field(
+            ..., description="Estimated impact of implementing this recommendation"
+        )
+        implementation_steps: List[str] = Field(
+            ..., description="Step-by-step implementation guide"
+        )
+        estimated_effort: str = Field(
+            ..., description="Estimated implementation effort (low, medium, high)"
+        )
         prerequisites: List[str] = Field(..., description="Prerequisites for implementation")
-        metrics_to_track: List[str] = Field(..., description="Metrics to track after implementation")
+        metrics_to_track: List[str] = Field(
+            ..., description="Metrics to track after implementation"
+        )
 
     class RecommendationSummary(BaseModel):
         """Summary statistics for recommendations"""
-        total_recommendations: int = Field(..., description="Total number of recommendations generated")
+
+        total_recommendations: int = Field(
+            ..., description="Total number of recommendations generated"
+        )
         high_priority: int = Field(..., description="Number of high priority recommendations")
         medium_priority: int = Field(..., description="Number of medium priority recommendations")
         low_priority: int = Field(..., description="Number of low priority recommendations")
-        estimated_total_savings: float = Field(..., description="Total estimated time savings in seconds")
+        estimated_total_savings: float = Field(
+            ..., description="Total estimated time savings in seconds"
+        )
         analysis_period_hours: int = Field(..., description="Hours of data analyzed")
 
     class ImplementationRoadmap(BaseModel):
         """Categorized implementation roadmap"""
-        quick_wins: List[PerformanceRecommendation] = Field(..., description="Low effort, high impact recommendations")
-        major_improvements: List[PerformanceRecommendation] = Field(..., description="High effort, high impact recommendations")
-        maintenance_tasks: List[PerformanceRecommendation] = Field(..., description="Low priority maintenance recommendations")
+
+        quick_wins: List[PerformanceRecommendation] = Field(
+            ..., description="Low effort, high impact recommendations"
+        )
+        major_improvements: List[PerformanceRecommendation] = Field(
+            ..., description="High effort, high impact recommendations"
+        )
+        maintenance_tasks: List[PerformanceRecommendation] = Field(
+            ..., description="Low priority maintenance recommendations"
+        )
 
     class PerformanceRecommendationsResponse(BaseModel):
         """Response model for performance recommendations"""
-        recommendations: List[PerformanceRecommendation] = Field(..., description="List of actionable recommendations")
+
+        recommendations: List[PerformanceRecommendation] = Field(
+            ..., description="List of actionable recommendations"
+        )
         summary: RecommendationSummary = Field(..., description="Summary statistics")
-        implementation_roadmap: ImplementationRoadmap = Field(..., description="Recommendations organized by implementation strategy")
+        implementation_roadmap: ImplementationRoadmap = Field(
+            ..., description="Recommendations organized by implementation strategy"
+        )
         timestamp: str = Field(..., description="ISO timestamp of analysis")
 
     # ---------- Performance Recommendations Endpoint ----------
@@ -4794,22 +4971,25 @@ def setup_ums_api(app: FastAPI) -> None:
                                     "impact_estimate": {
                                         "time_savings_potential": 463.0,
                                         "affected_actions": 61,
-                                        "cost_benefit_ratio": 8.5
+                                        "cost_benefit_ratio": 8.5,
                                     },
                                     "implementation_steps": [
                                         "Profile smart_browser execution to identify bottlenecks",
                                         "Consider caching frequently used data",
                                         "Optimize database queries if applicable",
-                                        "Evaluate alternative implementations or libraries"
+                                        "Evaluate alternative implementations or libraries",
                                     ],
                                     "estimated_effort": "medium",
-                                    "prerequisites": ["Development environment setup", "Performance profiling tools"],
+                                    "prerequisites": [
+                                        "Development environment setup",
+                                        "Performance profiling tools",
+                                    ],
                                     "metrics_to_track": [
                                         "Average execution time",
                                         "P95 execution time",
                                         "Tool success rate",
-                                        "Resource utilization"
-                                    ]
+                                        "Resource utilization",
+                                    ],
                                 }
                             ],
                             "summary": {
@@ -4818,17 +4998,17 @@ def setup_ums_api(app: FastAPI) -> None:
                                 "medium_priority": 2,
                                 "low_priority": 1,
                                 "estimated_total_savings": 1250.5,
-                                "analysis_period_hours": 24
+                                "analysis_period_hours": 24,
                             },
                             "implementation_roadmap": {
                                 "quick_wins": [],
                                 "major_improvements": [],
-                                "maintenance_tasks": []
+                                "maintenance_tasks": [],
                             },
-                            "timestamp": "2024-01-01T12:00:00"
+                            "timestamp": "2024-01-01T12:00:00",
                         }
                     }
-                }
+                },
             },
             500: {
                 "description": "Internal server error",
@@ -4836,36 +5016,33 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "Failed to generate recommendations"}
                     }
-                }
-            }
-        }
+                },
+            },
+        },
     )
     async def get_performance_recommendations(
         hours_back: int = Query(
-            24,
-            description="Hours back to analyze for recommendations",
-            ge=1,
-            le=720,
-            example=24
+            24, description="Hours back to analyze for recommendations", ge=1, le=720, example=24
         ),
         priority_filter: str = Query(
             "all",
             description="Filter recommendations by priority level",
             regex="^(all|high|medium|low)$",
-            example="all"
-        )
+            example="all",
+        ),
     ) -> PerformanceRecommendationsResponse:
         """Generate actionable performance optimization recommendations"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             since_timestamp = datetime.now().timestamp() - (hours_back * 3600)
-            
+
             recommendations = []
-            
+
             # Analyze slow tools
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     tool_name,
                     COUNT(*) as usage_count,
@@ -4877,44 +5054,51 @@ def setup_ums_api(app: FastAPI) -> None:
                 GROUP BY tool_name
                 HAVING avg_duration > 5
                 ORDER BY total_time DESC
-            """, (since_timestamp,))
-            
-            slow_tools = [dict(zip([d[0] for d in cursor.description], row, strict=False)) for row in cursor.fetchall()]
-            
+            """,
+                (since_timestamp,),
+            )
+
+            slow_tools = [
+                dict(zip([d[0] for d in cursor.description], row, strict=False))
+                for row in cursor.fetchall()
+            ]
+
             for tool in slow_tools[:5]:  # Top 5 slowest tools
-                impact_score = tool['total_time'] / 3600  # hours of time spent
-                priority = 'high' if impact_score > 1 else 'medium' if impact_score > 0.5 else 'low'
-                
+                impact_score = tool["total_time"] / 3600  # hours of time spent
+                priority = "high" if impact_score > 1 else "medium" if impact_score > 0.5 else "low"
+
                 recommendation = PerformanceRecommendation(
                     id=f"optimize_tool_{tool['tool_name']}",
-                    type='tool_optimization',
+                    type="tool_optimization",
                     priority=priority,
                     title=f"Optimize {tool['tool_name']} performance",
                     description=f"Tool consumes {tool['total_time']:.1f}s total execution time with {tool['avg_duration']:.2f}s average",
                     impact_estimate=ImpactEstimate(
-                        time_savings_potential=tool['total_time'] * 0.3,  # Assume 30% improvement possible
-                        affected_actions=tool['usage_count'],
-                        cost_benefit_ratio=impact_score
+                        time_savings_potential=tool["total_time"]
+                        * 0.3,  # Assume 30% improvement possible
+                        affected_actions=tool["usage_count"],
+                        cost_benefit_ratio=impact_score,
                     ),
                     implementation_steps=[
                         f"Profile {tool['tool_name']} execution to identify bottlenecks",
                         "Consider caching frequently used data",
                         "Optimize database queries if applicable",
-                        "Evaluate alternative implementations or libraries"
+                        "Evaluate alternative implementations or libraries",
                     ],
-                    estimated_effort='medium',
-                    prerequisites=['Development environment setup', 'Performance profiling tools'],
+                    estimated_effort="medium",
+                    prerequisites=["Development environment setup", "Performance profiling tools"],
                     metrics_to_track=[
-                        'Average execution time',
-                        'P95 execution time',
-                        'Tool success rate',
-                        'Resource utilization'
-                    ]
+                        "Average execution time",
+                        "P95 execution time",
+                        "Tool success rate",
+                        "Resource utilization",
+                    ],
                 )
                 recommendations.append(recommendation)
-            
+
             # Analyze workflow parallelization opportunities
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     workflow_id,
                     COUNT(*) as action_count,
@@ -4925,45 +5109,51 @@ def setup_ums_api(app: FastAPI) -> None:
                 GROUP BY workflow_id
                 HAVING action_count > 3 AND total_sequential_time > actual_elapsed_time * 1.5
                 ORDER BY (total_sequential_time - actual_elapsed_time) DESC
-            """, (since_timestamp,))
-            
-            parallelization_opps = [dict(zip([d[0] for d in cursor.description], row, strict=False)) for row in cursor.fetchall()]
-            
+            """,
+                (since_timestamp,),
+            )
+
+            parallelization_opps = [
+                dict(zip([d[0] for d in cursor.description], row, strict=False))
+                for row in cursor.fetchall()
+            ]
+
             for opp in parallelization_opps[:3]:  # Top 3 parallelization opportunities
-                time_savings = opp['total_sequential_time'] - opp['actual_elapsed_time']
-                priority = 'high' if time_savings > 30 else 'medium'
-                
+                time_savings = opp["total_sequential_time"] - opp["actual_elapsed_time"]
+                priority = "high" if time_savings > 30 else "medium"
+
                 recommendation = PerformanceRecommendation(
                     id=f"parallelize_workflow_{opp['workflow_id']}",
-                    type='parallelization',
+                    type="parallelization",
                     priority=priority,
                     title=f"Parallelize workflow {opp['workflow_id']}",
                     description=f"Workflow could save {time_savings:.2f}s through better parallelization",
                     impact_estimate=ImpactEstimate(
                         time_savings_potential=time_savings,
-                        efficiency_improvement=(time_savings / opp['total_sequential_time']) * 100,
+                        efficiency_improvement=(time_savings / opp["total_sequential_time"]) * 100,
                         affected_workflows=1,
-                        affected_actions=opp['action_count'],
-                        cost_benefit_ratio=time_savings / 10  # Arbitrary scaling
+                        affected_actions=opp["action_count"],
+                        cost_benefit_ratio=time_savings / 10,  # Arbitrary scaling
                     ),
                     implementation_steps=[
                         "Analyze action dependencies in the workflow",
                         "Identify independent action sequences",
                         "Implement async execution patterns",
-                        "Add proper synchronization points"
+                        "Add proper synchronization points",
                     ],
-                    estimated_effort='high',
-                    prerequisites=['Workflow dependency analysis', 'Async execution framework'],
+                    estimated_effort="high",
+                    prerequisites=["Workflow dependency analysis", "Async execution framework"],
                     metrics_to_track=[
-                        'Workflow end-to-end time',
-                        'Action parallelization ratio',
-                        'Resource utilization efficiency'
-                    ]
+                        "Workflow end-to-end time",
+                        "Action parallelization ratio",
+                        "Resource utilization efficiency",
+                    ],
                 )
                 recommendations.append(recommendation)
-            
+
             # Analyze error patterns
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT 
                     tool_name,
                     COUNT(*) as error_count,
@@ -4976,86 +5166,104 @@ def setup_ums_api(app: FastAPI) -> None:
                 GROUP BY tool_name
                 HAVING error_rate > 5
                 ORDER BY error_rate DESC
-            """, (since_timestamp, since_timestamp))
-            
-            error_prone_tools = [dict(zip([d[0] for d in cursor.description], row, strict=False)) for row in cursor.fetchall()]
-            
+            """,
+                (since_timestamp, since_timestamp),
+            )
+
+            error_prone_tools = [
+                dict(zip([d[0] for d in cursor.description], row, strict=False))
+                for row in cursor.fetchall()
+            ]
+
             for tool in error_prone_tools[:3]:  # Top 3 error-prone tools
-                priority = 'high' if tool['error_rate'] > 20 else 'medium'
-                
+                priority = "high" if tool["error_rate"] > 20 else "medium"
+
                 recommendation = PerformanceRecommendation(
                     id=f"improve_reliability_{tool['tool_name']}",
-                    type='reliability_improvement',
+                    type="reliability_improvement",
                     priority=priority,
                     title=f"Improve {tool['tool_name']} reliability",
                     description=f"Tool has {tool['error_rate']:.1f}% failure rate ({tool['error_count']} failures)",
                     impact_estimate=ImpactEstimate(
-                        reliability_improvement=tool['error_rate'],
-                        affected_actions=tool['error_count'],
-                        user_experience_impact='high',
-                        cost_benefit_ratio=tool['error_rate'] / 10,
-                        time_savings_potential=0  # Reliability doesn't directly save time
+                        reliability_improvement=tool["error_rate"],
+                        affected_actions=tool["error_count"],
+                        user_experience_impact="high",
+                        cost_benefit_ratio=tool["error_rate"] / 10,
+                        time_savings_potential=0,  # Reliability doesn't directly save time
                     ),
                     implementation_steps=[
                         "Analyze failure patterns and root causes",
                         "Implement better error handling and retries",
                         "Add input validation and sanitization",
-                        "Improve tool documentation and usage examples"
+                        "Improve tool documentation and usage examples",
                     ],
-                    estimated_effort='medium',
-                    prerequisites=['Error logging analysis', 'Tool source code access'],
+                    estimated_effort="medium",
+                    prerequisites=["Error logging analysis", "Tool source code access"],
                     metrics_to_track=[
-                        'Tool failure rate',
-                        'Time to recovery',
-                        'User satisfaction scores'
-                    ]
+                        "Tool failure rate",
+                        "Time to recovery",
+                        "User satisfaction scores",
+                    ],
                 )
                 recommendations.append(recommendation)
-            
+
             # Filter recommendations by priority if requested
-            if priority_filter != 'all':
+            if priority_filter != "all":
                 recommendations = [r for r in recommendations if r.priority == priority_filter]
-            
+
             # Sort by impact and priority
-            priority_order = {'high': 3, 'medium': 2, 'low': 1}
-            recommendations.sort(key=lambda x: (
-                priority_order.get(x.priority, 0),
-                x.impact_estimate.time_savings_potential
-            ), reverse=True)
-            
+            priority_order = {"high": 3, "medium": 2, "low": 1}
+            recommendations.sort(
+                key=lambda x: (
+                    priority_order.get(x.priority, 0),
+                    x.impact_estimate.time_savings_potential,
+                ),
+                reverse=True,
+            )
+
             # Calculate summary
             summary = RecommendationSummary(
                 total_recommendations=len(recommendations),
-                high_priority=len([r for r in recommendations if r.priority == 'high']),
-                medium_priority=len([r for r in recommendations if r.priority == 'medium']),
-                low_priority=len([r for r in recommendations if r.priority == 'low']),
-                estimated_total_savings=sum(r.impact_estimate.time_savings_potential for r in recommendations),
-                analysis_period_hours=hours_back
+                high_priority=len([r for r in recommendations if r.priority == "high"]),
+                medium_priority=len([r for r in recommendations if r.priority == "medium"]),
+                low_priority=len([r for r in recommendations if r.priority == "low"]),
+                estimated_total_savings=sum(
+                    r.impact_estimate.time_savings_potential for r in recommendations
+                ),
+                analysis_period_hours=hours_back,
             )
-            
+
             # Create implementation roadmap
             roadmap = ImplementationRoadmap(
-                quick_wins=[r for r in recommendations if r.estimated_effort == 'low' and r.priority == 'high'],
-                major_improvements=[r for r in recommendations if r.estimated_effort == 'high' and r.priority == 'high'],
-                maintenance_tasks=[r for r in recommendations if r.priority == 'low']
+                quick_wins=[
+                    r
+                    for r in recommendations
+                    if r.estimated_effort == "low" and r.priority == "high"
+                ],
+                major_improvements=[
+                    r
+                    for r in recommendations
+                    if r.estimated_effort == "high" and r.priority == "high"
+                ],
+                maintenance_tasks=[r for r in recommendations if r.priority == "low"],
             )
-            
+
             conn.close()
-            
+
             return PerformanceRecommendationsResponse(
                 recommendations=recommendations,
                 summary=summary,
                 implementation_roadmap=roadmap,
-                timestamp=datetime.now().isoformat()
+                timestamp=datetime.now().isoformat(),
             )
-            
+
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Internal server error: {str(e)}") from e
 
     # ---------- Module-level singletons for Body parameters ----------
-    
+
     # Define Body parameters as module-level singletons to avoid B008 warnings
     WORKFLOW_SCHEDULE_BODY = Body(...)
     RESTORE_STATE_BODY = Body(...)
@@ -5064,21 +5272,23 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class WorkflowScheduleRequest(BaseModel):
         """Request model for scheduling a workflow"""
+
         scheduled_at: datetime = Field(
             ...,
             description="ISO timestamp for when to execute the workflow",
-            example="2024-01-01T12:00:00Z"
+            example="2024-01-01T12:00:00Z",
         )
         priority: int = Field(
             default=5,
             ge=1,
             le=10,
             description="Execution priority (1=highest, 10=lowest)",
-            example=3
+            example=3,
         )
 
     class ScheduleData(BaseModel):
         """Schedule data for the workflow"""
+
         workflow_id: str = Field(..., description="ID of the scheduled workflow")
         scheduled_at: str = Field(..., description="Scheduled execution time")
         priority: int = Field(..., description="Execution priority")
@@ -5087,6 +5297,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class WorkflowScheduleResponse(BaseModel):
         """Response model for workflow scheduling"""
+
         success: bool = Field(..., description="Whether scheduling was successful")
         schedule_id: str = Field(..., description="Unique identifier for this schedule")
         message: str = Field(..., description="Success or error message")
@@ -5096,15 +5307,17 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class RestoreStateRequest(BaseModel):
         """Request model for restoring a cognitive state"""
+
         restore_mode: str = Field(
             default="full",
             regex="^(full|partial|snapshot)$",
             description="Type of restoration to perform",
-            example="full"
+            example="full",
         )
 
     class RestoreData(BaseModel):
         """Restoration data"""
+
         state_id: str = Field(..., description="ID of the state being restored")
         restore_mode: str = Field(..., description="Restoration mode used")
         restored_at: str = Field(..., description="When the restoration occurred")
@@ -5112,6 +5325,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class RestoreStateResponse(BaseModel):
         """Response model for state restoration"""
+
         success: bool = Field(..., description="Whether restoration was successful")
         message: str = Field(..., description="Success or error message")
         restore_data: RestoreData = Field(..., description="Details of the restoration")
@@ -5120,6 +5334,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
     class HealthResponse(BaseModel):
         """Health check response"""
+
         status: str = Field(..., description="Health status indicator", example="ok")
         version: str = Field(..., description="Server version string", example="0.1.0")
 
@@ -5154,20 +5369,25 @@ def setup_ums_api(app: FastAPI) -> None:
                                 "scheduled_at": "2024-01-01T12:00:00Z",
                                 "priority": 3,
                                 "status": "scheduled",
-                                "created_at": "2024-01-01T10:00:00Z"
-                            }
+                                "created_at": "2024-01-01T10:00:00Z",
+                            },
                         }
                     }
-                }
+                },
             },
             400: {"description": "Invalid request parameters"},
             404: {"description": "Workflow not found"},
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def schedule_workflow(
-        workflow_id: str = ApiPath(..., description="Unique identifier of the workflow to schedule", example="workflow_abc123", regex="^[a-zA-Z0-9_-]+$"),
-        request: WorkflowScheduleRequest = WORKFLOW_SCHEDULE_BODY
+        workflow_id: str = ApiPath(
+            ...,
+            description="Unique identifier of the workflow to schedule",
+            example="workflow_abc123",
+            regex="^[a-zA-Z0-9_-]+$",
+        ),
+        request: WorkflowScheduleRequest = WORKFLOW_SCHEDULE_BODY,
     ) -> WorkflowScheduleResponse:
         """Schedule workflow execution"""
         try:
@@ -5178,26 +5398,28 @@ def setup_ums_api(app: FastAPI) -> None:
                 scheduled_at=request.scheduled_at.isoformat(),
                 priority=request.priority,
                 status="scheduled",
-                created_at=datetime.now().isoformat()
+                created_at=datetime.now().isoformat(),
             )
-            
+
             # Generate a unique schedule ID
             schedule_id = f"sched_{workflow_id}_{int(datetime.now().timestamp())}"
-            
+
             # In a real implementation, this would:
             # 1. Verify the workflow exists
             # 2. Create a scheduled task in a task queue
             # 3. Store the schedule in a database
-            
+
             return WorkflowScheduleResponse(
                 success=True,
                 schedule_id=schedule_id,
                 message="Workflow scheduled successfully",
-                schedule_data=schedule_data
+                schedule_data=schedule_data,
             )
-            
+
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to schedule workflow: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to schedule workflow: {str(e)}"
+            ) from e
 
     # ---------- Cognitive State Restoration Endpoint ----------
 
@@ -5228,63 +5450,64 @@ def setup_ums_api(app: FastAPI) -> None:
                                 "state_id": "state_abc123xyz789",
                                 "restore_mode": "full",
                                 "restored_at": "2024-01-01T12:00:00Z",
-                                "original_timestamp": 1703980800.0
-                            }
+                                "original_timestamp": 1703980800.0,
+                            },
                         }
                     }
-                }
+                },
             },
             400: {"description": "Invalid request parameters"},
             404: {"description": "Cognitive state not found"},
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def restore_cognitive_state(
         state_id: str = ApiPath(
             ...,
             description="Unique identifier of the cognitive state to restore",
             example="state_abc123xyz789",
-            regex="^[a-zA-Z0-9_-]+$"
+            regex="^[a-zA-Z0-9_-]+$",
         ),
-        request: RestoreStateRequest = RESTORE_STATE_BODY
+        request: RestoreStateRequest = RESTORE_STATE_BODY,
     ) -> RestoreStateResponse:
         """Restore a cognitive state"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             # Get the state to restore
-            cursor.execute("SELECT * FROM cognitive_timeline_states WHERE state_id = ?", (state_id,))
+            cursor.execute(
+                "SELECT * FROM cognitive_timeline_states WHERE state_id = ?", (state_id,)
+            )
             state = cursor.fetchone()
-            
+
             if not state:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"Cognitive state with ID '{state_id}' not found"
+                    status_code=404, detail=f"Cognitive state with ID '{state_id}' not found"
                 )
-            
+
             # Create restoration data
             restore_data = RestoreData(
                 state_id=state_id,
                 restore_mode=request.restore_mode,
                 restored_at=datetime.now().isoformat(),
-                original_timestamp=state[1] if state else None  # timestamp column
+                original_timestamp=state[1] if state else None,  # timestamp column
             )
-            
+
             # In a real implementation, this would:
             # 1. Create a backup of the current state
             # 2. Restore the cognitive state to the system
             # 3. Update all dependent systems
             # 4. Log the restoration event
-            
+
             conn.close()
-            
+
             return RestoreStateResponse(
                 success=True,
                 message="Cognitive state restoration initiated",
-                restore_data=restore_data
+                restore_data=restore_data,
             )
-            
+
         except HTTPException:
             raise
         except sqlite3.Error as e:
@@ -5312,9 +5535,7 @@ def setup_ums_api(app: FastAPI) -> None:
             200: {
                 "description": "Artifact file downloaded successfully",
                 "content": {
-                    "application/octet-stream": {
-                        "schema": {"type": "string", "format": "binary"}
-                    },
+                    "application/octet-stream": {"schema": {"type": "string", "format": "binary"}},
                     "application/json": {
                         "schema": {"type": "object"},
                         "example": {
@@ -5325,10 +5546,10 @@ def setup_ums_api(app: FastAPI) -> None:
                             "file_path": "/artifacts/reports/q4_2024.pdf",
                             "file_size": 2048576,
                             "created_at": 1703980800.0,
-                            "metadata": {"author": "System", "version": "1.0"}
-                        }
-                    }
-                }
+                            "metadata": {"author": "System", "version": "1.0"},
+                        },
+                    },
+                },
             },
             404: {
                 "description": "Artifact not found",
@@ -5336,59 +5557,58 @@ def setup_ums_api(app: FastAPI) -> None:
                     "application/json": {
                         "example": {"detail": "Artifact with ID 'artifact_123' not found"}
                     }
-                }
+                },
             },
-            500: {"description": "Internal server error"}
-        }
+            500: {"description": "Internal server error"},
+        },
     )
     async def download_artifact(
         artifact_id: str = ApiPath(
             ...,
             description="Unique identifier of the artifact to download",
             example="artifact_abc123",
-            regex="^[a-zA-Z0-9_-]+$"
-        )
+            regex="^[a-zA-Z0-9_-]+$",
+        ),
     ):
         """Download an artifact"""
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
+
             cursor.execute("SELECT * FROM artifacts WHERE artifact_id = ?", (artifact_id,))
             artifact = cursor.fetchone()
-            
+
             if not artifact:
                 raise HTTPException(
-                    status_code=404,
-                    detail=f"Artifact with ID '{artifact_id}' not found"
+                    status_code=404, detail=f"Artifact with ID '{artifact_id}' not found"
                 )
-            
+
             # Convert to dictionary
             artifact_dict = dict(zip([d[0] for d in cursor.description], artifact, strict=False))
-            
+
             conn.close()
-            
+
             # For now, return the artifact data as JSON
             # In a real implementation, this would serve the actual file
             from fastapi.responses import Response
-            
+
             content = json.dumps(artifact_dict, indent=2)
             filename = f"{artifact_dict.get('name', 'artifact')}.json"
-            
+
             return Response(
                 content=content,
-                media_type='application/json',
-                headers={
-                    'Content-Disposition': f'attachment; filename="{filename}"'
-                }
+                media_type="application/json",
+                headers={"Content-Disposition": f'attachment; filename="{filename}"'},
             )
-            
+
         except HTTPException:
             raise
         except sqlite3.Error as e:
             raise HTTPException(status_code=500, detail=f"Database error: {str(e)}") from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to download artifact: {str(e)}") from e
+            raise HTTPException(
+                status_code=500, detail=f"Failed to download artifact: {str(e)}"
+            ) from e
 
     # ---------- Health & Utilities Endpoints ----------
 
@@ -5410,28 +5630,14 @@ def setup_ums_api(app: FastAPI) -> None:
         responses={
             200: {
                 "description": "Server is healthy and operational",
-                "content": {
-                    "application/json": {
-                        "example": {
-                            "status": "ok",
-                            "version": "0.1.0"
-                        }
-                    }
-                }
+                "content": {"application/json": {"example": {"status": "ok", "version": "0.1.0"}}},
             },
             500: {
                 "description": "Server health check failed",
-                "content": {
-                    "application/json": {
-                        "example": {"detail": "Health check failed"}
-                    }
-                }
-            }
-        }
+                "content": {"application/json": {"example": {"detail": "Health check failed"}}},
+            },
+        },
     )
     async def health_check() -> HealthResponse:
         """Health check endpoint for monitoring server status"""
-        return HealthResponse(
-            status="ok",
-            version="0.1.0"
-        )
+        return HealthResponse(status="ok", version="0.1.0")

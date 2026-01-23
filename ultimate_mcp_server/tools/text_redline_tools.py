@@ -124,6 +124,7 @@ _DIFF_PREFIX = "diff"
 # --- Synthetic ID Generation ---
 _id_counter = itertools.count(1)
 
+
 def _normalize_text(text: Optional[str]) -> str:
     """Collapses whitespace and strips leading/trailing space."""
     if text is None:
@@ -132,9 +133,10 @@ def _normalize_text(text: Optional[str]) -> str:
     normalized = re.sub(r"\s+", " ", text).strip()
     return normalized
 
+
 def _get_normalized_full_text(el: _Element) -> str:
     """Gets normalized text content of an element and its descendants,
-       excluding script and style tags."""
+    excluding script and style tags."""
     if el is None:
         return ""
     # Get text from all descendant text nodes, excluding those within script/style
@@ -147,10 +149,11 @@ def _get_normalized_full_text(el: _Element) -> str:
     except Exception as e:
         # Fallback for safety, though xpath should be robust
         logger.warning(f"XPath text extraction failed for <{el.tag}>: {e}. Falling back.")
-        texts = [t for t in el.itertext() if t.strip()] # Less precise about script/style
+        texts = [t for t in el.itertext() if t.strip()]  # Less precise about script/style
         full_text = " ".join(t.strip() for t in texts)
         return _normalize_text(full_text)
-    
+
+
 # Define significant attributes (adjust as needed)
 # These are attributes likely to uniquely identify an element or its purpose
 # Avoid volatile attributes like style, or overly common ones like class (unless very specific)
@@ -158,21 +161,57 @@ _SIGNIFICANT_ATTRIBUTES = {"id", "href", "src", "name", "value", "title", "alt",
 # Consider adding data-* attributes if they are known to be stable identifiers in your source HTML
 
 # --- Fuzzy move detection configuration ---
-_MOVE_MIN_TOKENS: int = 5         # Ignore tiny fragments; raise to 8 for stricter pairing
-_MOVE_MIN_CHARS: int = 24         # Shorter text tends to be noise
-_MOVE_SIM_THRESHOLD: float = 0.82 # 0..1; lower to catch more, higher to be stricter
+_MOVE_MIN_TOKENS: int = 5  # Ignore tiny fragments; raise to 8 for stricter pairing
+_MOVE_MIN_CHARS: int = 24  # Shorter text tends to be noise
+_MOVE_SIM_THRESHOLD: float = 0.82  # 0..1; lower to catch more, higher to be stricter
 _MOVE_MAX_CANDIDATES: int = 2000  # Safety bound for O(N*M) matching
 # Tags considered "blocky enough" to attempt fuzzy move pairing even if tags differ
 _BLOCK_TAGS: Set[str] = {
-    "p","li","ul","ol","h1","h2","h3","h4","h5","h6","blockquote","pre","code",
-    "section","article","aside","figure","figcaption","table","thead","tbody","tr","td","th","dl","dt","dd"
+    "p",
+    "li",
+    "ul",
+    "ol",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+    "blockquote",
+    "pre",
+    "code",
+    "section",
+    "article",
+    "aside",
+    "figure",
+    "figcaption",
+    "table",
+    "thead",
+    "tbody",
+    "tr",
+    "td",
+    "th",
+    "dl",
+    "dt",
+    "dd",
 }
 # Attributes that help anchor identity/context
-_ANCHOR_ATTRS: Set[str] = {"id","name","href","src","data-id","data-key","data-uid","aria-label","title"}
+_ANCHOR_ATTRS: Set[str] = {
+    "id",
+    "name",
+    "href",
+    "src",
+    "data-id",
+    "data-key",
+    "data-uid",
+    "aria-label",
+    "title",
+}
+
 
 def _inject_synthetic_ids(root: _Element, *, attr: str = "data-diff-id") -> None:
     """Inject synthetic IDs into elements based on tag, normalized full text,
-       and significant attributes."""
+    and significant attributes."""
     global _id_counter
     if root is None:
         return
@@ -189,7 +228,7 @@ def _inject_synthetic_ids(root: _Element, *, attr: str = "data-diff-id") -> None
 
         # Skip if ID already exists (e.g., from previous run or source)
         if el.get(attr):
-            elements_with_ids +=1
+            elements_with_ids += 1
             continue
 
         # 1. Get Tag
@@ -205,15 +244,15 @@ def _inject_synthetic_ids(root: _Element, *, attr: str = "data-diff-id") -> None
             # (often used for stable identifiers)
             # Exclude the synthetic ID attribute itself if looping
             if (k in _SIGNIFICANT_ATTRIBUTES or k.startswith("data-")) and k != attr:
-                 # Normalize attribute value's whitespace
-                 sig_attrs[k] = _normalize_text(v)
+                # Normalize attribute value's whitespace
+                sig_attrs[k] = _normalize_text(v)
 
         # Sort significant attributes by key for consistent signature
         sorted_sig_attrs = tuple(sorted(sig_attrs.items()))
 
         # 4. Create Signature Tuple
         # Using a hash of the potentially long text to keep the signature manageable
-        text_hash = hashlib.blake2b(norm_text.encode('utf-8', 'replace'), digest_size=8).hexdigest()
+        text_hash = hashlib.blake2b(norm_text.encode("utf-8", "replace"), digest_size=8).hexdigest()
         sig_tuple = (tag, text_hash, sorted_sig_attrs)
 
         # 5. Generate Hash and Synthetic ID
@@ -231,7 +270,10 @@ def _inject_synthetic_ids(root: _Element, *, attr: str = "data-diff-id") -> None
                 f"(Text hash: {text_hash}, Attrs: {sorted_sig_attrs}): {e}"
             )
 
-    logger.debug(f"ID Injection: Processed {processed_elements} elements, {elements_with_ids} have IDs.")
+    logger.debug(
+        f"ID Injection: Processed {processed_elements} elements, {elements_with_ids} have IDs."
+    )
+
 
 # Helper to safely get attributes from actions
 def _safe_get_attr(action: Any, *attr_names: str, default: Any = None) -> Any:
@@ -473,7 +515,7 @@ class RedlineXMLFormatter:
         if node_structure is not None and isinstance(node_structure, _Element):
             try:
                 # Attempt to clone from the action object first
-                node_to_insert = deepcopy(node_structure) # Use deepcopy
+                node_to_insert = deepcopy(node_structure)  # Use deepcopy
                 # node_to_insert = etree.fromstring(etree.tostring(node_structure))
             except Exception as e:
                 logger.error(f"InsertNode clone failed: {e}")
@@ -505,7 +547,9 @@ class RedlineXMLFormatter:
                 node_to_insert = etree.Element(tag, attrs)
                 # Make placeholder text more distinct
                 node_to_insert.text = f"[Placeholder: Inserted <{tag}> content missing]"
-                logger.warning(f"InsertNode created placeholder <{tag}> because node structure was missing in action and couldn't be fetched.")
+                logger.warning(
+                    f"InsertNode created placeholder <{tag}> because node structure was missing in action and couldn't be fetched."
+                )
             else:
                 logger.error("InsertNode failed: No structure/tag provided in action.")
                 self.processed_actions["errors"] += 1
@@ -581,7 +625,9 @@ class RedlineXMLFormatter:
         """Handle move: Ensure source marked, insert clone at target."""
         src_xpath = _safe_get_attr(action, "node", "source")
         tgt_xpath = _safe_get_attr(action, "target")
-        pos = _safe_get_attr(action, "pos", "position", default="into") # Keep default 'into' if missing
+        pos = _safe_get_attr(
+            action, "pos", "position", default="into"
+        )  # Keep default 'into' if missing
         move_id = _safe_get_attr(action, "move_id")
 
         if not src_xpath or not tgt_xpath or not move_id:
@@ -601,7 +647,9 @@ class RedlineXMLFormatter:
         copy_src_node = self._get_corresponding_node_in_copy(orig_src_node)
         if copy_src_node is None:
             # Log error but attempt to continue if possible - maybe source was deleted then moved? Unlikely but cover edge case.
-            logger.error(f"MoveNode {move_id}: Corresponding copy source node for {src_xpath} not found.")
+            logger.error(
+                f"MoveNode {move_id}: Corresponding copy source node for {src_xpath} not found."
+            )
             # If the source isn't in the copy, we can't mark it, but we still need to insert the target.
             # No need to return here, proceed to insert the target.
             # self.processed_actions["errors"] += 1 # Maybe not an error if source was already removed by another action?
@@ -627,26 +675,39 @@ class RedlineXMLFormatter:
             try:
                 # Get the actual node from the modified tree at the target position
                 node_to_clone = mod_target_parent[pos]
-                logger.debug(f"MoveNode {move_id}: Found node to clone in MODIFIED tree at {tgt_xpath}[{pos}].")
+                logger.debug(
+                    f"MoveNode {move_id}: Found node to clone in MODIFIED tree at {tgt_xpath}[{pos}]."
+                )
             except IndexError:
-                logger.warning(f"MoveNode {move_id}: Index {pos} out of bounds for target parent {tgt_xpath} in MODIFIED tree. Parent has {len(mod_target_parent)} children.")
+                logger.warning(
+                    f"MoveNode {move_id}: Index {pos} out of bounds for target parent {tgt_xpath} in MODIFIED tree. Parent has {len(mod_target_parent)} children."
+                )
             except Exception as e:
-                logger.warning(f"MoveNode {move_id}: Error accessing node at {tgt_xpath}[{pos}] in MODIFIED tree: {e}")
-        elif mod_target_parent is not None and pos == "into": # Handle insertion 'into' as append
-             try:
+                logger.warning(
+                    f"MoveNode {move_id}: Error accessing node at {tgt_xpath}[{pos}] in MODIFIED tree: {e}"
+                )
+        elif mod_target_parent is not None and pos == "into":  # Handle insertion 'into' as append
+            try:
                 # If pos is 'into', it usually implies appending. The moved node would be the last child.
                 # However, xmldiff usually gives an integer position for moves.
                 # Let's try finding based on the source node's ID if possible, as a fallback.
-                mod_node_with_same_id = mod_target_parent.xpath(f".//*[@data-diff-id='{orig_src_node.get('data-diff-id')}']")
+                mod_node_with_same_id = mod_target_parent.xpath(
+                    f".//*[@data-diff-id='{orig_src_node.get('data-diff-id')}']"
+                )
                 if mod_node_with_same_id:
                     node_to_clone = mod_node_with_same_id[0]
-                    logger.debug(f"MoveNode {move_id}: Found node to clone in MODIFIED tree based on ID matching source ID within {tgt_xpath}.")
+                    logger.debug(
+                        f"MoveNode {move_id}: Found node to clone in MODIFIED tree based on ID matching source ID within {tgt_xpath}."
+                    )
                 else:
-                    logger.warning(f"MoveNode {move_id}: Position is '{pos}', couldn't find node to clone in MODIFIED target parent {tgt_xpath} by index or ID.")
+                    logger.warning(
+                        f"MoveNode {move_id}: Position is '{pos}', couldn't find node to clone in MODIFIED target parent {tgt_xpath} by index or ID."
+                    )
 
-             except Exception as e:
-                 logger.warning(f"MoveNode {move_id}: Error finding node in MODIFIED target parent {tgt_xpath} for pos='{pos}': {e}")
-
+            except Exception as e:
+                logger.warning(
+                    f"MoveNode {move_id}: Error finding node in MODIFIED target parent {tgt_xpath} for pos='{pos}': {e}"
+                )
 
         if node_to_clone is None:
             # Fallback: Clone the original source node. This might lose internal changes.
@@ -660,7 +721,8 @@ class RedlineXMLFormatter:
         try:
             # Use deepcopy which might be more robust for lxml elements than fromstring(tostring)
             cloned_node_for_insert = deepcopy(node_to_clone)
-            if cloned_node_for_insert is None: raise ValueError("Deepcopy resulted in None") # noqa: E701
+            if cloned_node_for_insert is None:
+                raise ValueError("Deepcopy resulted in None")  # noqa: E701
         except Exception as e:
             logger.error(f"MoveNode {move_id}: Cloning node failed: {e}")
             self.processed_actions["errors"] += 1
@@ -668,14 +730,14 @@ class RedlineXMLFormatter:
 
         # --- Clean and mark the cloned node ---
         # Remove any pre-existing diff attributes from the clone and its descendants
-        for el in cloned_node_for_insert.xpath(".//* | ."): # Iterate over self and descendants
-             if isinstance(el, _Element):
-                 for name in list(el.attrib):
-                     if name.startswith(f"{{{_DIFF_NS}}}"):
-                         del el.attrib[name]
-                     # Also remove the synthetic ID from the clone to avoid collisions if diff runs again
-                     if name == "data-diff-id":
-                         del el.attrib[name]
+        for el in cloned_node_for_insert.xpath(".//* | ."):  # Iterate over self and descendants
+            if isinstance(el, _Element):
+                for name in list(el.attrib):
+                    if name.startswith(f"{{{_DIFF_NS}}}"):
+                        del el.attrib[name]
+                    # Also remove the synthetic ID from the clone to avoid collisions if diff runs again
+                    if name == "data-diff-id":
+                        del el.attrib[name]
 
         # Mark the root of the clone as the move target
         self._add_diff_attribute(cloned_node_for_insert, "op", "move-target")
@@ -684,7 +746,9 @@ class RedlineXMLFormatter:
         # --- Insert the cloned node into the copy tree ---
         target_node_in_copy = self._find_node_in_copy_by_xpath(tgt_xpath)
         if target_node_in_copy is None:
-            logger.error(f"MoveNode {move_id}: Target parent node {tgt_xpath} not found in COPY tree for insertion.")
+            logger.error(
+                f"MoveNode {move_id}: Target parent node {tgt_xpath} not found in COPY tree for insertion."
+            )
             self.processed_actions["errors"] += 1
             # Attempt to insert into the root as a last resort? Or just fail? Let's fail.
             return
@@ -696,20 +760,28 @@ class RedlineXMLFormatter:
                 # Clamp index to valid range for insertion
                 idx = max(0, min(int(pos), len(parent)))
                 parent.insert(idx, cloned_node_for_insert)
-                logger.debug(f"MoveNode {move_id}: Inserted move-target clone into copy tree at {tgt_xpath}[{idx}].")
+                logger.debug(
+                    f"MoveNode {move_id}: Inserted move-target clone into copy tree at {tgt_xpath}[{idx}]."
+                )
                 self.processed_actions["moves"] += 1
-            elif pos == "into": # Handle 'into' - append to the target node
+            elif pos == "into":  # Handle 'into' - append to the target node
                 parent = target_node_in_copy
                 parent.append(cloned_node_for_insert)
-                logger.debug(f"MoveNode {move_id}: Appended move-target clone into copy tree node {tgt_xpath}.")
+                logger.debug(
+                    f"MoveNode {move_id}: Appended move-target clone into copy tree node {tgt_xpath}."
+                )
                 self.processed_actions["moves"] += 1
             else:
                 # This case (e.g., pos='before'/'after') shouldn't happen with MoveNode from xmldiff typically,
                 # as it uses parent path + index. Log an error if it does.
-                logger.error(f"MoveNode {move_id}: Unsupported position '{pos}' for insertion. Expected integer or 'into'.")
+                logger.error(
+                    f"MoveNode {move_id}: Unsupported position '{pos}' for insertion. Expected integer or 'into'."
+                )
                 self.processed_actions["errors"] += 1
         except Exception as e:
-            logger.exception(f"MoveNode {move_id}: Insertion of cloned node into copy tree failed: {e}")
+            logger.exception(
+                f"MoveNode {move_id}: Insertion of cloned node into copy tree failed: {e}"
+            )
             self.processed_actions["errors"] += 1
 
     def _handle_update_text(self, action: Union[UpdateTextIn, UpdateTextBefore, UpdateTextAfter]):
@@ -1212,7 +1284,9 @@ def _generate_markdown_summary(
                 xp = _safe_get_attr(a, "node", "node_xpath", "target")
                 onode = _get_element_by_xpath_from_tree(xp, orig_doc)
                 tag = onode.tag if onode else "[?]"
-                content = _node_plain_text(onode, max_len=context_chars) if onode is not None else "[?]"
+                content = (
+                    _node_plain_text(onode, max_len=context_chars) if onode is not None else "[?]"
+                )
                 summary = [
                     f"### Deleted `<{tag}>`",
                     f"- **Location:** `{xp}`",
@@ -1231,7 +1305,9 @@ def _generate_markdown_summary(
                 mnode = _get_element_by_xpath_from_tree(xp, mod_doc)
                 old = _node_plain_text(onode, max_len=context_chars) if onode is not None else "[?]"
                 new = _node_plain_text(mnode, max_len=context_chars) if mnode is not None else "[?]"
-                tag = onode.tag if onode is not None else (mnode.tag if mnode is not None else "[?]")
+                tag = (
+                    onode.tag if onode is not None else (mnode.tag if mnode is not None else "[?]")
+                )
                 if old != new:
                     summary = [
                         f"### Text Change in `<{tag}>`",
@@ -1247,7 +1323,9 @@ def _generate_markdown_summary(
                 xp = _safe_get_attr(a, "node", "node_xpath")
                 onode = _get_element_by_xpath_from_tree(xp, orig_doc)
                 mnode = _get_element_by_xpath_from_tree(xp, mod_doc)
-                tag = onode.tag if onode is not None else (mnode.tag if mnode is not None else "[?]")
+                tag = (
+                    onode.tag if onode is not None else (mnode.tag if mnode is not None else "[?]")
+                )
 
                 details = ""
                 if isinstance(a, UpdateAttrib):
@@ -1462,7 +1540,11 @@ def _resolve_insert_element(
         sib = _get_element_by_xpath_from_tree(sib_xpath, mod_doc)
         if sib is not None:
             par = sib.getparent()
-            idx = par.index(sib) + (1 if pos == "after" else 0) if pos in ("before", "after") else len(par)
+            idx = (
+                par.index(sib) + (1 if pos == "after" else 0)
+                if pos in ("before", "after")
+                else len(par)
+            )
             try:
                 return par[idx], par.getroottree().getpath(par), idx
             except Exception:
@@ -1477,8 +1559,16 @@ def _score_pair(a: _NodeFP, b: _NodeFP) -> float:
     content = max(seq, jac)
     shs = _simhash_sim(a.simhash, b.simhash)
     anc = difflib.SequenceMatcher(None, a.anchor_sig, b.anchor_sig, autojunk=False).ratio()
-    attr = 1.0 if (a.attrs_sig and a.attrs_sig == b.attrs_sig) else (0.5 if a.attrs_sig and b.attrs_sig else 0.0)
-    tag_bonus = 0.05 if (a.tag == b.tag) else (0.03 if (a.tag in _BLOCK_TAGS and b.tag in _BLOCK_TAGS) else -0.10)
+    attr = (
+        1.0
+        if (a.attrs_sig and a.attrs_sig == b.attrs_sig)
+        else (0.5 if a.attrs_sig and b.attrs_sig else 0.0)
+    )
+    tag_bonus = (
+        0.05
+        if (a.tag == b.tag)
+        else (0.03 if (a.tag in _BLOCK_TAGS and b.tag in _BLOCK_TAGS) else -0.10)
+    )
     score = 0.45 * content + 0.25 * shs + 0.20 * anc + 0.10 * attr + tag_bonus
     lr = min(a.length, b.length) / max(a.length, b.length)
     if lr < 0.5:
@@ -1534,7 +1624,11 @@ def _augment_actions_with_fuzzy_moves(
             fp = _build_fp_for_element(target_el, xp or "")
             if fp:
                 fp.parent_xpath = parent_xpath
-                fp.pos = pos if (isinstance(pos, int) or (isinstance(pos, str) and str(pos).isdigit())) else None
+                fp.pos = (
+                    pos
+                    if (isinstance(pos, int) or (isinstance(pos, str) and str(pos).isdigit()))
+                    else None
+                )
                 fp.action_index = idx
                 ins_fps.append(fp)
 
@@ -1568,7 +1662,9 @@ def _augment_actions_with_fuzzy_moves(
     inject_moves: Dict[int, List[Any]] = {}
 
     def _mk_move_id(src_xp: str, tgt_px: str, pos_val: Optional[int]) -> str:
-        h = hashlib.blake2b(f"{src_xp}|{tgt_px}|{pos_val}".encode("utf-8", "replace"), digest_size=6).hexdigest()
+        h = hashlib.blake2b(
+            f"{src_xp}|{tgt_px}|{pos_val}".encode("utf-8", "replace"), digest_size=6
+        ).hexdigest()
         return f"mv_{h}"
 
     for score, d_idx, i_idx in cand:
@@ -1592,13 +1688,17 @@ def _augment_actions_with_fuzzy_moves(
                 pass
         elif not (isinstance(pos, int) or (isinstance(pos, str) and str(pos).isdigit())):
             try:
-                parent_el = _get_element_by_xpath_from_tree(tgt_parent, mod_doc) if tgt_parent else None
+                parent_el = (
+                    _get_element_by_xpath_from_tree(tgt_parent, mod_doc) if tgt_parent else None
+                )
                 if parent_el is not None:
                     pos = len(parent_el)
             except Exception:
                 pos = "into"
 
-        move_id = _mk_move_id(str(src_xpath), str(tgt_parent), int(pos) if str(pos).isdigit() else -1)
+        move_id = _mk_move_id(
+            str(src_xpath), str(tgt_parent), int(pos) if str(pos).isdigit() else -1
+        )
         try:
             if isinstance(pos, int) or (isinstance(pos, str) and str(pos).isdigit()):
                 pos_int = int(pos)
@@ -1814,8 +1914,8 @@ async def create_html_redline(
 
         # --- Reset Counter & Inject IDs ---
         logger.debug("Resetting ID counter and injecting synthetic IDs...")
-        _id_counter = itertools.count(1) # Reset counter here
-        _inject_synthetic_ids(orig_root) # Inject into original root
+        _id_counter = itertools.count(1)  # Reset counter here
+        _inject_synthetic_ids(orig_root)  # Inject into original root
         _inject_synthetic_ids(mod_root)  # Inject into modified root
         logger.debug("Synthetic ID injection complete.")
 
@@ -1837,16 +1937,15 @@ async def create_html_redline(
 
     # --- Check if pristine copies were successfully created before proceeding ---
     if original_tree_pristine is None or modified_tree_pristine is None:
-         # This case should ideally be caught by the exception above,
-         # but it's good practice to check.
-         logger.error("Pristine trees for diffing are missing after preparation step.")
-         return {
-             "redline_html": "<!-- Error: Failed to prepare documents for diffing -->",
-             "stats": {"error": "Document preparation failed"},
-             "processing_time": time.time() - t0,
-             "success": False,
-         }
-
+        # This case should ideally be caught by the exception above,
+        # but it's good practice to check.
+        logger.error("Pristine trees for diffing are missing after preparation step.")
+        return {
+            "redline_html": "<!-- Error: Failed to prepare documents for diffing -->",
+            "stats": {"error": "Document preparation failed"},
+            "processing_time": time.time() - t0,
+            "success": False,
+        }
 
     # --- Diff Actions (Using Synthetic IDs) ---
     logger.debug("Calculating differences using xmldiff with synthetic IDs...")
@@ -1868,9 +1967,9 @@ async def create_html_redline(
         debug_orig_path = "debug_orig_tree_with_ids.xml"
         debug_mod_path = "debug_mod_tree_with_ids.xml"
         with open(debug_orig_path, "wb") as f:
-            orig_tree.write(f, pretty_print=True, encoding='utf-8', xml_declaration=True)
+            orig_tree.write(f, pretty_print=True, encoding="utf-8", xml_declaration=True)
         with open(debug_mod_path, "wb") as f:
-            mod_tree.write(f, pretty_print=True, encoding='utf-8', xml_declaration=True)
+            mod_tree.write(f, pretty_print=True, encoding="utf-8", xml_declaration=True)
         logger.info(f"Debug trees with IDs written to {debug_orig_path} and {debug_mod_path}")
     except Exception as dbg_e:
         logger.warning(f"Failed to write debug trees: {dbg_e}")
@@ -1881,7 +1980,7 @@ async def create_html_redline(
         # Use the main trees (orig_tree, mod_tree) for diffing
         # as they have the structure and IDs needed for diff calculation.
         actions = main.diff_trees(
-            orig_tree, # Use the tree derived directly from preprocessing + ID injection
+            orig_tree,  # Use the tree derived directly from preprocessing + ID injection
             mod_tree,  # Use the tree derived directly from preprocessing + ID injection
             diff_options=differ_opts,
         )
@@ -1911,9 +2010,15 @@ async def create_html_redline(
             logger.warning("xmldiff generated NO actions.")
 
         # Check insert/delete ratio
-        insert_delete_ratio = (sum(1 for a in actions if isinstance(a, (InsertNode, DeleteNode))) / len(actions)) if actions else 0
+        insert_delete_ratio = (
+            (sum(1 for a in actions if isinstance(a, (InsertNode, DeleteNode))) / len(actions))
+            if actions
+            else 0
+        )
         if insert_delete_ratio > 0.9:
-            logger.warning(f"High ratio ({insert_delete_ratio:.2f}) of Insert/Delete actions. Node matching via data-diff-id might have failed.")
+            logger.warning(
+                f"High ratio ({insert_delete_ratio:.2f}) of Insert/Delete actions. Node matching via data-diff-id might have failed."
+            )
 
         # --- Generate Markdown Summary (if requested) ---
         if generate_markdown and actions:
@@ -1960,7 +2065,6 @@ async def create_html_redline(
         # Explicitly None out large trees if possible (though garbage collection should handle this)
         orig_tree = mod_tree = original_tree_pristine = modified_tree_pristine = None
 
-
     # --- Remove Synthetic IDs from Final Output ---
     if annotated_tree is not None:
         logger.debug("Removing synthetic IDs from the final annotated tree...")
@@ -1970,15 +2074,14 @@ async def create_html_redline(
                 count_removed += 1
         logger.debug(f"Removed {count_removed} synthetic IDs from final output.")
     else:
-         logger.error("Annotated tree is None after formatting.")
-         # Handle this case - perhaps return an error
-         return {
-             "redline_html": "<!-- Error: Formatting produced no result -->",
-             "stats": stats if stats else {"error": "Formatting failed"},
-             "processing_time": time.time() - t0,
-             "success": False,
-         }
-
+        logger.error("Annotated tree is None after formatting.")
+        # Handle this case - perhaps return an error
+        return {
+            "redline_html": "<!-- Error: Formatting produced no result -->",
+            "stats": stats if stats else {"error": "Formatting failed"},
+            "processing_time": time.time() - t0,
+            "success": False,
+        }
 
     # --- Apply XSLT ---
     logger.debug("Applying revised XSLT transformation...")
@@ -2014,20 +2117,20 @@ async def create_html_redline(
     dt = time.time() - t0
     success_flag = (
         stats.get("errors", 0) == 0
-        and "<!-- XSLT" not in redline_html # Check for XSLT error comments
+        and "<!-- XSLT" not in redline_html  # Check for XSLT error comments
     )
     result: Dict[str, Any] = {"stats": stats, "processing_time": dt, "success": success_flag}
 
     # Handle large output
     size_bytes = len(final_redline_html.encode("utf-8", errors="ignore"))
     logger.info(f"Generated redline HTML size: {size_bytes / 1024:.2f} KB")
-    if size_bytes > 10_000_000: # Example limit: 10MB
+    if size_bytes > 10_000_000:  # Example limit: 10MB
         logger.warning(f"Redline HTML size ({size_bytes} bytes) exceeds limit, encoding Base64.")
         try:
             result["redline_html_base64"] = base64.b64encode(
                 final_redline_html.encode("utf-8")
             ).decode("ascii")
-            result["output_is_base64"] = True # Add flag
+            result["output_is_base64"] = True  # Add flag
         except Exception as e:
             logger.error(f"Base64 encoding failed: {e}")
             result["redline_html"] = "<!-- Error: Output too large & Base64 failed -->"
@@ -2041,7 +2144,9 @@ async def create_html_redline(
     if generate_markdown:
         result["markdown_summary"] = markdown_summary
         if markdown_path:
-            result["markdown_path"] = str(Path(markdown_path).resolve()) # Example of returning path
+            result["markdown_path"] = str(
+                Path(markdown_path).resolve()
+            )  # Example of returning path
 
     logger.info(
         f"HTML redline generation finished in {dt:.3f} seconds. Success: {result['success']}"
@@ -2099,71 +2204,72 @@ def _normalize_tree_whitespace(root: _Element) -> None:
     if root is None:
         return
     # Iterate through all elements AND comments/PIs (which can have tails)
-    for node in root.xpath('. | .//node()'):
+    for node in root.xpath(". | .//node()"):
         # Check if it's an element or something else that can have text/tail
-        if hasattr(node, 'text'):
-             node.text = _normalize_text(node.text) or None # Use None if empty after normalize
-        if hasattr(node, 'tail'):
-             node.tail = _normalize_text(node.tail) or None # Use None if empty after normalize
+        if hasattr(node, "text"):
+            node.text = _normalize_text(node.text) or None  # Use None if empty after normalize
+        if hasattr(node, "tail"):
+            node.tail = _normalize_text(node.tail) or None  # Use None if empty after normalize
+
 
 def _deduplicate_body(root: _Element) -> None:
     """If an <html> element has more than one <body>, merge children
-       into the first and delete the rest. Modifies the tree in-place."""
-    if root is None or root.tag.lower() != 'html':
+    into the first and delete the rest. Modifies the tree in-place."""
+    if root is None or root.tag.lower() != "html":
         # Only operate on the root <html> element
         return
 
-    bodies = root.xpath('./body | ./BODY') # Case-insensitive check
+    bodies = root.xpath("./body | ./BODY")  # Case-insensitive check
     if len(bodies) <= 1:
-        return # Nothing to do
+        return  # Nothing to do
 
     logger.warning(f"Found {len(bodies)} <body> elements; merging into the first.")
     main_body = bodies[0]
-    parent = main_body.getparent() # Should be the <html> tag
-    if parent is None: 
-        return # Should not happen
+    parent = main_body.getparent()  # Should be the <html> tag
+    if parent is None:
+        return  # Should not happen
 
     for i, extra_body in enumerate(bodies[1:], start=1):
-         # Move children
-         for child in list(extra_body): # Iterate over a list copy
-              main_body.append(child) # Append moves the child
+        # Move children
+        for child in list(extra_body):  # Iterate over a list copy
+            main_body.append(child)  # Append moves the child
 
-         # Append tail text if any
-         if extra_body.tail:
-             # Find the last element in main_body to append the tail to,
-             # or append to main_body's text if it's empty
-             last_element = main_body[-1] if len(main_body) > 0 else None
-             if last_element is not None:
-                 if last_element.tail:
-                     last_element.tail = (last_element.tail or "") + (extra_body.tail or "")
-                 else:
-                     last_element.tail = extra_body.tail
-             else: # If main_body has no children, append to its text
-                 main_body.text = (main_body.text or "") + (extra_body.tail or "")
+        # Append tail text if any
+        if extra_body.tail:
+            # Find the last element in main_body to append the tail to,
+            # or append to main_body's text if it's empty
+            last_element = main_body[-1] if len(main_body) > 0 else None
+            if last_element is not None:
+                if last_element.tail:
+                    last_element.tail = (last_element.tail or "") + (extra_body.tail or "")
+                else:
+                    last_element.tail = extra_body.tail
+            else:  # If main_body has no children, append to its text
+                main_body.text = (main_body.text or "") + (extra_body.tail or "")
 
-
-         # Remove the now-empty extra body
-         try:
+        # Remove the now-empty extra body
+        try:
             parent.remove(extra_body)
-         except ValueError:
-            logger.error(f"Could not remove extra body #{i+1}, already removed?")
+        except ValueError:
+            logger.error(f"Could not remove extra body #{i + 1}, already removed?")
 
     logger.debug("Finished merging duplicate <body> elements.")
+
 
 def _preprocess_html_docs(
     original_html: str,
     modified_html: str,
     *,
-    ignore_whitespace: bool = True, # Keep this param, but handle normalization separately now
+    ignore_whitespace: bool = True,  # Keep this param, but handle normalization separately now
     use_tempfiles: bool = False,
     run_tidy: bool = False,
 ) -> Tuple[_Element, _Element]:
     """Preprocesses HTML, including optional Tidy and robust whitespace normalization."""
 
     if not original_html.strip():
-        original_html = "<html><body><p>Empty Document</p></body></html>" # Provide some structure
+        original_html = "<html><body><p>Empty Document</p></body></html>"  # Provide some structure
     if not modified_html.strip():
-        modified_html = "<html><body><p>Empty Document</p></body></html>" # Provide some structure
+        modified_html = "<html><body><p>Empty Document</p></body></html>"  # Provide some structure
 
     tidied_orig, tidied_mod = original_html, modified_html
 
@@ -2185,15 +2291,15 @@ def _preprocess_html_docs(
     parser = lxml_html.HTMLParser(
         recover=True,
         encoding="utf-8",
-        remove_comments=False, # Keep comments, they can affect structure/diff
-        remove_pis=False,      # Keep processing instructions
-        remove_blank_text=False, # IMPORTANT: Keep blank text for now
+        remove_comments=False,  # Keep comments, they can affect structure/diff
+        remove_pis=False,  # Keep processing instructions
+        remove_blank_text=False,  # IMPORTANT: Keep blank text for now
     )
     o_root: Optional[_Element] = None
     m_root: Optional[_Element] = None
     try:
         # Use memory parsing unless very large docs require temp files
-        if use_tempfiles and (len(tidied_orig) > 5e6 or len(tidied_mod) > 5e6): # 5MB limit example
+        if use_tempfiles and (len(tidied_orig) > 5e6 or len(tidied_mod) > 5e6):  # 5MB limit example
             logger.debug("Using temporary files for parsing large documents.")
             with tempfile.TemporaryDirectory() as td:
                 orig_p = Path(td, "orig.html")
@@ -2223,8 +2329,8 @@ def _preprocess_html_docs(
             _normalize_tree_whitespace(m_root)
             logger.debug("Whitespace normalization complete.")
         except Exception as e:
-             logger.exception("Whitespace normalization failed.")
-             raise ToolInputError("Failed whitespace normalization during preprocessing.") from e
+            logger.exception("Whitespace normalization failed.")
+            raise ToolInputError("Failed whitespace normalization during preprocessing.") from e
 
     # 4. Deduplicate Body Tags (Apply *after* normalization) <-- NEW STEP
     logger.debug("Checking for and merging duplicate <body> tags...")
@@ -2419,6 +2525,7 @@ def _get_base_diff_css() -> str:
         </style>
         """
 
+
 def _get_tailwind_css() -> str:
     return """ @tailwind base;@tailwind components;@tailwind utilities; @layer components { .diff-insert, .diff-delete, .diff-move-target, .diff-move-source { @apply px-0.5 rounded-sm mx-[1px] transition duration-150; } ins.diff-insert, .diff-insert > ins { @apply text-blue-800 bg-blue-50 ring-1 ring-inset ring-blue-300/60 no-underline; } .dark ins.diff-insert, .dark .diff-insert > ins { @apply text-blue-200 bg-blue-900/40 ring-blue-500/30; } ins.diff-insert:hover, .diff-insert > ins:hover { @apply ring-2 ring-offset-1 ring-black/10 shadow-sm bg-blue-100 dark:bg-blue-800/60; } del.diff-delete, .diff-delete > del { @apply text-rose-800 bg-rose-50 ring-1 ring-inset ring-rose-300/60 line-through; } .dark del.diff-delete, .dark .diff-delete > del { @apply text-rose-200 bg-rose-900/40 ring-rose-500/30; } del.diff-delete:hover, .diff-delete > del:hover { @apply ring-2 ring-offset-1 ring-black/10 shadow-sm bg-rose-100 dark:bg-rose-800/60; } ins.diff-move-target, .diff-move-target > ins { @apply text-emerald-900 bg-emerald-50 ring-1 ring-emerald-400/60 no-underline border border-emerald-300; } .dark ins.diff-move-target, .dark .diff-move-target > ins { @apply text-emerald-200 bg-emerald-900/40 ring-emerald-500/30 border-emerald-700; } ins.diff-move-target:hover, .diff-move-target > ins:hover { @apply ring-2 ring-offset-1 ring-black/10 shadow-sm bg-emerald-100 dark:bg-emerald-800/60; } del.diff-move-source, .diff-move-source > del { @apply text-emerald-800/60 bg-emerald-50/50 line-through border border-dashed border-emerald-400/40; } .dark del.diff-move-source, .dark .diff-move-source > del { @apply text-emerald-300/60 bg-emerald-900/30 border-emerald-700/40; } del.diff-move-source:hover, .diff-move-source > del:hover { @apply bg-emerald-100/70 border-emerald-400 shadow-sm dark:bg-emerald-800/50; } span.diff-update-container { @apply border-b border-dotted border-orange-400 bg-orange-50/30; } .dark span.diff-update-container { @apply border-orange-500 bg-orange-900/30; } span.diff-update-container:hover { @apply bg-orange-100/50 dark:bg-orange-800/40; } span.diff-attrib-change { @apply ring-1 ring-orange-400/50 ring-inset bg-orange-50/30 backdrop-blur-sm rounded-sm; } .dark span.diff-attrib-change { @apply ring-orange-500/50 bg-orange-900/30; } span.diff-attrib-change:hover { @apply bg-orange-100/50 dark:bg-orange-800/40; } span.diff-rename-node { @apply ring-1 ring-purple-400/50 ring-inset bg-violet-50/30 backdrop-blur-sm rounded-sm; } .dark span.diff-rename-node { @apply ring-purple-500/50 bg-violet-900/30; } span.diff-rename-node:hover { @apply bg-violet-100/50 dark:bg-violet-800/40; } ins.diff-insert-text { @apply text-blue-700 dark:text-blue-300 underline decoration-dotted decoration-1 underline-offset-2 bg-transparent border-none ring-0 p-0 m-0; } del.diff-delete-text { @apply text-rose-700 dark:text-rose-300 line-through decoration-dotted decoration-1 bg-transparent border-none ring-0 p-0 m-0; } @media print { .redline-navigation, .redline-legend, .redline-minimap, #theme-toggle { @apply hidden; } ins, del, span[class*="diff-"] { @apply text-black !important; background-color: transparent !important; border: none !important; ring: none !important; box-shadow: none !important; } ins { @apply font-bold no-underline; } del { @apply italic line-through; } } } """
 
@@ -2431,19 +2538,30 @@ def _get_navigation_js() -> str:
 #                       Plain‑text comparison (escaped)
 # ─────────────────────────────────────────────────────────────────────────────
 def _generate_text_redline(
-    original_text: str, modified_text: str, *, diff_level: str = "word",
+    original_text: str,
+    modified_text: str,
+    *,
+    diff_level: str = "word",
 ) -> Tuple[str, Dict[str, int]]:
     """Return plain‑text diff with {- +} markers and [~ ~] for moves."""
     if diff_level == "char":
         orig_units, mod_units, joiner = list(original_text), list(modified_text), ""
     elif diff_level == "word":
-        rx = r"(\w+[\S\w]*|\s+|[^\w\s])" # Keep whitespace as separate unit
-        orig_units, mod_units, joiner = re.findall(rx, original_text), re.findall(rx, modified_text), ""
-    else: # line level
-        orig_units, mod_units, joiner = original_text.splitlines(True), modified_text.splitlines(True), ""
+        rx = r"(\w+[\S\w]*|\s+|[^\w\s])"  # Keep whitespace as separate unit
+        orig_units, mod_units, joiner = (
+            re.findall(rx, original_text),
+            re.findall(rx, modified_text),
+            "",
+        )
+    else:  # line level
+        orig_units, mod_units, joiner = (
+            original_text.splitlines(True),
+            modified_text.splitlines(True),
+            "",
+        )
 
     sm = difflib.SequenceMatcher(None, orig_units, mod_units, autojunk=False)
-    ops: List[Tuple[str, str]] = [] # Store ('tag', 'text') pairs
+    ops: List[Tuple[str, str]] = []  # Store ('tag', 'text') pairs
     for tag, i1, i2, j1, j2 in sm.get_opcodes():
         if tag == "equal":
             ops.append(("eq", joiner.join(orig_units[i1:i2])))
@@ -2451,7 +2569,7 @@ def _generate_text_redline(
             ops.append(("del", joiner.join(orig_units[i1:i2])))
         elif tag == "insert":
             ops.append(("ins", joiner.join(mod_units[j1:j2])))
-        else: # replace
+        else:  # replace
             # Treat replace as delete followed by insert for move detection
             ops.append(("del", joiner.join(orig_units[i1:i2])))
             ops.append(("ins", joiner.join(mod_units[j1:j2])))
@@ -2459,20 +2577,20 @@ def _generate_text_redline(
     # --- Attempt Move Detection based on Content ---
     # Normalize whitespace and ignore case for matching identical blocks
     def _normalize_for_match(s: str) -> str:
-        return re.sub(r'\s+', ' ', s.strip()).lower()
+        return re.sub(r"\s+", " ", s.strip()).lower()
 
-    dels: Dict[str, List[int]] = {} # Map normalized text -> list of deletion indices
-    ins: Dict[str, List[int]] = {} # Map normalized text -> list of insertion indices
-    paired: Dict[int, int] = {} # Map deletion index -> insertion index for identified moves
+    dels: Dict[str, List[int]] = {}  # Map normalized text -> list of deletion indices
+    ins: Dict[str, List[int]] = {}  # Map normalized text -> list of insertion indices
+    paired: Dict[int, int] = {}  # Map deletion index -> insertion index for identified moves
 
     for idx, (tag, txt) in enumerate(ops):
         if tag == "del":
             key = _normalize_for_match(txt)
-            if key: # Only track non-empty deletions
+            if key:  # Only track non-empty deletions
                 dels.setdefault(key, []).append(idx)
         elif tag == "ins":
             key = _normalize_for_match(txt)
-            if key: # Only track non-empty insertions
+            if key:  # Only track non-empty insertions
                 ins.setdefault(key, []).append(idx)
 
     # Find potential moves: identical normalized content deleted once and inserted once
@@ -2483,46 +2601,46 @@ def _generate_text_redline(
             # Ensure they are not adjacent (which would be a replace)
             # This simple check might be too strict, but helps avoid marking simple replacements as moves
             if abs(deletion_idx - insertion_idx) > 1:
-                paired[deletion_idx] = insertion_idx # Mark as a move pair
+                paired[deletion_idx] = insertion_idx  # Mark as a move pair
 
     # --- Build Output String ---
     buf: List[str] = []
-    ic = dc = mc = 0 # Insert, Delete, Move counts
+    ic = dc = mc = 0  # Insert, Delete, Move counts
     for idx, (tag, txt) in enumerate(ops):
-        if idx in paired: # This is the deletion part of a move, skip it
+        if idx in paired:  # This is the deletion part of a move, skip it
             continue
-        if idx in paired.values(): # This is the insertion part of a move
-             # Escape markers within the moved text
-             escaped_move = txt.replace("[~", "[ ~").replace("~]", "~ ]")
-             buf.append(f"[~{escaped_move}~]")
-             mc += 1
-             continue
+        if idx in paired.values():  # This is the insertion part of a move
+            # Escape markers within the moved text
+            escaped_move = txt.replace("[~", "[ ~").replace("~]", "~ ]")
+            buf.append(f"[~{escaped_move}~]")
+            mc += 1
+            continue
 
         # Handle regular operations
         if tag == "eq":
             buf.append(txt)
         elif tag == "del":
-             # Escape markers within the deleted text
-             escaped_del = txt.replace("[-", "[ -").replace("-]", "- ]")
-             buf.append(f"[-{escaped_del}-]")
-             dc += 1
+            # Escape markers within the deleted text
+            escaped_del = txt.replace("[-", "[ -").replace("-]", "- ]")
+            buf.append(f"[-{escaped_del}-]")
+            dc += 1
         elif tag == "ins":
-             # Escape markers within the inserted text
-             escaped_ins = txt.replace("{+", "{ +").replace("+}", "+ }")
-             buf.append(f"{{+{escaped_ins}+}}")
-             ic += 1
+            # Escape markers within the inserted text
+            escaped_ins = txt.replace("{+", "{ +").replace("+}", "+ }")
+            buf.append(f"{{+{escaped_ins}+}}")
+            ic += 1
 
     # --- Calculate Stats ---
     stats = {
-        "total_changes": ic + dc + mc, # Total distinct changes
+        "total_changes": ic + dc + mc,  # Total distinct changes
         "insertions": ic,
         "deletions": dc,
         "moves": mc,
-        "text_updates": 0, # Not explicitly tracked with this method
+        "text_updates": 0,  # Not explicitly tracked with this method
         "attr_updates": 0,
         "other_changes": 0,
-        "inline_insertions": ic + mc, # Count move insertions here?
-        "inline_deletions": dc + mc, # Count move deletions here?
+        "inline_insertions": ic + mc,  # Count move insertions here?
+        "inline_deletions": dc + mc,  # Count move deletions here?
     }
     return "".join(buf), stats
 
@@ -2735,10 +2853,8 @@ def _detect_file_format(text: str) -> str:
     lines = text.splitlines()
     ms = (
         sum(bool(re.search(p, l)) for p in mrx[:5] for l in lines[:30])  # noqa: E741
-        + sum( 
-            bool(re.search(p, text, re.M)) for p in mrx[5:]
-        )
-    )  
+        + sum(bool(re.search(p, text, re.M)) for p in mrx[5:])
+    )
     if ls >= 2 and hs < 2:
         return "latex"
     if hs >= 4 or (hs >= 2 and "<body" in t):

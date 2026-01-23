@@ -1,5 +1,6 @@
 # ultimate/core/providers/openrouter.py
 """OpenRouter provider implementation."""
+
 import os
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Tuple, Union
@@ -16,6 +17,7 @@ logger = get_logger("ultimate_mcp_server.providers.openrouter")
 
 # Default OpenRouter Base URL (can be overridden by config)
 DEFAULT_OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
 
 class OpenRouterProvider(BaseProvider):
     """Provider implementation for OpenRouter API (using OpenAI-compatible interface)."""
@@ -34,26 +36,30 @@ class OpenRouterProvider(BaseProvider):
         config = get_config().providers.openrouter
         super().__init__(**kwargs)
         self.name = "openrouter"
-        
+
         # Use config default first, then fallback to constants
         self.default_model = config.default_model or DEFAULT_MODELS.get(Provider.OPENROUTER)
         if not config.default_model:
-            logger.debug(f"No default model set in config for OpenRouter, using fallback from constants: {self.default_model}")
+            logger.debug(
+                f"No default model set in config for OpenRouter, using fallback from constants: {self.default_model}"
+            )
 
         # Get base_url from config, fallback to kwargs, then constant
         self.base_url = config.base_url or kwargs.get("base_url", DEFAULT_OPENROUTER_BASE_URL)
 
         # Get additional headers from config's additional_params
-        self.http_referer = config.additional_params.get("http_referer") or kwargs.get("http_referer")
+        self.http_referer = config.additional_params.get("http_referer") or kwargs.get(
+            "http_referer"
+        )
         self.x_title = config.additional_params.get("x_title") or kwargs.get("x_title")
-        
+
         # We'll create the client in initialize() instead
         self.client = None
         self.available_models = []
-    
+
     async def initialize(self) -> bool:
         """Initialize the OpenRouter client.
-        
+
         Returns:
             bool: True if initialization was successful
         """
@@ -64,24 +70,26 @@ class OpenRouterProvider(BaseProvider):
                 headers["HTTP-Referer"] = self.http_referer
             if self.x_title:
                 headers["X-Title"] = self.x_title
-            
+
             # Get timeout from config
             config = get_config().providers.openrouter
             timeout = config.timeout or 30.0  # Default timeout 30s
-            
+
             # Check if API key is available
             if not self.api_key:
-                logger.warning(f"{self.name} API key not found in configuration. Provider will be unavailable.")
+                logger.warning(
+                    f"{self.name} API key not found in configuration. Provider will be unavailable."
+                )
                 return False
-                
+
             # Create the client
             self.client = AsyncOpenAI(
                 base_url=self.base_url,
                 api_key=self.api_key,
                 default_headers=headers,
-                timeout=timeout
+                timeout=timeout,
             )
-            
+
             # Pre-fetch available models
             try:
                 self.available_models = await self.list_models()
@@ -90,18 +98,12 @@ class OpenRouterProvider(BaseProvider):
                 logger.warning(f"Failed to fetch models from OpenRouter: {str(model_err)}")
                 # Use hardcoded fallback models
                 self.available_models = self._get_fallback_models()
-            
-            logger.success(
-                "OpenRouter provider initialized successfully", 
-                emoji_key="provider"
-            )
+
+            logger.success("OpenRouter provider initialized successfully", emoji_key="provider")
             return True
-            
+
         except Exception as e:
-            logger.error(
-                f"Failed to initialize OpenRouter provider: {str(e)}", 
-                emoji_key="error"
-            )
+            logger.error(f"Failed to initialize OpenRouter provider: {str(e)}", emoji_key="error")
             return False
 
     def _initialize_client(self, **kwargs):
@@ -116,7 +118,7 @@ class OpenRouterProvider(BaseProvider):
         model: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
-        **kwargs
+        **kwargs,
     ) -> ModelResponse:
         """Generate a completion using OpenRouter.
 
@@ -145,7 +147,9 @@ class OpenRouterProvider(BaseProvider):
 
         # Ensure we have a model name before proceeding
         if model is None:
-            logger.error("Completion failed: No model specified and no default model configured for OpenRouter.")
+            logger.error(
+                "Completion failed: No model specified and no default model configured for OpenRouter."
+            )
             raise ValueError("No model specified and no default model configured for OpenRouter.")
 
         # Strip provider prefix only if it matches OUR provider name
@@ -185,13 +189,16 @@ class OpenRouterProvider(BaseProvider):
             f"Generating completion with {self.provider_name} model {model}",
             emoji_key=self.provider_name,
             prompt_length=len(prompt),
-            json_mode_requested=json_mode
+            json_mode_requested=json_mode,
         )
 
         try:
             # Make API call with timing
             response, processing_time = await self.process_with_timer(
-                self.client.chat.completions.create, **params, extra_headers=extra_headers, extra_body=extra_body
+                self.client.chat.completions.create,
+                **params,
+                extra_headers=extra_headers,
+                extra_body=extra_body,
             )
 
             # Extract response text
@@ -200,7 +207,7 @@ class OpenRouterProvider(BaseProvider):
             # Create standardized response
             result = ModelResponse(
                 text=completion_text,
-                model=response.model, # Use model returned by API
+                model=response.model,  # Use model returned by API
                 provider=self.provider_name,
                 input_tokens=response.usage.prompt_tokens,
                 output_tokens=response.usage.completion_tokens,
@@ -213,12 +220,9 @@ class OpenRouterProvider(BaseProvider):
                 f"{self.provider_name} completion successful",
                 emoji_key="success",
                 model=result.model,
-                tokens={
-                    "input": result.input_tokens,
-                    "output": result.output_tokens
-                },
-                cost=result.cost, # Will be calculated by ModelResponse
-                time=result.processing_time
+                tokens={"input": result.input_tokens, "output": result.output_tokens},
+                cost=result.cost,  # Will be calculated by ModelResponse
+                time=result.processing_time,
             )
 
             return result
@@ -227,7 +231,7 @@ class OpenRouterProvider(BaseProvider):
             self.logger.error(
                 f"{self.provider_name} completion failed for model {model}: {str(e)}",
                 emoji_key="error",
-                model=model
+                model=model,
             )
             raise
 
@@ -237,7 +241,7 @@ class OpenRouterProvider(BaseProvider):
         model: Optional[str] = None,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
-        **kwargs
+        **kwargs,
     ) -> AsyncGenerator[Tuple[str, Dict[str, Any]], None]:
         """Generate a streaming completion using OpenRouter.
 
@@ -292,15 +296,17 @@ class OpenRouterProvider(BaseProvider):
             f"Generating streaming completion with {self.provider_name} model {model}",
             emoji_key=self.provider_name,
             prompt_length=len(prompt),
-            json_mode_requested=json_mode
+            json_mode_requested=json_mode,
         )
 
         start_time = time.time()
         total_chunks = 0
-        final_model_name = model # Store initially requested model
+        final_model_name = model  # Store initially requested model
 
         try:
-            stream = await self.client.chat.completions.create(**params, extra_headers=extra_headers, extra_body=extra_body)
+            stream = await self.client.chat.completions.create(
+                **params, extra_headers=extra_headers, extra_body=extra_body
+            )
 
             async for chunk in stream:
                 total_chunks += 1
@@ -326,14 +332,14 @@ class OpenRouterProvider(BaseProvider):
                 emoji_key="success",
                 model=final_model_name,
                 chunks=total_chunks,
-                time=processing_time
+                time=processing_time,
             )
 
         except Exception as e:
             self.logger.error(
                 f"{self.provider_name} streaming completion failed for model {model}: {str(e)}",
                 emoji_key="error",
-                model=model
+                model=model,
             )
             raise
 
@@ -370,7 +376,7 @@ class OpenRouterProvider(BaseProvider):
         if not self.client:
             # Try to initialize if not already done
             if not await self._initialize_client():
-                return False # Initialization failed
+                return False  # Initialization failed
 
         try:
             # Attempt a simple, low-cost operation, e.g., list models (even if it returns 404/permission error, it validates the key/URL)
@@ -379,11 +385,13 @@ class OpenRouterProvider(BaseProvider):
                 model=self.get_default_model(),
                 messages=[{"role": "user", "content": "test"}],
                 max_tokens=1,
-                temperature=0
+                temperature=0,
             )
             return True
         except Exception as e:
-            logger.warning(f"API key check failed for {self.provider_name}: {str(e)}", emoji_key="warning")
+            logger.warning(
+                f"API key check failed for {self.provider_name}: {str(e)}", emoji_key="warning"
+            )
             return False
 
     def get_available_models(self) -> List[str]:
@@ -395,27 +403,35 @@ class OpenRouterProvider(BaseProvider):
         available_model_ids = [model["id"] for model in self.available_models]
         return model_name in available_model_ids
 
-    async def create_completion(self, model: str, messages: List[Dict[str, str]], stream: bool = False, **kwargs) -> Union[str, AsyncGenerator[str, None]]:
+    async def create_completion(
+        self, model: str, messages: List[Dict[str, str]], stream: bool = False, **kwargs
+    ) -> Union[str, AsyncGenerator[str, None]]:
         """Create a completion using the specified model."""
         if not self.client:
             raise RuntimeError("OpenRouter client not initialized (likely missing API key).")
-            
+
         # Check if model is available
         if not self.is_model_available(model):
             # Fallback to default if provided model isn't listed? Or raise error?
             # Let's try the default model if the requested one isn't confirmed available.
             if self.default_model and self.is_model_available(self.default_model):
-                logger.warning(f"Model '{model}' not found in available list. Falling back to default '{self.default_model}'.")
+                logger.warning(
+                    f"Model '{model}' not found in available list. Falling back to default '{self.default_model}'."
+                )
                 model = self.default_model
             else:
                 # If even the default isn't available or set, raise error
-                raise ValueError(f"Model '{model}' is not available via OpenRouter according to fetched list, and no valid default model is set.")
+                raise ValueError(
+                    f"Model '{model}' is not available via OpenRouter according to fetched list, and no valid default model is set."
+                )
 
         merged_kwargs = {**kwargs}
         # OpenRouter uses standard OpenAI params like max_tokens, temperature, etc.
         # Ensure essential params are passed
-        if 'max_tokens' not in merged_kwargs:
-            merged_kwargs['max_tokens'] = get_config().providers.openrouter.max_tokens or 1024 # Use config or default
+        if "max_tokens" not in merged_kwargs:
+            merged_kwargs["max_tokens"] = (
+                get_config().providers.openrouter.max_tokens or 1024
+            )  # Use config or default
 
         if stream:
             logger.debug(f"Creating stream completion: Model={model}, Params={merged_kwargs}")
@@ -424,47 +440,49 @@ class OpenRouterProvider(BaseProvider):
             logger.debug(f"Creating completion: Model={model}, Params={merged_kwargs}")
             try:
                 response = await self.client.chat.completions.create(
-                    model=model,
-                    messages=messages,
-                    stream=False,
-                    **merged_kwargs
+                    model=model, messages=messages, stream=False, **merged_kwargs
                 )
                 # Extract content based on OpenAI library version
-                if hasattr(response, 'choices') and response.choices:
+                if hasattr(response, "choices") and response.choices:
                     choice = response.choices[0]
-                    if hasattr(choice, 'message') and hasattr(choice.message, 'content'):
-                        return choice.message.content or "" # Return empty string if content is None
-                    elif hasattr(choice, 'delta') and hasattr(choice.delta, 'content'): # Should not happen for stream=False but check
+                    if hasattr(choice, "message") and hasattr(choice.message, "content"):
+                        return (
+                            choice.message.content or ""
+                        )  # Return empty string if content is None
+                    elif hasattr(choice, "delta") and hasattr(
+                        choice.delta, "content"
+                    ):  # Should not happen for stream=False but check
                         return choice.delta.content or ""
                 logger.warning("Could not extract content from OpenRouter response.")
-                return "" # Return empty string if no content found
+                return ""  # Return empty string if no content found
             except Exception as e:
                 logger.error(f"OpenRouter completion failed: {e}", exc_info=True)
                 raise RuntimeError(f"OpenRouter API call failed: {e}") from e
 
-    async def _stream_completion_generator(self, model: str, messages: List[Dict[str, str]], **kwargs) -> AsyncGenerator[str, None]:
+    async def _stream_completion_generator(
+        self, model: str, messages: List[Dict[str, str]], **kwargs
+    ) -> AsyncGenerator[str, None]:
         """Async generator for streaming completions."""
         if not self.client:
             raise RuntimeError("OpenRouter client not initialized (likely missing API key).")
         try:
             stream = await self.client.chat.completions.create(
-                model=model,
-                messages=messages,
-                stream=True,
-                **kwargs
+                model=model, messages=messages, stream=True, **kwargs
             )
             async for chunk in stream:
                 # Extract content based on OpenAI library version
                 content = ""
-                if hasattr(chunk, 'choices') and chunk.choices:
-                     choice = chunk.choices[0]
-                     if hasattr(choice, 'delta') and hasattr(choice.delta, 'content'):
-                          content = choice.delta.content
-                     elif hasattr(choice, 'message') and hasattr(choice.message, 'content'): # Should not happen for stream=True
-                          content = choice.message.content
+                if hasattr(chunk, "choices") and chunk.choices:
+                    choice = chunk.choices[0]
+                    if hasattr(choice, "delta") and hasattr(choice.delta, "content"):
+                        content = choice.delta.content
+                    elif hasattr(choice, "message") and hasattr(
+                        choice.message, "content"
+                    ):  # Should not happen for stream=True
+                        content = choice.message.content
 
                 if content:
-                     yield content
+                    yield content
         except Exception as e:
             logger.error(f"OpenRouter stream completion failed: {e}", exc_info=True)
             # Depending on desired behavior, either raise or yield an error message
@@ -482,17 +500,25 @@ class OpenRouterProvider(BaseProvider):
         # Placeholder: Need to fetch and store detailed pricing from OpenRouter
         # Example structure (needs actual data):
         openrouter_pricing = {
-             # "model_id": {"prompt_cost_per_mtok": X, "completion_cost_per_mtok": Y},
-             "openai/gpt-4o": {"prompt_cost_per_mtok": 5.0, "completion_cost_per_mtok": 15.0},
-             "google/gemini-pro-1.5": {"prompt_cost_per_mtok": 3.5, "completion_cost_per_mtok": 10.5},
-             "anthropic/claude-3-opus": {"prompt_cost_per_mtok": 15.0, "completion_cost_per_mtok": 75.0},
-             # ... add more model costs from openrouter.ai/docs#models ...
+            # "model_id": {"prompt_cost_per_mtok": X, "completion_cost_per_mtok": Y},
+            "openai/gpt-4o": {"prompt_cost_per_mtok": 5.0, "completion_cost_per_mtok": 15.0},
+            "google/gemini-pro-1.5": {
+                "prompt_cost_per_mtok": 3.5,
+                "completion_cost_per_mtok": 10.5,
+            },
+            "anthropic/claude-3-opus": {
+                "prompt_cost_per_mtok": 15.0,
+                "completion_cost_per_mtok": 75.0,
+            },
+            # ... add more model costs from openrouter.ai/docs#models ...
         }
 
         model_cost = openrouter_pricing.get(model)
         if model_cost:
             prompt_cost = (prompt_tokens / 1_000_000) * model_cost.get("prompt_cost_per_mtok", 0)
-            completion_cost = (completion_tokens / 1_000_000) * model_cost.get("completion_cost_per_mtok", 0)
+            completion_cost = (completion_tokens / 1_000_000) * model_cost.get(
+                "completion_cost_per_mtok", 0
+            )
             return prompt_cost + completion_cost
         else:
             logger.warning(f"Cost calculation not available for OpenRouter model: {model}")
@@ -524,6 +550,7 @@ class OpenRouterProvider(BaseProvider):
                 "description": "Meta: Powerful open-source instruction-tuned model.",
             },
         ]
+
 
 # Make available via discovery
 __all__ = ["OpenRouterProvider"]

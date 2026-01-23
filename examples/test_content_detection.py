@@ -117,18 +117,21 @@ def is_this_code():
 Regular paragraph text continues here.
 """
 
+
 async def test_content_detection():
-    console.print(Panel("Testing Content Type Detection with Magika Integration", style="bold green"))
-    
+    console.print(
+        Panel("Testing Content Type Detection with Magika Integration", style="bold green")
+    )
+
     # Initialize the document processor
     gateway = Gateway("content-detection-test")
     # Initialize providers
     console.print("Initializing gateway and providers...")
     await gateway._initialize_providers()
-    
+
     # Create document processing tool
     doc_tool = DocumentProcessingTool(gateway)
-    
+
     # Define test cases
     test_cases = [
         ("HTML Document", HTML_CONTENT),
@@ -137,7 +140,7 @@ async def test_content_detection():
         ("Plain Text Document", PLAIN_TEXT_CONTENT),
         ("Ambiguous Content", AMBIGUOUS_CONTENT),
     ]
-    
+
     # Create results table
     results_table = Table(title="Content Type Detection Results")
     results_table.add_column("Content Type", style="cyan")
@@ -145,63 +148,67 @@ async def test_content_detection():
     results_table.add_column("Confidence", style="yellow")
     results_table.add_column("Method", style="magenta")
     results_table.add_column("Detection Criteria", style="blue")
-    
+
     # Test each case
     for name, content in test_cases:
         console.print(f"\nDetecting content type for: [bold cyan]{name}[/]")
-        
+
         # Detect content type
         result = await doc_tool.detect_content_type(content)
-        
+
         # Get detection details
         detected_type = result.get("content_type", "unknown")
         confidence = result.get("confidence", 0.0)
         criteria = ", ".join(result.get("detection_criteria", []))
-        
+
         # Check if Magika was used
         method = "Magika" if result.get("detection_method") == "magika" else "Heuristic"
         if not result.get("detection_method") == "magika" and result.get("magika_details"):
             method = "Combined (Magika + Heuristic)"
-            
+
         # Add to results table
         results_table.add_row(
             name,
             detected_type,
             f"{confidence:.2f}",
             method,
-            criteria[:100] + "..." if len(criteria) > 100 else criteria
+            criteria[:100] + "..." if len(criteria) > 100 else criteria,
         )
-        
+
         # Show all scores
         scores = result.get("all_scores", {})
         if scores:
             scores_table = Table(title="Detection Scores")
             scores_table.add_column("Content Type", style="cyan")
             scores_table.add_column("Score", style="yellow")
-            
+
             for ctype, score in scores.items():
                 scores_table.add_row(ctype, f"{score:.3f}")
-            
+
             console.print(scores_table)
-        
+
         # Show Magika details if available
         if "magika_details" in result:
             magika_details = result["magika_details"]
-            console.print(Panel(
-                f"Magika Type: {magika_details.get('type', 'unknown')}\n"
-                f"Magika Confidence: {magika_details.get('confidence', 0.0):.3f}\n"
-                f"Matched Primary Type: {magika_details.get('matched_primary_type', False)}",
-                title="Magika Details",
-                style="blue"
-            ))
-    
+            console.print(
+                Panel(
+                    f"Magika Type: {magika_details.get('type', 'unknown')}\n"
+                    f"Magika Confidence: {magika_details.get('confidence', 0.0):.3f}\n"
+                    f"Matched Primary Type: {magika_details.get('matched_primary_type', False)}",
+                    title="Magika Details",
+                    style="blue",
+                )
+            )
+
     # Print final results table
     console.print("\n")
     console.print(results_table)
 
     # Now test HTML to Markdown conversion with a clearly broken HTML case
-    console.print(Panel("Testing HTML to Markdown Conversion with Content Detection", style="bold green"))
-    
+    console.print(
+        Panel("Testing HTML to Markdown Conversion with Content Detection", style="bold green")
+    )
+
     # Create a test case with problematic HTML (the one that previously failed)
     problematic_html = """<!DOCTYPE html>
 <html class="client-nojs vector-feature-language-in-header-enabled vector-feature-language-in-main-page-header-disabled">
@@ -218,25 +225,27 @@ async def test_content_detection():
 
     console.print("Converting problematic HTML to Markdown...")
     result = await doc_tool.clean_and_format_text_as_markdown(
-        text=problematic_html,
-        extraction_method="auto",
-        preserve_tables=True,
-        preserve_links=True
+        text=problematic_html, extraction_method="auto", preserve_tables=True, preserve_links=True
     )
-    
-    console.print(Panel(
-        f"Original Type: {result.get('original_content_type', 'unknown')}\n"
-        f"Was HTML: {result.get('was_html', False)}\n"
-        f"Extraction Method: {result.get('extraction_method_used', 'none')}",
-        title="Conversion Details", 
-        style="cyan"
-    ))
-    
-    console.print(Panel(
-        result.get("markdown_text", "No markdown produced"),
-        title="Converted Markdown", 
-        style="green"
-    ))
+
+    console.print(
+        Panel(
+            f"Original Type: {result.get('original_content_type', 'unknown')}\n"
+            f"Was HTML: {result.get('was_html', False)}\n"
+            f"Extraction Method: {result.get('extraction_method_used', 'none')}",
+            title="Conversion Details",
+            style="cyan",
+        )
+    )
+
+    console.print(
+        Panel(
+            result.get("markdown_text", "No markdown produced"),
+            title="Converted Markdown",
+            style="green",
+        )
+    )
+
 
 if __name__ == "__main__":
-    asyncio.run(test_content_detection()) 
+    asyncio.run(test_content_detection())

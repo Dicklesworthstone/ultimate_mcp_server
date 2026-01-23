@@ -35,7 +35,7 @@ logger = get_logger("example.business_sentiment_demo")
 
 # Provider and model configuration - easy to change
 PROVIDER = Provider.OPENAI.value  # Change this to switch providers (e.g., Provider.OPENAI.value)
-MODEL = 'gpt-4.1-nano'  # Set to None to use default model for the provider, or specify a model name
+MODEL = "gpt-4.1-nano"  # Set to None to use default model for the provider, or specify a model name
 
 # Sample data for demonstrations
 SAMPLE_FEEDBACK = {
@@ -865,7 +865,7 @@ async def run_batch_analysis(gateway, tracker: CostTracker):
             if "aggregate_insights" in result and result["aggregate_insights"]:
                 insights = result["aggregate_insights"]
                 recommendations = []
-                
+
                 # Extract top issues from aggregate insights
                 if "top_aspects" in insights and insights["top_aspects"]:
                     for aspect in insights["top_aspects"]:
@@ -873,24 +873,24 @@ async def run_batch_analysis(gateway, tracker: CostTracker):
                             recommendations.append(
                                 f"Address issues with {aspect['name'].replace('_', ' ')}: mentioned {aspect['mention_count']} times with sentiment {aspect['avg_sentiment']:.2f}"
                             )
-                
+
                 if "key_topics" in insights and insights["key_topics"]:
                     for topic in insights["key_topics"]:
                         if "avg_sentiment" in topic and topic["avg_sentiment"] < 0:
                             recommendations.append(
                                 f"Investigate concerns about '{topic['topic']}': mentioned {topic['mention_count']} times"
                             )
-                
+
                 # If we don't have enough recommendations, add some generic ones
                 if len(recommendations) < 3:
                     recommendations.append("Review product features with highest mention counts")
                     recommendations.append("Follow up with customers who reported critical issues")
-                
+
                 # Format and display recommendations
                 formatted_recommendations = []
                 for i, rec in enumerate(recommendations[:4]):  # Limit to top 4
                     formatted_recommendations.append(f"{i + 1}. **{rec}**")
-                
+
                 if formatted_recommendations:
                     console.print(
                         Panel(

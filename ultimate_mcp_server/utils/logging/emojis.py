@@ -4,6 +4,7 @@ Emoji definitions for Gateway logging system.
 This module contains constants for emojis used in logging to provide visual cues
 about the type and severity of log messages.
 """
+
 from typing import Dict
 
 # Log level emojis
@@ -30,13 +31,13 @@ TIMEOUT = "⏱️"
 SKIPPED = "⏭️"
 
 # Operation emojis (Adapt for ultimate)
-REQUEST = "➡️" # Example
-RESPONSE = "⬅️" # Example
+REQUEST = "➡️"  # Example
+RESPONSE = "⬅️"  # Example
 PROCESS = "⚙️"  # Example
-CACHE_HIT = "✅" # Example
-CACHE_MISS = "❌" # Example
-AUTHENTICATE = "🔒" # Example
-AUTHORIZE = "🔑" # Example
+CACHE_HIT = "✅"  # Example
+CACHE_MISS = "❌"  # Example
+AUTHENTICATE = "🔒"  # Example
+AUTHORIZE = "🔑"  # Example
 VALIDATE = "✔️"
 CONNECT = "🔌"
 DISCONNECT = "🔌"
@@ -44,12 +45,12 @@ UPDATE = "📝"
 
 # Component emojis (Adapt for ultimate)
 CORE = "⚙️"
-PROVIDER = "☁️" # Example
-ROUTER = "🔀" # Example
+PROVIDER = "☁️"  # Example
+ROUTER = "🔀"  # Example
 CACHE = "📦"
 API = "🌐"
-MCP = "📡" # Keep if relevant
-UTILS = "🔧" # Example
+MCP = "📡"  # Keep if relevant
+UTILS = "🔧"  # Example
 
 # Tool emojis (Keep/remove/add as needed)
 # RIPGREP = "🔍"
@@ -70,8 +71,8 @@ LOW_CONFIDENCE = "🚪"
 STARTUP = "🔆"
 SHUTDOWN = "🔅"
 CONFIG = "⚙️"
-ERROR = "⛔" # Distinct from level error
-WARNING = "⚠️" # Same as level warning
+ERROR = "⛔"  # Distinct from level error
+WARNING = "⚠️"  # Same as level warning
 DEPENDENCY = "🧱"
 VERSION = "🏷️"
 UPDATE_AVAILABLE = "🆕"
@@ -133,32 +134,33 @@ COMPONENT_EMOJIS: Dict[str, str] = {
     # Add other components here
 }
 
+
 # Get emoji by name function for more dynamic access
 def get_emoji(category: str, name: str) -> str:
     """Get an emoji by category and name.
-    
+
     Args:
         category: The category of emoji (e.g., 'level', 'status', 'operation', 'component')
         name: The name of the emoji within that category
-    
+
     Returns:
         The emoji string or a default '?' if not found
     """
     category = category.lower()
     name_lower = name.lower()
-    
+
     if category == "level":
         return LEVEL_EMOJIS.get(name_lower, "?")
     elif category == "operation":
-        return OPERATION_EMOJIS.get(name_lower, "⚙️") # Default to generic gear
+        return OPERATION_EMOJIS.get(name_lower, "⚙️")  # Default to generic gear
     elif category == "component":
-        return COMPONENT_EMOJIS.get(name_lower, "🧩") # Default to puzzle piece
-    
+        return COMPONENT_EMOJIS.get(name_lower, "🧩")  # Default to puzzle piece
+
     # Fallback for other categories or direct constant lookup
     name_upper = name.upper()
     globals_dict = globals()
     if name_upper in globals_dict:
         return globals_dict[name_upper]
-        
+
     # Default if nothing matches
-    return "❓" 
+    return "❓"

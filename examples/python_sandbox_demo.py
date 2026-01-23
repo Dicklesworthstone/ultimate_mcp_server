@@ -77,7 +77,6 @@ install_rich_traceback(show_locals=False, width=console.width)
 # --- Enhanced Display Helper (from older script) ---
 
 
-
 # --- Argument Parsing ---
 def parse_arguments():
     """Parse command line arguments for the demo."""
@@ -378,7 +377,7 @@ print(f"Square root of x ({x}) is {result}")
             "code": code3,
             "handle": repl_handle,
             "packages": [],
-        }, 
+        },
         description=f"REPL Call 3 (Handle: {repl_handle[-8:]}): Import math and use x",
     )
     display_sandbox_result(f"REPL Step 3 (Handle: ...{repl_handle[-8:]})", result3, code3)

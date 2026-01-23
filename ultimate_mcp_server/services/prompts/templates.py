@@ -1,4 +1,5 @@
 """Prompt template management and rendering for Ultimate MCP Server."""
+
 import json
 import re
 from enum import Enum
@@ -17,6 +18,7 @@ logger = get_logger(__name__)
 
 class TemplateFormat(str, Enum):
     """Template format options."""
+
     JINJA = "jinja"
     SIMPLE = "simple"
     MARKDOWN = "markdown"
@@ -25,6 +27,7 @@ class TemplateFormat(str, Enum):
 
 class TemplateType(str, Enum):
     """Template type options."""
+
     COMPLETION = "completion"
     CHAT = "chat"
     SYSTEM = "system"
@@ -35,7 +38,7 @@ class TemplateType(str, Enum):
 
 class PromptTemplate:
     """Template for generating prompts for LLM providers."""
-    
+
     def __init__(
         self,
         template: str,
@@ -49,7 +52,7 @@ class PromptTemplate:
         example_vars: Optional[Dict[str, Any]] = None,
     ):
         """Initialize a prompt template.
-        
+
         Args:
             template: Template string
             template_id: Unique identifier for this template
@@ -63,49 +66,49 @@ class PromptTemplate:
         """
         self.template = template
         self.template_id = template_id
-        
+
         # Normalize format and type to enum values
         self.format = TemplateFormat(format) if isinstance(format, str) else format
         self.type = TemplateType(type) if isinstance(type, str) else type
-        
+
         # Store additional attributes
         self.metadata = metadata or {}
         self.provider_defaults = provider_defaults or {}
         self.description = description
         self.example_vars = example_vars or {}
-        
+
         # Extract required variables based on format
         self.required_vars = required_vars or self._extract_required_vars()
-        
+
         # Compile template if using Jinja format
         self._compiled_template: Optional[Template] = None
         if self.format == TemplateFormat.JINJA:
             self._compiled_template = self._compile_template()
-    
+
     def _extract_required_vars(self) -> List[str]:
         """Extract required variables from template based on format.
-        
+
         Returns:
             List of required variable names
         """
         if self.format == TemplateFormat.JINJA:
             # Extract variables using regex for basic Jinja pattern
-            matches = re.findall(r'{{(.*?)}}', self.template)
+            matches = re.findall(r"{{(.*?)}}", self.template)
             vars_set: Set[str] = set()
-            
+
             for match in matches:
                 # Extract variable name (removing filters and whitespace)
-                var_name = match.split('|')[0].strip()
-                if var_name and not var_name.startswith('_'):
+                var_name = match.split("|")[0].strip()
+                if var_name and not var_name.startswith("_"):
                     vars_set.add(var_name)
-                    
+
             return sorted(list(vars_set))
-            
+
         elif self.format == TemplateFormat.SIMPLE:
             # Extract variables from {variable} format
-            matches = re.findall(r'{([^{}]*)}', self.template)
+            matches = re.findall(r"{([^{}]*)}", self.template)
             return sorted(list(set(matches)))
-            
+
         elif self.format == TemplateFormat.JSON:
             # Try to find JSON template variables
             try:
@@ -114,26 +117,25 @@ class PromptTemplate:
                 return self._extract_json_vars(template_dict)
             except json.JSONDecodeError:
                 logger.warning(
-                    f"Failed to parse JSON template: {self.template_id}",
-                    emoji_key="warning"
+                    f"Failed to parse JSON template: {self.template_id}", emoji_key="warning"
                 )
                 return []
-                
+
         # Default: no variables detected
         return []
-    
+
     def _extract_json_vars(self, obj: Any, prefix: str = "") -> List[str]:
         """Recursively extract variables from a JSON object.
-        
+
         Args:
             obj: JSON object to extract variables from
             prefix: Prefix for nested variables
-            
+
         Returns:
             List of variable names
         """
         vars_list = []
-        
+
         if isinstance(obj, dict):
             for key, value in obj.items():
                 if isinstance(value, str) and value.startswith("${") and value.endswith("}"):
@@ -151,37 +153,36 @@ class PromptTemplate:
                 elif isinstance(item, str) and item.startswith("${") and item.endswith("}"):
                     var_name = item[2:-1]
                     vars_list.append(f"{prefix}{var_name}")
-        
+
         return sorted(list(set(vars_list)))
-    
+
     def _compile_template(self) -> Template:
         """Compile the Jinja template.
-        
+
         Returns:
             Compiled Jinja template
-            
+
         Raises:
             ValueError: If template compilation fails
         """
         try:
-            env = Environment(autoescape=select_autoescape(['html', 'xml']))
+            env = Environment(autoescape=select_autoescape(["html", "xml"]))
             return env.from_string(self.template)
         except Exception as e:
             logger.error(
-                f"Failed to compile template {self.template_id}: {str(e)}",
-                emoji_key="error"
+                f"Failed to compile template {self.template_id}: {str(e)}", emoji_key="error"
             )
             raise ValueError(f"Invalid template format: {str(e)}") from e
-    
+
     def render(self, variables: Dict[str, Any]) -> str:
         """Render the template with the provided variables.
-        
+
         Args:
             variables: Dictionary of variables to render with
-            
+
         Returns:
             Rendered template string
-            
+
         Raises:
             ValueError: If required variables are missing
         """
@@ -191,64 +192,60 @@ class PromptTemplate:
             raise ValueError(
                 f"Missing required variables for template {self.template_id}: {', '.join(missing_vars)}"
             )
-        
+
         # Render based on format
         if self.format == TemplateFormat.JINJA:
             if not self._compiled_template:
                 self._compiled_template = self._compile_template()
             return self._compiled_template.render(**variables)
-            
+
         elif self.format == TemplateFormat.SIMPLE:
             # Simple variable substitution with {var} syntax
             result = self.template
             for var_name, var_value in variables.items():
                 result = result.replace(f"{{{var_name}}}", str(var_value))
             return result
-            
+
         elif self.format == TemplateFormat.JSON:
             try:
                 # Parse template as JSON
                 template_dict = json.loads(self.template)
-                
+
                 # Replace variables in the JSON structure
                 rendered_dict = self._render_json_vars(template_dict, variables)
-                
+
                 # Convert back to JSON string
                 return json.dumps(rendered_dict)
-                
+
             except json.JSONDecodeError:
                 logger.error(
-                    f"Failed to parse JSON template: {self.template_id}",
-                    emoji_key="error"
+                    f"Failed to parse JSON template: {self.template_id}", emoji_key="error"
                 )
                 # Fall back to simple replacement
                 return self.template
-            
+
         elif self.format == TemplateFormat.MARKDOWN:
             # Process markdown with simple variable substitution
             result = self.template
             for var_name, var_value in variables.items():
                 result = result.replace(f"{{{var_name}}}", str(var_value))
             return result
-            
+
         # Default: return template as is
         return self.template
-    
+
     def _render_json_vars(self, obj: Any, variables: Dict[str, Any]) -> Any:
         """Recursively render variables in a JSON object.
-        
+
         Args:
             obj: JSON object to render variables in
             variables: Dictionary of variables to render with
-            
+
         Returns:
             Rendered JSON object
         """
         if isinstance(obj, dict):
-            return {
-                key: self._render_json_vars(value, variables) 
-                for key, value in obj.items()
-            }
+            return {key: self._render_json_vars(value, variables) for key, value in obj.items()}
         elif isinstance(obj, list):
             return [self._render_json_vars(item, variables) for item in obj]
         elif isinstance(obj, str) and obj.startswith("${") and obj.endswith("}"):
@@ -258,22 +255,22 @@ class PromptTemplate:
             return variables.get(var_name, obj)
         else:
             return obj
-    
+
     def validate_variables(self, variables: Dict[str, Any]) -> Tuple[bool, List[str]]:
         """Validate that all required variables are provided.
-        
+
         Args:
             variables: Dictionary of variables to validate
-            
+
         Returns:
             Tuple of (is_valid, missing_variables)
         """
         missing_vars = [var for var in self.required_vars if var not in variables]
         return len(missing_vars) == 0, missing_vars
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert template to dictionary representation.
-        
+
         Returns:
             Dictionary representation of template
         """
@@ -288,14 +285,14 @@ class PromptTemplate:
             "required_vars": self.required_vars,
             "example_vars": self.example_vars,
         }
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "PromptTemplate":
         """Create a template from dictionary representation.
-        
+
         Args:
             data: Dictionary representation of template
-            
+
         Returns:
             PromptTemplate instance
         """
@@ -310,13 +307,13 @@ class PromptTemplate:
             required_vars=data.get("required_vars"),
             example_vars=data.get("example_vars"),
         )
-    
+
     def get_provider_defaults(self, provider: str) -> Dict[str, Any]:
         """Get provider-specific default parameters.
-        
+
         Args:
             provider: Provider name
-            
+
         Returns:
             Dictionary of default parameters
         """
@@ -325,10 +322,10 @@ class PromptTemplate:
 
 class PromptTemplateRenderer:
     """Service for rendering prompt templates."""
-    
+
     def __init__(self, template_dir: Optional[Union[str, Path]] = None):
         """Initialize the prompt template renderer.
-        
+
         Args:
             template_dir: Optional directory containing template files
         """
@@ -338,37 +335,37 @@ class PromptTemplateRenderer:
         else:
             # Default to project directory / templates
             self.template_dir = Path.home() / ".ultimate" / "templates"
-            
+
         # Create directory if it doesn't exist
         self.template_dir.mkdir(parents=True, exist_ok=True)
-        
+
         # Set up Jinja environment for file-based templates
         self.jinja_env = Environment(
             loader=FileSystemLoader(str(self.template_dir)),
-            autoescape=select_autoescape(['html', 'xml']),
+            autoescape=select_autoescape(["html", "xml"]),
             trim_blocks=True,
             lstrip_blocks=True,
         )
-        
+
         # Get prompt repository for template storage
         self.repository = get_prompt_repository()
-        
+
         # Template cache
         self._template_cache: Dict[str, PromptTemplate] = {}
-    
+
     async def get_template(self, template_id: str) -> Optional[PromptTemplate]:
         """Get a template by ID.
-        
+
         Args:
             template_id: Template identifier
-            
+
         Returns:
             PromptTemplate instance or None if not found
         """
         # Check cache first
         if template_id in self._template_cache:
             return self._template_cache[template_id]
-            
+
         # Look up in repository
         template_data = await self.repository.get_prompt(template_id)
         if template_data:
@@ -376,43 +373,40 @@ class PromptTemplateRenderer:
             # Cache for future use
             self._template_cache[template_id] = template
             return template
-        
+
         # Try to load from file if not in repository
         template_path = self.template_dir / f"{template_id}.j2"
         if template_path.exists():
             # Load template from file
             with open(template_path, "r", encoding="utf-8") as f:
                 template_content = f.read()
-                
+
             # Create template instance
             template = PromptTemplate(
                 template=template_content,
                 template_id=template_id,
                 format=TemplateFormat.JINJA,
             )
-            
+
             # Cache for future use
             self._template_cache[template_id] = template
             return template
-            
+
         return None
-    
+
     async def render_template(
-        self,
-        template_id: str,
-        variables: Dict[str, Any],
-        provider: Optional[str] = None
+        self, template_id: str, variables: Dict[str, Any], provider: Optional[str] = None
     ) -> str:
         """Render a template with variables.
-        
+
         Args:
             template_id: Template identifier
             variables: Variables to render the template with
             provider: Optional provider name for provider-specific adjustments
-            
+
         Returns:
             Rendered template string
-            
+
         Raises:
             ValueError: If template not found or rendering fails
         """
@@ -420,36 +414,33 @@ class PromptTemplateRenderer:
         template = await self.get_template(template_id)
         if not template:
             raise ValueError(f"Template not found: {template_id}")
-            
+
         # Check if all required variables are provided
         is_valid, missing_vars = template.validate_variables(variables)
         if not is_valid:
             raise ValueError(
                 f"Missing required variables for template {template_id}: {', '.join(missing_vars)}"
             )
-        
+
         # Render the template
         rendered = template.render(variables)
-        
+
         # Apply provider-specific adjustments if provided
         if provider:
             rendered = self._apply_provider_adjustments(rendered, provider, template)
-            
+
         return rendered
-    
+
     def _apply_provider_adjustments(
-        self,
-        rendered: str,
-        provider: str,
-        template: PromptTemplate
+        self, rendered: str, provider: str, template: PromptTemplate
     ) -> str:
         """Apply provider-specific adjustments to rendered template.
-        
+
         Args:
             rendered: Rendered template string
             provider: Provider name
             template: Template being rendered
-            
+
         Returns:
             Adjusted template string
         """
@@ -465,52 +456,51 @@ class PromptTemplateRenderer:
         elif provider == Provider.GEMINI.value:
             # Gemini-specific adjustments
             pass
-        
+
         return rendered
-    
+
     async def save_template(self, template: PromptTemplate) -> bool:
         """Save a template to the repository.
-        
+
         Args:
             template: Template to save
-            
+
         Returns:
             True if successful
         """
         # Update cache
         self._template_cache[template.template_id] = template
-        
+
         # Save to repository
         return await self.repository.save_prompt(
-            prompt_id=template.template_id,
-            prompt_data=template.to_dict()
+            prompt_id=template.template_id, prompt_data=template.to_dict()
         )
-    
+
     async def delete_template(self, template_id: str) -> bool:
         """Delete a template from the repository.
-        
+
         Args:
             template_id: Template identifier
-            
+
         Returns:
             True if successful
         """
         # Remove from cache
         if template_id in self._template_cache:
             del self._template_cache[template_id]
-            
+
         # Delete from repository
         return await self.repository.delete_prompt(template_id)
-    
+
     async def list_templates(self) -> List[str]:
         """List available templates.
-        
+
         Returns:
             List of template IDs
         """
         # Get templates from repository
         return await self.repository.list_prompts()
-    
+
     def clear_cache(self) -> None:
         """Clear the template cache."""
         self._template_cache.clear()
@@ -522,7 +512,7 @@ _template_renderer: Optional[PromptTemplateRenderer] = None
 
 def get_template_renderer() -> PromptTemplateRenderer:
     """Get the global template renderer instance.
-    
+
     Returns:
         PromptTemplateRenderer instance
     """
@@ -535,10 +525,10 @@ def get_template_renderer() -> PromptTemplateRenderer:
 @lru_cache(maxsize=32)
 def get_template_path(template_id: str) -> Optional[Path]:
     """Get the path to a template file.
-    
+
     Args:
         template_id: Template identifier
-        
+
     Returns:
         Path to template file or None if not found
     """
@@ -549,46 +539,44 @@ def get_template_path(template_id: str) -> Optional[Path]:
         # Then check the package's template directory
         Path(__file__).parent.parent.parent.parent / "templates",
     ]
-    
+
     for template_dir in template_dirs:
         # Check for .j2 extension first
         template_path = template_dir / f"{template_id}.j2"
         if template_path.exists():
             return template_path
-            
+
         # Check for .tpl extension
         template_path = template_dir / f"{template_id}.tpl"
         if template_path.exists():
             return template_path
-            
+
         # Check for .md extension
         template_path = template_dir / f"{template_id}.md"
         if template_path.exists():
             return template_path
-            
+
         # Check for .json extension
         template_path = template_dir / f"{template_id}.json"
         if template_path.exists():
             return template_path
-    
+
     return None
 
 
 async def render_prompt_template(
-    template_id: str,
-    variables: Dict[str, Any],
-    provider: Optional[str] = None
+    template_id: str, variables: Dict[str, Any], provider: Optional[str] = None
 ) -> str:
     """Render a prompt template.
-    
+
     Args:
         template_id: Template identifier
         variables: Variables to render the template with
         provider: Optional provider name for provider-specific adjustments
-        
+
     Returns:
         Rendered template string
-        
+
     Raises:
         ValueError: If template not found or rendering fails
     """
@@ -602,15 +590,15 @@ async def render_prompt(
     format: Union[str, TemplateFormat] = TemplateFormat.JINJA,
 ) -> str:
     """Render a prompt from template content.
-    
+
     Args:
         template_content: Template content string
         variables: Variables to render the template with
         format: Template format
-        
+
     Returns:
         Rendered template string
-        
+
     Raises:
         ValueError: If rendering fails
     """
@@ -620,24 +608,21 @@ async def render_prompt(
         template_id="_temp_template",
         format=format,
     )
-    
+
     # Render and return
     return template.render(variables)
 
 
-async def get_template_defaults(
-    template_id: str,
-    provider: str
-) -> Dict[str, Any]:
+async def get_template_defaults(template_id: str, provider: str) -> Dict[str, Any]:
     """Get provider-specific default parameters for a template.
-    
+
     Args:
         template_id: Template identifier
         provider: Provider name
-        
+
     Returns:
         Dictionary of default parameters
-        
+
     Raises:
         ValueError: If template not found
     """
@@ -645,5 +630,5 @@ async def get_template_defaults(
     template = await renderer.get_template(template_id)
     if not template:
         raise ValueError(f"Template not found: {template_id}")
-        
+
     return template.get_provider_defaults(provider)

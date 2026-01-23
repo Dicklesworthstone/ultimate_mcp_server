@@ -1,4 +1,5 @@
 """Utility functions for Ultimate MCP Server."""
+
 from ultimate_mcp_server.utils.logging.console import console
 from ultimate_mcp_server.utils.logging.logger import (
     critical,
@@ -25,7 +26,6 @@ __all__ = [
     "critical",
     "section",
     "get_logger",
-    
     # Parsing utilities
     "parse_result",
     "process_mcp_result",

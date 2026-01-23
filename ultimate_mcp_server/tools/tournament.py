@@ -1,4 +1,5 @@
 """Tournament tools for Ultimate MCP Server."""
+
 from typing import Any, Dict, List, Optional
 
 from ultimate_mcp_server.core.models.tournament import (
@@ -28,6 +29,7 @@ logger = get_logger("ultimate_mcp_server.tools.tournament")
 
 # --- Standalone Tool Functions ---
 
+
 @with_tool_metrics
 @with_error_handling
 async def create_tournament(
@@ -40,7 +42,7 @@ async def create_tournament(
     evaluators: Optional[List[Dict[str, Any]]] = None,
     max_retries_per_model_call: int = 3,
     retry_backoff_base_seconds: float = 1.0,
-    max_concurrent_model_calls: int = 5
+    max_concurrent_model_calls: int = 5,
 ) -> Dict[str, Any]:
     """
     Creates and starts a new LLM competition (tournament) based on a prompt and model configurations.
@@ -93,7 +95,7 @@ async def create_tournament(
             evaluators=parsed_evaluators,
             max_retries_per_model_call=max_retries_per_model_call,
             retry_backoff_base_seconds=retry_backoff_base_seconds,
-            max_concurrent_model_calls=max_concurrent_model_calls
+            max_concurrent_model_calls=max_concurrent_model_calls,
         )
 
         tournament = tournament_manager.create_tournament(input_data)
@@ -106,18 +108,26 @@ async def create_tournament(
         )
 
         if not success:
-            logger.error(f"Failed to schedule background execution for tournament {tournament.tournament_id}")
+            logger.error(
+                f"Failed to schedule background execution for tournament {tournament.tournament_id}"
+            )
             updated_tournament = tournament_manager.get_tournament(tournament.tournament_id)
-            error_msg = updated_tournament.error_message if updated_tournament else "Failed to schedule execution."
+            error_msg = (
+                updated_tournament.error_message
+                if updated_tournament
+                else "Failed to schedule execution."
+            )
             raise ToolError(f"Failed to start tournament execution: {error_msg}")
 
-        logger.info(f"Tournament {tournament.tournament_id} ({tournament.name}) created and background execution started.")
+        logger.info(
+            f"Tournament {tournament.tournament_id} ({tournament.name}) created and background execution started."
+        )
         # Include storage_path in the return value
         output = CreateTournamentOutput(
             tournament_id=tournament.tournament_id,
             status=tournament.status,
             storage_path=tournament.storage_path,
-            message=f"Tournament '{tournament.name}' created successfully and execution started."
+            message=f"Tournament '{tournament.name}' created successfully and execution started.",
         )
         return output.dict()
 
@@ -128,11 +138,10 @@ async def create_tournament(
         logger.error(f"Error creating tournament: {e}", exc_info=True)
         raise ToolError(f"An unexpected error occurred: {e}") from e
 
+
 @with_tool_metrics
 @with_error_handling
-async def get_tournament_status(
-    tournament_id: str
-) -> Dict[str, Any]:
+async def get_tournament_status(tournament_id: str) -> Dict[str, Any]:
     """Retrieves the current status and progress of a specific tournament.
 
     Use this tool to monitor an ongoing tournament (PENDING, RUNNING) or check the final
@@ -176,22 +185,19 @@ async def get_tournament_status(
         if not tournament_id or not isinstance(tournament_id, str):
             raise ToolError(
                 status_code=400,
-                detail="Invalid tournament ID format. Tournament ID must be a non-empty string."
+                detail="Invalid tournament ID format. Tournament ID must be a non-empty string.",
             )
 
         try:
             input_data = GetTournamentStatusInput(tournament_id=tournament_id)
         except ValueError as ve:
-            raise ToolError(
-                status_code=400,
-                detail=f"Invalid tournament ID: {str(ve)}"
-            ) from ve
+            raise ToolError(status_code=400, detail=f"Invalid tournament ID: {str(ve)}") from ve
 
         tournament = tournament_manager.get_tournament(input_data.tournament_id, force_reload=True)
         if not tournament:
             raise ToolError(
                 status_code=404,
-                detail=f"Tournament not found: {tournament_id}. Check if the tournament ID is correct or use list_tournaments to see all available tournaments."
+                detail=f"Tournament not found: {tournament_id}. Check if the tournament ID is correct or use list_tournaments to see all available tournaments.",
             )
 
         try:
@@ -204,14 +210,14 @@ async def get_tournament_status(
                 total_rounds=tournament.config.rounds,
                 created_at=tournament.created_at,
                 updated_at=tournament.updated_at,
-                error_message=tournament.error_message
+                error_message=tournament.error_message,
             )
             return output.dict()
         except Exception as e:
             logger.error(f"Error converting tournament data to output format: {e}", exc_info=True)
             raise ToolError(
                 status_code=500,
-                detail=f"Error processing tournament data: {str(e)}. The tournament data may be corrupted."
+                detail=f"Error processing tournament data: {str(e)}. The tournament data may be corrupted.",
             ) from e
     except ToolError:
         raise
@@ -219,13 +225,13 @@ async def get_tournament_status(
         logger.error(f"Error getting tournament status for {tournament_id}: {e}", exc_info=True)
         raise ToolError(
             status_code=500,
-            detail=f"Internal server error retrieving tournament status: {str(e)}. Please try again or check the server logs."
+            detail=f"Internal server error retrieving tournament status: {str(e)}. Please try again or check the server logs.",
         ) from e
+
 
 @with_tool_metrics
 @with_error_handling
-async def list_tournaments(
-) -> List[Dict[str, Any]]:
+async def list_tournaments() -> List[Dict[str, Any]]:
     """Lists all created tournaments with basic identifying information and status.
 
     Useful for discovering existing tournaments and their current states without fetching full results.
@@ -259,14 +265,18 @@ async def list_tournaments(
         for tournament in tournaments:
             try:
                 # Ensure tournament object has necessary attributes before accessing
-                if not hasattr(tournament, 'tournament_id') or \
-                   not hasattr(tournament, 'name') or \
-                   not hasattr(tournament, 'config') or \
-                   not hasattr(tournament.config, 'tournament_type') or \
-                   not hasattr(tournament, 'status') or \
-                   not hasattr(tournament, 'created_at') or \
-                   not hasattr(tournament, 'updated_at'):
-                    logger.warning(f"Skipping tournament due to missing attributes: {getattr(tournament, 'tournament_id', 'UNKNOWN ID')}")
+                if (
+                    not hasattr(tournament, "tournament_id")
+                    or not hasattr(tournament, "name")
+                    or not hasattr(tournament, "config")
+                    or not hasattr(tournament.config, "tournament_type")
+                    or not hasattr(tournament, "status")
+                    or not hasattr(tournament, "created_at")
+                    or not hasattr(tournament, "updated_at")
+                ):
+                    logger.warning(
+                        f"Skipping tournament due to missing attributes: {getattr(tournament, 'tournament_id', 'UNKNOWN ID')}"
+                    )
                     continue
 
                 basic_info = TournamentBasicInfo(
@@ -279,20 +289,20 @@ async def list_tournaments(
                 )
                 output_list.append(basic_info.dict())
             except Exception as e:
-                logger.warning(f"Skipping tournament {getattr(tournament, 'tournament_id', 'UNKNOWN')} due to data error during processing: {e}")
+                logger.warning(
+                    f"Skipping tournament {getattr(tournament, 'tournament_id', 'UNKNOWN')} due to data error during processing: {e}"
+                )
         return output_list
     except Exception as e:
         logger.error(f"Error listing tournaments: {e}", exc_info=True)
         raise ToolError(
-            status_code=500,
-            detail=f"Internal server error listing tournaments: {str(e)}"
+            status_code=500, detail=f"Internal server error listing tournaments: {str(e)}"
         ) from e
+
 
 @with_tool_metrics
 @with_error_handling
-async def get_tournament_results(
-    tournament_id: str
-) -> List[Dict[str, str]]:
+async def get_tournament_results(tournament_id: str) -> List[Dict[str, str]]:
     """Retrieves the complete results and configuration for a specific tournament.
 
     Provides comprehensive details including configuration, final scores (if applicable),
@@ -325,46 +335,51 @@ async def get_tournament_results(
         if not tournament_id or not isinstance(tournament_id, str):
             raise ToolError(
                 status_code=400,
-                detail="Invalid tournament ID format. Tournament ID must be a non-empty string."
+                detail="Invalid tournament ID format. Tournament ID must be a non-empty string.",
             )
 
         try:
             input_data = GetTournamentResultsInput(tournament_id=tournament_id)
         except ValueError as ve:
-             raise ToolError(
-                status_code=400,
-                detail=f"Invalid tournament ID: {str(ve)}"
-            ) from ve
+            raise ToolError(status_code=400, detail=f"Invalid tournament ID: {str(ve)}") from ve
 
         # Make sure to request TournamentData which should contain results
-        tournament_data: Optional[TournamentData] = tournament_manager.get_tournament(input_data.tournament_id, force_reload=True)
+        tournament_data: Optional[TournamentData] = tournament_manager.get_tournament(
+            input_data.tournament_id, force_reload=True
+        )
 
         if not tournament_data:
             # Check if the tournament exists but just has no results yet (e.g., PENDING)
-            tournament_status_info = tournament_manager.get_tournament(tournament_id) # Gets basic info
+            tournament_status_info = tournament_manager.get_tournament(
+                tournament_id
+            )  # Gets basic info
             if tournament_status_info:
                 current_status = tournament_status_info.status
                 if current_status in [TournamentStatus.PENDING, TournamentStatus.RUNNING]:
-                     raise ToolError(
-                         status_code=404, # Use 404 to indicate results not ready
-                         detail=f"Tournament '{tournament_id}' is currently {current_status}. Results are not yet available."
-                     )
-                else: # Should have results if COMPLETED or ERROR, maybe data issue?
-                     logger.error(f"Tournament {tournament_id} status is {current_status} but get_tournament_results returned None.")
-                     raise ToolError(
-                         status_code=500,
-                         detail=f"Could not retrieve results for tournament '{tournament_id}' despite status being {current_status}. There might be an internal data issue."
-                     )
+                    raise ToolError(
+                        status_code=404,  # Use 404 to indicate results not ready
+                        detail=f"Tournament '{tournament_id}' is currently {current_status}. Results are not yet available.",
+                    )
+                else:  # Should have results if COMPLETED or ERROR, maybe data issue?
+                    logger.error(
+                        f"Tournament {tournament_id} status is {current_status} but get_tournament_results returned None."
+                    )
+                    raise ToolError(
+                        status_code=500,
+                        detail=f"Could not retrieve results for tournament '{tournament_id}' despite status being {current_status}. There might be an internal data issue.",
+                    )
             else:
                 raise ToolError(
                     status_code=404,
-                    detail=f"Tournament not found: {tournament_id}. Cannot retrieve results."
+                    detail=f"Tournament not found: {tournament_id}. Cannot retrieve results.",
                 )
 
         # NEW: Return a structure that FastMCP might recognize as a pre-formatted content list
         json_string = tournament_data.json()
-        logger.info(f"[DEBUG_GET_RESULTS] Returning pre-formatted TextContent list. JSON Snippet: {json_string[:150]}")
-        return [{ "type": "text", "text": json_string }]
+        logger.info(
+            f"[DEBUG_GET_RESULTS] Returning pre-formatted TextContent list. JSON Snippet: {json_string[:150]}"
+        )
+        return [{"type": "text", "text": json_string}]
 
     except ToolError:
         raise
@@ -372,14 +387,13 @@ async def get_tournament_results(
         logger.error(f"Error getting tournament results for {tournament_id}: {e}", exc_info=True)
         raise ToolError(
             f"Internal server error retrieving tournament results: {str(e)}",
-            500 # status_code
+            500,  # status_code
         ) from e
+
 
 @with_tool_metrics
 @with_error_handling
-async def cancel_tournament(
-    tournament_id: str
-) -> Dict[str, Any]:
+async def cancel_tournament(tournament_id: str) -> Dict[str, Any]:
     """Attempts to cancel a running (RUNNING) or pending (PENDING) tournament.
 
     Signals the tournament manager to stop processing. Cancellation is not guaranteed
@@ -409,28 +423,38 @@ async def cancel_tournament(
             raise ToolError(status_code=400, detail=f"Invalid tournament ID: {str(ve)}") from ve
 
         # Call the manager's cancel function
-        success, message, final_status = await tournament_manager.cancel_tournament(input_data.tournament_id)
+        success, message, final_status = await tournament_manager.cancel_tournament(
+            input_data.tournament_id
+        )
 
         # Prepare output using the Pydantic model
         output = CancelTournamentOutput(
             tournament_id=tournament_id,
-            status=final_status, # Return the actual status after attempt
-            message=message
+            status=final_status,  # Return the actual status after attempt
+            message=message,
         )
 
         if not success:
             # Log the failure but return the status/message from the manager
-            logger.warning(f"Cancellation attempt for tournament {tournament_id} reported failure: {message}")
+            logger.warning(
+                f"Cancellation attempt for tournament {tournament_id} reported failure: {message}"
+            )
             # Raise ToolError if the status implies a client error (e.g., not found)
             if "not found" in message.lower():
                 raise ToolError(status_code=404, detail=message)
-            elif final_status in [TournamentStatus.COMPLETED, TournamentStatus.FAILED, TournamentStatus.CANCELLED] and "already" in message.lower():
+            elif (
+                final_status
+                in [TournamentStatus.COMPLETED, TournamentStatus.FAILED, TournamentStatus.CANCELLED]
+                and "already" in message.lower()
+            ):
                 raise ToolError(status_code=409, detail=message)
             # Optionally handle other errors as 500
             # else:
             #     raise ToolError(status_code=500, detail=f"Cancellation failed: {message}")
         else:
-            logger.info(f"Cancellation attempt for tournament {tournament_id} successful. Final status: {final_status}")
+            logger.info(
+                f"Cancellation attempt for tournament {tournament_id} successful. Final status: {final_status}"
+            )
 
         return output.dict()
 
@@ -438,4 +462,6 @@ async def cancel_tournament(
         raise
     except Exception as e:
         logger.error(f"Error cancelling tournament {tournament_id}: {e}", exc_info=True)
-        raise ToolError(status_code=500, detail=f"Internal server error during cancellation: {str(e)}") from e
+        raise ToolError(
+            status_code=500, detail=f"Internal server error during cancellation: {str(e)}"
+        ) from e

@@ -4,36 +4,37 @@ Tool annotations for MCP servers.
 This module provides a standardized way to annotate tools with hints that help LLMs
 understand when and how to use them effectively.
 """
+
 from typing import List, Optional
 
 
 class ToolAnnotations:
     """
     Tool annotations providing hints to LLMs about tool behavior and usage patterns.
-    
+
     ToolAnnotations supply metadata that helps LLMs make informed decisions about:
     - WHEN to use a particular tool (appropriate contexts and priority)
     - HOW to use the tool correctly (through examples and behavior hints)
     - WHAT the potential consequences of using the tool might be (read-only vs. destructive)
     - WHO should use the tool (assistant, user, or both via audience hints)
-    
+
     These annotations serve as a bridge between tool developers and LLMs, providing
     crucial context beyond just function signatures and descriptions. For example, the
     annotations can indicate that a file deletion tool is destructive and should be used
     with caution, or that a search tool is safe to retry multiple times.
-    
+
     The system supports four key behavioral hints:
     - read_only_hint: Tool doesn't modify state (safe for exploratory use)
     - destructive_hint: Tool may perform irreversible changes (use with caution)
     - idempotent_hint: Repeated calls with same arguments produce same results
     - open_world_hint: Tool interacts with external systems beyond the LLM's knowledge
-    
+
     Additional metadata includes:
     - audience: Who can/should use this tool
     - priority: How important/commonly used this tool is
     - title: Human-readable name for the tool
     - examples: Sample inputs and expected outputs
-    
+
     Usage example:
         ```python
         # For a document deletion tool
@@ -51,11 +52,11 @@ class ToolAnnotations:
             }]
         )
         ```
-    
+
     Note: All hints are advisory only - they don't enforce behavior but help LLMs
     make better decisions about tool usage.
     """
-    
+
     def __init__(
         self,
         read_only_hint: bool = False,
@@ -69,41 +70,41 @@ class ToolAnnotations:
     ):
         """
         Initialize tool annotations.
-        
+
         Args:
             read_only_hint: If True, indicates this tool does not modify its environment.
                 Tools with read_only_hint=True are safe to call for exploration without
                 side effects. Examples: search tools, data retrieval, information queries.
                 Default: False
-                
+
             destructive_hint: If True, the tool may perform destructive updates that
-                can't easily be reversed or undone. Only meaningful when read_only_hint 
+                can't easily be reversed or undone. Only meaningful when read_only_hint
                 is False. Examples: deletion operations, irreversible state changes, payments.
                 Default: True
-                
+
             idempotent_hint: If True, calling the tool repeatedly with the same arguments
                 will have no additional effect beyond the first call. Useful for retry logic.
                 Only meaningful when read_only_hint is False. Examples: setting a value,
                 deleting an item (calling it twice doesn't delete it twice).
                 Default: False
-                
-            open_world_hint: If True, this tool may interact with systems or information 
+
+            open_world_hint: If True, this tool may interact with systems or information
                 outside the LLM's knowledge context (external APIs, file systems, etc.).
                 If False, the tool operates in a closed domain the LLM can fully model.
                 Default: True
-                
+
             audience: Who is the intended user of this tool, as a list of roles:
                 - "assistant": The AI assistant can use this tool
                 - "user": The human user can use this tool
                 Default: ["assistant"]
-                
+
             priority: How important this tool is, from 0.0 (lowest) to 1.0 (highest).
                 Higher priority tools should be considered first when multiple tools
                 might accomplish a similar task. Default: 0.5 (medium priority)
-                
+
             title: Human-readable title for the tool. If not provided, the tool's
                 function name is typically used instead.
-                
+
             examples: List of usage examples, each containing 'input' and 'output' keys.
                 These help the LLM understand expected patterns of use and responses.
         """
@@ -115,7 +116,7 @@ class ToolAnnotations:
         self.priority = max(0.0, min(1.0, priority))  # Clamp between 0 and 1
         self.title = title
         self.examples = examples or []
-        
+
     def to_dict(self) -> dict:
         """Convert annotations to dictionary for MCP protocol."""
         return {
@@ -126,8 +127,9 @@ class ToolAnnotations:
             "title": self.title,
             "audience": self.audience,
             "priority": self.priority,
-            "examples": self.examples
+            "examples": self.examples,
         }
+
 
 # Pre-defined annotation templates for common tool types
 
@@ -138,7 +140,7 @@ READONLY_TOOL = ToolAnnotations(
     idempotent_hint=True,
     open_world_hint=False,
     priority=0.8,
-    title="Read-Only Tool"
+    title="Read-Only Tool",
 )
 
 # A tool that queries external systems or APIs for information
@@ -148,7 +150,7 @@ QUERY_TOOL = ToolAnnotations(
     idempotent_hint=True,
     open_world_hint=True,
     priority=0.7,
-    title="Query Tool"
+    title="Query Tool",
 )
 
 # A tool that performs potentially irreversible changes to state
@@ -159,7 +161,7 @@ DESTRUCTIVE_TOOL = ToolAnnotations(
     idempotent_hint=False,
     open_world_hint=True,
     priority=0.3,
-    title="Destructive Tool"
+    title="Destructive Tool",
 )
 
 # A tool that modifies state but can be safely called multiple times
@@ -170,5 +172,5 @@ IDEMPOTENT_UPDATE_TOOL = ToolAnnotations(
     idempotent_hint=True,
     open_world_hint=False,
     priority=0.5,
-    title="Idempotent Update Tool"
-) 
+    title="Idempotent Update Tool",
+)

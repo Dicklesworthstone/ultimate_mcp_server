@@ -115,18 +115,18 @@ class AnthropicProvider(BaseProvider):
         # Original logic: Validate that either prompt or messages is provided
         if prompt is None and not messages:
             raise ValueError("Either 'prompt' or 'messages' must be provided")
-            
+
         # Original logic: If messages are provided, use the chat_completion function
         if messages:
             # Ensure all necessary parameters are passed to generate_chat_completion
             # This includes system_prompt if it's in kwargs
             return await self.generate_chat_completion(
                 messages=messages,
-                model=model, # Pass original model ID
+                model=model,  # Pass original model ID
                 max_tokens=max_tokens,
                 temperature=temperature,
-                json_mode=json_mode, # Pass json_mode
-                **kwargs # Pass other kwargs like system, top_p etc.
+                json_mode=json_mode,  # Pass json_mode
+                **kwargs,  # Pass other kwargs like system, top_p etc.
             )
 
         # Original logic: Prepare message list for the API from prompt
@@ -147,35 +147,40 @@ class AnthropicProvider(BaseProvider):
                 if msg["role"] == "user":
                     user_message_idx = i
                     break
-            
+
             if user_message_idx != -1:
                 original_content = current_api_messages[user_message_idx]["content"]
-                if isinstance(original_content, str) and "Please respond with valid JSON" not in original_content:
-                     current_api_messages[user_message_idx]["content"] = (
+                if (
+                    isinstance(original_content, str)
+                    and "Please respond with valid JSON" not in original_content
+                ):
+                    current_api_messages[user_message_idx]["content"] = (
                         f"{original_content}\\nPlease respond ONLY with valid JSON matching the expected schema. Do not include explanations or markdown formatting."
                     )
             else:
                 # This case should ideally not happen if prompt is always user role.
                 # If it could, one might append a new user message asking for JSON,
                 # or include it in system prompt if system_prompt is being constructed here.
-                self.logger.warning("Could not find user message to append JSON instruction for simple prompt case.")
+                self.logger.warning(
+                    "Could not find user message to append JSON instruction for simple prompt case."
+                )
 
         # Prepare API call parameters using max_tokens directly from signature
         api_params = {
             "messages": current_api_messages,
             "model": actual_model_name,
-            "max_tokens": max_tokens, # Uses max_tokens from signature (which defaults to 1024 if not passed)
+            "max_tokens": max_tokens,  # Uses max_tokens from signature (which defaults to 1024 if not passed)
             "temperature": temperature,
             **kwargs,  # Pass remaining kwargs (like top_p, etc.) that were not popped
         }
-        if system_prompt: # Add system prompt if it was extracted
+        if system_prompt:  # Add system prompt if it was extracted
             api_params["system"] = system_prompt
-        
+
         # Logging before API call (original style)
         self.logger.info(
             f"Generating completion with Anthropic model {actual_model_name}",
             emoji_key=TaskType.COMPLETION.value,
-            prompt_length=len(prompt) if prompt else 0, # length of prompt if provided
+            prompt_length=len(prompt) if prompt else 0,  # length of prompt if provided
             json_mode_requested=json_mode,
         )
 
@@ -197,11 +202,13 @@ class AnthropicProvider(BaseProvider):
         completion_text = response.content[0].text
 
         # Post-process if JSON mode was requested (for simple prompt case) - best effort extraction
-        if json_mode: # This json_mode is the original parameter
+        if json_mode:  # This json_mode is the original parameter
             original_text_for_json_check = completion_text
             completion_text = self._extract_json_from_text(completion_text)
             if original_text_for_json_check != completion_text:
-                self.logger.debug("Extracted JSON content from Anthropic response post-processing (simple prompt case).")
+                self.logger.debug(
+                    "Extracted JSON content from Anthropic response post-processing (simple prompt case)."
+                )
 
         result = ModelResponse(
             text=completion_text,
@@ -259,15 +266,15 @@ class AnthropicProvider(BaseProvider):
 
         # Handle system prompt extraction
         system_prompt = kwargs.pop("system", None)
-        
+
         # Process the messages to extract system message and convert to Anthropic format
         processed_messages = []
         extracted_system = None
-        
+
         for msg in messages:
             role = msg.get("role", "")
             content = msg.get("content", "")
-            
+
             # Extract system message if present
             if role == "system":
                 if extracted_system is None:  # Take the first system message
@@ -279,19 +286,19 @@ class AnthropicProvider(BaseProvider):
                 processed_messages.append({"role": role, "content": content})
             else:
                 self.logger.warning(f"Ignoring unsupported message role: {role}")
-                
+
         # If we found a system message, use it (overrides any system in kwargs)
         if extracted_system is not None:
             system_prompt = extracted_system
 
         # Process json_mode by modifying system prompt or last user message
         json_mode_requested = json_mode
-        
+
         if json_mode_requested:
             self.logger.debug(
                 "json_mode=True requested for chat completion, implementing via prompt engineering for Anthropic"
             )
-            
+
             # If we have a system prompt, update it to include JSON instructions
             if system_prompt:
                 system_prompt = f"{system_prompt}\n\nIMPORTANT: You must respond ONLY with valid JSON matching the expected schema. Do not include explanations or markdown formatting."
@@ -302,8 +309,13 @@ class AnthropicProvider(BaseProvider):
                     if processed_messages[i].get("role") == "user":
                         user_content = processed_messages[i].get("content", "")
                         # Only add JSON instruction if not already present
-                        if "respond with JSON" not in user_content and "respond in JSON" not in user_content:
-                            processed_messages[i]["content"] = f"{user_content}\n\nPlease respond ONLY with valid JSON. Do not include explanations or markdown formatting."
+                        if (
+                            "respond with JSON" not in user_content
+                            and "respond in JSON" not in user_content
+                        ):
+                            processed_messages[i]["content"] = (
+                                f"{user_content}\n\nPlease respond ONLY with valid JSON. Do not include explanations or markdown formatting."
+                            )
                         break
             # If neither system prompt nor user messages to modify, add a system prompt
             else:
@@ -355,7 +367,7 @@ class AnthropicProvider(BaseProvider):
             processing_time=processing_time,
             raw_response=response.model_dump(),  # Use model_dump() if Pydantic
         )
-        
+
         # Add message to result for chat_completion
         result.message = {"role": "assistant", "content": assistant_content}
 
@@ -417,11 +429,11 @@ class AnthropicProvider(BaseProvider):
             # Process the messages to extract system message and convert to Anthropic format
             processed_messages = []
             extracted_system = None
-            
+
             for msg in messages:
                 role = msg.get("role", "")
                 content = msg.get("content", "")
-                
+
                 # Extract system message if present
                 if role == "system":
                     if extracted_system is None:  # Take the first system message
@@ -433,11 +445,11 @@ class AnthropicProvider(BaseProvider):
                     processed_messages.append({"role": role, "content": content})
                 else:
                     self.logger.warning(f"Ignoring unsupported message role in streaming: {role}")
-                    
+
             # If we found a system message, use it (overrides any system in kwargs)
             if extracted_system is not None:
                 system_prompt = extracted_system
-                
+
             input_desc = f"{len(processed_messages)} messages"
         elif prompt:
             # Construct messages from prompt
@@ -512,10 +524,18 @@ class AnthropicProvider(BaseProvider):
                 # Important: Get final tokens from the final message state
                 try:
                     final_message = await stream.get_final_message()
-                    final_input_tokens = final_message.usage.input_tokens if hasattr(final_message, 'usage') else 0
-                    final_output_tokens = final_message.usage.output_tokens if hasattr(final_message, 'usage') else 0
+                    final_input_tokens = (
+                        final_message.usage.input_tokens if hasattr(final_message, "usage") else 0
+                    )
+                    final_output_tokens = (
+                        final_message.usage.output_tokens if hasattr(final_message, "usage") else 0
+                    )
                     # Ensure finish_reason is captured from the final message
-                    finish_reason = final_message.stop_reason if hasattr(final_message, 'stop_reason') else "unknown"
+                    finish_reason = (
+                        final_message.stop_reason
+                        if hasattr(final_message, "stop_reason")
+                        else "unknown"
+                    )
                 except Exception as e:
                     # If we can't get the final message for any reason, log it but continue
                     self.logger.warning(f"Couldn't get final message stats: {e}")
@@ -683,23 +703,23 @@ class AnthropicProvider(BaseProvider):
 
     def _extract_json_from_text(self, text: str) -> str:
         """Extract JSON content from text that might include markdown code blocks or explanatory text.
-        
+
         Args:
             text: The raw text response that might contain JSON
-            
+
         Returns:
             Cleaned JSON content
         """
-        
+
         # First check if the text is already valid JSON
         try:
             json.loads(text)
             return text  # Already valid JSON
         except json.JSONDecodeError:
             pass  # Continue with extraction
-        
+
         # Extract JSON from code blocks - most common Anthropic pattern
-        code_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+        code_block_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
         if code_block_match:
             code_content = code_block_match.group(1).strip()
             try:
@@ -707,32 +727,32 @@ class AnthropicProvider(BaseProvider):
                 return code_content
             except json.JSONDecodeError:
                 # Try to fix common JSON syntax issues like trailing commas
-                fixed_content = re.sub(r',\s*([}\]])', r'\1', code_content)
+                fixed_content = re.sub(r",\s*([}\]])", r"\1", code_content)
                 try:
                     json.loads(fixed_content)
                     return fixed_content
                 except json.JSONDecodeError:
                     pass  # Continue with other extraction methods
-        
+
         # Look for JSON array or object patterns in the content
         # Find the first [ or { and the matching closing ] or }
         stripped = text.strip()
-        
+
         # Try to extract array
-        if '[' in stripped and ']' in stripped:
-            start = stripped.find('[')
+        if "[" in stripped and "]" in stripped:
+            start = stripped.find("[")
             # Find the matching closing bracket
             end = -1
             depth = 0
             for i in range(start, len(stripped)):
-                if stripped[i] == '[':
+                if stripped[i] == "[":
                     depth += 1
-                elif stripped[i] == ']':
+                elif stripped[i] == "]":
                     depth -= 1
                     if depth == 0:
                         end = i + 1
                         break
-            
+
             if end > start:
                 array_content = stripped[start:end]
                 try:
@@ -740,22 +760,22 @@ class AnthropicProvider(BaseProvider):
                     return array_content
                 except json.JSONDecodeError:
                     pass  # Try other methods
-        
+
         # Try to extract object
-        if '{' in stripped and '}' in stripped:
-            start = stripped.find('{')
+        if "{" in stripped and "}" in stripped:
+            start = stripped.find("{")
             # Find the matching closing bracket
             end = -1
             depth = 0
             for i in range(start, len(stripped)):
-                if stripped[i] == '{':
+                if stripped[i] == "{":
                     depth += 1
-                elif stripped[i] == '}':
+                elif stripped[i] == "}":
                     depth -= 1
                     if depth == 0:
                         end = i + 1
                         break
-            
+
             if end > start:
                 object_content = stripped[start:end]
                 try:
@@ -763,7 +783,7 @@ class AnthropicProvider(BaseProvider):
                     return object_content
                 except json.JSONDecodeError:
                     pass  # Try other methods
-        
+
         # If all else fails, return the original text
         return text
 
@@ -773,4 +793,3 @@ class AnthropicProvider(BaseProvider):
         result = await func(*args, **kwargs)
         end_time = time.perf_counter()
         return result, end_time - start_time
-

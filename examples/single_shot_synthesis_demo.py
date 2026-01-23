@@ -61,7 +61,7 @@ DEFAULT_SYNTHESIZER_MODEL_CONFIG_SSS: Dict[str, Any] = {
 }
 # Fallback if preferred synthesizer isn't available
 FALLBACK_SYNTHESIZER_MODEL_CONFIG_SSS: Dict[str, Any] = {
-    "model_id": "anthropic/claude-3-7-sonnet-20250219", # Fallback to Sonnet 3.5
+    "model_id": "anthropic/claude-3-7-sonnet-20250219",  # Fallback to Sonnet 3.5
     "temperature": 0.5,
     "max_tokens": 3000,
 }
@@ -119,8 +119,8 @@ async def setup_gateway_for_demo_sss():
 
 def display_single_shot_synthesis_results(
     results_data: Dict[str, Any],
-    original_prompt: str, # Added to display the prompt
-    console_instance
+    original_prompt: str,  # Added to display the prompt
+    console_instance,
 ):
     """Displays the results from the single_shot_synthesis tool."""
     console_instance.print(
@@ -128,11 +128,18 @@ def display_single_shot_synthesis_results(
             f"[bold magenta]Single-Shot Synthesis Task: {results_data.get('name', 'N/A')}[/bold magenta]"
         )
     )
-    
+
     if not results_data or not isinstance(results_data, dict) or not results_data.get("request_id"):
-        console_instance.print(Panel("[bold red]No valid results data to display or essential fields missing.[/bold red]", border_style="red"))
+        console_instance.print(
+            Panel(
+                "[bold red]No valid results data to display or essential fields missing.[/bold red]",
+                border_style="red",
+            )
+        )
         if isinstance(results_data, dict) and results_data.get("error_message"):
-             console_instance.print(f"[bold red]Error in results data:[/bold red] {escape(results_data['error_message'])}")
+            console_instance.print(
+                f"[bold red]Error in results data:[/bold red] {escape(results_data['error_message'])}"
+            )
         return
 
     console_instance.print(f"Request ID: [cyan]{results_data.get('request_id')}[/cyan]")
@@ -144,7 +151,11 @@ def display_single_shot_synthesis_results(
 
     if results_data.get("error_message") and status in ["FAILED", "PARTIAL_SUCCESS"]:
         console_instance.print(
-            Panel(f"[red]{escape(results_data.get('error_message'))}[/red]", title="[bold red]Error Message[/bold red]", border_style="red")
+            Panel(
+                f"[red]{escape(results_data.get('error_message'))}[/red]",
+                title="[bold red]Error Message[/bold red]",
+                border_style="red",
+            )
         )
 
     storage_path = results_data.get("storage_path")
@@ -152,8 +163,15 @@ def display_single_shot_synthesis_results(
         console_instance.print(
             f"Artifacts Storage: [blue underline]{escape(storage_path)}[/blue underline]"
         )
-    
-    console_instance.print(Panel(escape(original_prompt), title="[bold]Original Prompt[/bold]", border_style="blue", expand=False))
+
+    console_instance.print(
+        Panel(
+            escape(original_prompt),
+            title="[bold]Original Prompt[/bold]",
+            border_style="blue",
+            expand=False,
+        )
+    )
 
     console_instance.print(Rule("[bold blue]Expert Model Responses[/bold blue]"))
     expert_responses = results_data.get("expert_responses", [])
@@ -167,12 +185,14 @@ def display_single_shot_synthesis_results(
             if has_error:
                 panel_title += " [bold red](Failed)[/bold red]"
 
-            content_table = Table(box=None, show_header=False, padding=(0,1))
+            content_table = Table(box=None, show_header=False, padding=(0, 1))
             content_table.add_column(style="dim")
             content_table.add_column()
 
             if resp_dict.get("error"):
-                content_table.add_row("[bold red]Error[/bold red]", escape(resp_dict.get('error', '')))
+                content_table.add_row(
+                    "[bold red]Error[/bold red]", escape(resp_dict.get("error", ""))
+                )
 
             text_content = resp_dict.get("response_text")
             # Assuming 'code' type experts are not used in this specific demo,
@@ -182,9 +202,14 @@ def display_single_shot_synthesis_results(
             #     content_table.add_row("Extracted Code", Syntax(code_content, "python", theme="monokai", line_numbers=True, word_wrap=True))
 
             if text_content:
-                content_table.add_row("Response Text", escape(text_content[:1000] + ('...' if len(text_content) > 1000 else '')))
+                content_table.add_row(
+                    "Response Text",
+                    escape(text_content[:1000] + ("..." if len(text_content) > 1000 else "")),
+                )
             elif not resp_dict.get("error"):
-                content_table.add_row("Response Text", "[italic]No content from this expert.[/italic]")
+                content_table.add_row(
+                    "Response Text", "[italic]No content from this expert.[/italic]"
+                )
 
             metrics = resp_dict.get("metrics", {})
             cost = metrics.get("cost", 0.0)
@@ -192,7 +217,7 @@ def display_single_shot_synthesis_results(
             total_task_time = metrics.get("total_task_time_ms", "N/A")
             input_tokens = metrics.get("input_tokens", "N/A")
             output_tokens = metrics.get("output_tokens", "N/A")
-            
+
             metrics_table = Table(box=box.ROUNDED, show_header=False, title="Metrics")
             metrics_table.add_column(style="cyan")
             metrics_table.add_column(style="white")
@@ -201,9 +226,12 @@ def display_single_shot_synthesis_results(
             metrics_table.add_row("Output Tokens", str(output_tokens))
             metrics_table.add_row("API Latency", f"{api_latency} ms")
             metrics_table.add_row("Total Task Time", f"{total_task_time} ms")
-            if metrics.get("api_model_id_used") and metrics.get("api_model_id_used") != model_id_display:
-                 metrics_table.add_row("API Model Used", str(metrics.get("api_model_id_used")))
-            
+            if (
+                metrics.get("api_model_id_used")
+                and metrics.get("api_model_id_used") != model_id_display
+            ):
+                metrics_table.add_row("API Model Used", str(metrics.get("api_model_id_used")))
+
             main_panel_content = [content_table, metrics_table]
 
             console_instance.print(
@@ -218,10 +246,10 @@ def display_single_shot_synthesis_results(
         console_instance.print("[italic]No expert responses available.[/italic]")
 
     console_instance.print(Rule("[bold green]Synthesized Response[/bold green]"))
-    
+
     synthesizer_metrics = results_data.get("synthesizer_metrics", {})
     synthesizer_model_id_used_api = synthesizer_metrics.get("api_model_id_used")
-    
+
     # Attempt to get configured synthesizer model from input if API one is not available (should be rare)
     # This requires passing synthesizer_config to this function or storing it in results_data
     # For now, we rely on api_model_id_used from metrics.
@@ -229,11 +257,14 @@ def display_single_shot_synthesis_results(
     # synthesizer_model_display = synthesizer_model_id_used_api or configured_synth_model
 
     if synthesizer_model_id_used_api:
-        console_instance.print(f"Synthesizer Model Used (from API): [magenta]{synthesizer_model_id_used_api}[/magenta]")
+        console_instance.print(
+            f"Synthesizer Model Used (from API): [magenta]{synthesizer_model_id_used_api}[/magenta]"
+        )
     else:
         # If not in metrics, try to infer from input or display N/A (needs input passed)
-        console_instance.print("Synthesizer Model: [magenta]N/A (configured model not directly in output, check logs or input config)[/magenta]")
-
+        console_instance.print(
+            "Synthesizer Model: [magenta]N/A (configured model not directly in output, check logs or input config)[/magenta]"
+        )
 
     thinking_process = results_data.get("synthesizer_thinking_process")
     if thinking_process:
@@ -249,7 +280,9 @@ def display_single_shot_synthesis_results(
     final_text = results_data.get("synthesized_response_text")
     final_code = results_data.get("synthesized_extracted_code")
     # Determine if the original task was for code
-    tournament_type = results_data.get("tournament_type", "text") # Assuming this field might be added to output for context
+    tournament_type = results_data.get(
+        "tournament_type", "text"
+    )  # Assuming this field might be added to output for context
 
     if tournament_type == "code" and final_code:
         console_instance.print(
@@ -259,7 +292,9 @@ def display_single_shot_synthesis_results(
                 border_style="green",
             )
         )
-    elif final_text: # Also show text if it's a code tournament but no code was extracted, or if it's text type
+    elif (
+        final_text
+    ):  # Also show text if it's a code tournament but no code was extracted, or if it's text type
         console_instance.print(
             Panel(
                 escape(final_text),
@@ -278,8 +313,12 @@ def display_single_shot_synthesis_results(
         synth_metrics_table.add_column("Metric", style="cyan")
         synth_metrics_table.add_column("Value", style="white")
         synth_metrics_table.add_row("Cost", f"${synthesizer_metrics.get('cost', 0.0):.6f}")
-        synth_metrics_table.add_row("Input Tokens", str(synthesizer_metrics.get("input_tokens", "N/A")))
-        synth_metrics_table.add_row("Output Tokens", str(synthesizer_metrics.get("output_tokens", "N/A")))
+        synth_metrics_table.add_row(
+            "Input Tokens", str(synthesizer_metrics.get("input_tokens", "N/A"))
+        )
+        synth_metrics_table.add_row(
+            "Output Tokens", str(synthesizer_metrics.get("output_tokens", "N/A"))
+        )
         synth_metrics_table.add_row(
             "API Latency", f"{synthesizer_metrics.get('api_latency_ms', 'N/A')} ms"
         )
@@ -312,14 +351,22 @@ def display_single_shot_synthesis_results(
         synthesis_prompt_file = Path(storage_path) / "synthesis_prompt.md"
         if synthesis_prompt_file.exists():
             try:
-                synthesis_prompt_content = synthesis_prompt_file.read_text(encoding='utf-8')
-                console_instance.print(Rule("[bold yellow]Full Prompt to Synthesizer Model[/bold yellow]"))
+                synthesis_prompt_content = synthesis_prompt_file.read_text(encoding="utf-8")
+                console_instance.print(
+                    Rule("[bold yellow]Full Prompt to Synthesizer Model[/bold yellow]")
+                )
                 console_instance.print(
                     Panel(
-                        Syntax(synthesis_prompt_content, "markdown", theme="monokai", line_numbers=True, word_wrap=True),
+                        Syntax(
+                            synthesis_prompt_content,
+                            "markdown",
+                            theme="monokai",
+                            line_numbers=True,
+                            word_wrap=True,
+                        ),
                         title="[bold]Synthesizer Input Prompt[/bold]",
                         border_style="yellow",
-                        expand=False # Keep it collapsed by default as it can be long
+                        expand=False,  # Keep it collapsed by default as it can be long
                     )
                 )
             except Exception as e:
@@ -368,67 +415,105 @@ async def run_single_shot_demo(tracker: CostTracker, args: argparse.Namespace):
 
     try:
         logger.info(f"Calling single_shot_synthesis tool for task: {args.name}", emoji_key="gear")
-        
+
         console.print(
             Panel(
                 f"Initiating Single-Shot Synthesis task: '[bold]{escape(args.name)}[/bold]'.\\n"
                 f"This involves parallel calls to [cyan]{len(expert_configs_for_tool)}[/cyan] expert model(s) "
                 f"followed by the synthesizer model ([cyan]{synthesizer_config_for_tool['model_id']}[/cyan]).\\n"
-                f"Prompt: '{escape(args.prompt[:150] + ('...' if len(args.prompt)>150 else ''))}'\\n"
+                f"Prompt: '{escape(args.prompt[:150] + ('...' if len(args.prompt) > 150 else ''))}'\\n"
                 "[italic]Please wait, this may take a few moments...[/italic]",
                 title="[bold blue]🚀 Starting Synthesis Process[/bold blue]",
                 border_style="blue",
-                expand=False
+                expand=False,
             )
         )
-        
+
         synthesis_data_dict: Optional[Dict[str, Any]] = None
-        with console.status("[bold yellow]Processing synthesis request via single_shot_synthesis tool...", spinner="dots"):
+        with console.status(
+            "[bold yellow]Processing synthesis request via single_shot_synthesis tool...",
+            spinner="dots",
+        ):
             # The tool 'single_shot_synthesis' is already registered with the gateway
-            synthesis_result_raw = await gateway.mcp.call_tool("single_shot_synthesis", synthesis_input_for_tool)
+            synthesis_result_raw = await gateway.mcp.call_tool(
+                "single_shot_synthesis", synthesis_input_for_tool
+            )
 
         # Process the result (moved out of the status context)
         if isinstance(synthesis_result_raw, dict):
-            logger.info("Tool call returned a dictionary directly. Using it as result.", emoji_key="package")
+            logger.info(
+                "Tool call returned a dictionary directly. Using it as result.", emoji_key="package"
+            )
             synthesis_data_dict = synthesis_result_raw
         elif isinstance(synthesis_result_raw, list):
-            logger.info("Tool call returned a list. Processing its first element.", emoji_key="package")
+            logger.info(
+                "Tool call returned a list. Processing its first element.", emoji_key="package"
+            )
             if synthesis_result_raw:
                 first_element = synthesis_result_raw[0]
                 if isinstance(first_element, dict):
                     synthesis_data_dict = first_element
-                elif hasattr(first_element, 'text') and isinstance(first_element.text, str):
-                    logger.info("First element has a .text attribute (like TextContent). Attempting to parse its .text attribute as JSON.", emoji_key="memo")
+                elif hasattr(first_element, "text") and isinstance(first_element.text, str):
+                    logger.info(
+                        "First element has a .text attribute (like TextContent). Attempting to parse its .text attribute as JSON.",
+                        emoji_key="memo",
+                    )
                     try:
                         synthesis_data_dict = json.loads(first_element.text)
                     except json.JSONDecodeError as e:
-                        logger.warning(f"JSON parsing of .text attribute failed: {e}. Falling back to process_mcp_result with the .text content.", emoji_key="warning")
-                        synthesis_data_dict = await process_mcp_result(first_element.text) # Pass the string for LLM repair
+                        logger.warning(
+                            f"JSON parsing of .text attribute failed: {e}. Falling back to process_mcp_result with the .text content.",
+                            emoji_key="warning",
+                        )
+                        synthesis_data_dict = await process_mcp_result(
+                            first_element.text
+                        )  # Pass the string for LLM repair
                 else:
-                    logger.warning(f"Tool call returned a list, but its first element is not a dictionary or TextContent-like. Content: {synthesis_result_raw!r:.500}", emoji_key="warning")
-                    synthesis_data_dict = await process_mcp_result(synthesis_result_raw) # Fallback with the whole list
+                    logger.warning(
+                        f"Tool call returned a list, but its first element is not a dictionary or TextContent-like. Content: {synthesis_result_raw!r:.500}",
+                        emoji_key="warning",
+                    )
+                    synthesis_data_dict = await process_mcp_result(
+                        synthesis_result_raw
+                    )  # Fallback with the whole list
             else:
-                logger.warning("Tool call returned an empty list. Falling back to process_mcp_result.", emoji_key="warning")
-                synthesis_data_dict = await process_mcp_result(synthesis_result_raw) # Fallback
-        elif isinstance(synthesis_result_raw, str): # If it's a string, try to parse
-            logger.info("Tool call returned a string. Attempting to parse with process_mcp_result.", emoji_key="memo")
+                logger.warning(
+                    "Tool call returned an empty list. Falling back to process_mcp_result.",
+                    emoji_key="warning",
+                )
+                synthesis_data_dict = await process_mcp_result(synthesis_result_raw)  # Fallback
+        elif isinstance(synthesis_result_raw, str):  # If it's a string, try to parse
+            logger.info(
+                "Tool call returned a string. Attempting to parse with process_mcp_result.",
+                emoji_key="memo",
+            )
             synthesis_data_dict = await process_mcp_result(synthesis_result_raw)
-        else: # If it's some other type, log and try process_mcp_result
-            logger.warning(f"Tool call returned an unexpected type: {type(synthesis_result_raw)}. Attempting to process with process_mcp_result.", emoji_key="warning")
+        else:  # If it's some other type, log and try process_mcp_result
+            logger.warning(
+                f"Tool call returned an unexpected type: {type(synthesis_result_raw)}. Attempting to process with process_mcp_result.",
+                emoji_key="warning",
+            )
             synthesis_data_dict = await process_mcp_result(synthesis_result_raw)
-
 
         # Check for errors from the tool call itself or if the synthesis_data_dict is problematic
-        if not synthesis_data_dict or not isinstance(synthesis_data_dict, dict) or \
-           synthesis_data_dict.get("success", True) is False or \
-           (synthesis_data_dict.get("status") == "FAILED" and synthesis_data_dict.get("error_message")):
-            
+        if (
+            not synthesis_data_dict
+            or not isinstance(synthesis_data_dict, dict)
+            or synthesis_data_dict.get("success", True) is False
+            or (
+                synthesis_data_dict.get("status") == "FAILED"
+                and synthesis_data_dict.get("error_message")
+            )
+        ):
             error_msg = "Unknown error or empty/invalid data from synthesis tool call."
             if synthesis_data_dict and isinstance(synthesis_data_dict, dict):
-                 error_msg = synthesis_data_dict.get("error_message", synthesis_data_dict.get("error", error_msg))
+                error_msg = synthesis_data_dict.get(
+                    "error_message", synthesis_data_dict.get("error", error_msg)
+                )
 
             logger.error(
-                f"Single-shot synthesis tool call failed or returned invalid data: {error_msg}", emoji_key="cross_mark"
+                f"Single-shot synthesis tool call failed or returned invalid data: {error_msg}",
+                emoji_key="cross_mark",
             )
             console.print(
                 f"[bold red]Error from synthesis tool call:[/bold red] {escape(error_msg)}"
@@ -437,9 +522,14 @@ async def run_single_shot_demo(tracker: CostTracker, args: argparse.Namespace):
             if synthesis_data_dict and isinstance(synthesis_data_dict, dict):
                 display_single_shot_synthesis_results(synthesis_data_dict, args.prompt, console)
             else:
-                console.print(Panel("[bold red]Received no usable data from the synthesis tool.[/bold red]", border_style="red"))
+                console.print(
+                    Panel(
+                        "[bold red]Received no usable data from the synthesis tool.[/bold red]",
+                        border_style="red",
+                    )
+                )
             return 1
-        
+
         console.print(Rule("[bold green]✔️ Synthesis Process Completed[/bold green]"))
         # Pass the original prompt (args.prompt) to the display function
         display_single_shot_synthesis_results(synthesis_data_dict, args.prompt, console)
@@ -456,7 +546,7 @@ async def run_single_shot_demo(tracker: CostTracker, args: argparse.Namespace):
             provider="synthesis_tool_operation",
             model=args.name,
             input_tokens=input_tokens,
-            output_tokens=output_tokens
+            output_tokens=output_tokens,
         )
 
     except (ToolError, ProviderError, Exception) as e:

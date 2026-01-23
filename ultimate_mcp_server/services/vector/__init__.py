@@ -1,4 +1,5 @@
 """Vector database and embedding operations for Ultimate MCP Server."""
+
 from ultimate_mcp_server.services.vector.embeddings import (
     EmbeddingService,
     get_embedding_service,

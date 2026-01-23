@@ -705,7 +705,7 @@ def _get_docling_converter(device, threads: int):
     opts = PdfPipelineOptions()
     opts.do_ocr = False
     opts.generate_page_images = False
-    opts.do_table_extraction = True # Explicitly enable table extraction in the pipeline options
+    opts.do_table_extraction = True  # Explicitly enable table extraction in the pipeline options
     opts.accelerator_options = AcceleratorOptions(num_threads=threads, device=device)
     try:
         converter_options = {InputFormat.PDF: PdfFormatOption(pipeline_options=opts)}

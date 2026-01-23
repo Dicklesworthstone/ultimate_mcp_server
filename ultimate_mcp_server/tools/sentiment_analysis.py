@@ -1,4 +1,5 @@
 """Business-focused sentiment analysis tools for Ultimate MCP Server."""
+
 import json
 import time
 from typing import Any, Dict, List, Optional
@@ -10,6 +11,7 @@ from ultimate_mcp_server.tools.completion import generate_completion
 from ultimate_mcp_server.utils import get_logger
 
 logger = get_logger("ultimate_mcp_server.tools.business_sentiment")
+
 
 @with_tool_metrics
 @with_error_handling
@@ -25,7 +27,7 @@ async def analyze_business_sentiment(
     language: str = "english",
     provider: str = Provider.OPENAI.value,
     model: Optional[str] = None,
-    threshold_config: Optional[Dict[str, float]] = None
+    threshold_config: Optional[Dict[str, float]] = None,
 ) -> Dict[str, Any]:
     """Performs comprehensive business-oriented sentiment analysis for commercial applications.
 
@@ -35,7 +37,7 @@ async def analyze_business_sentiment(
 
     Args:
         text: The business text to analyze (feedback, review, survey response, etc.).
-        industry: Optional industry context to tailor analysis (e.g., "retail", "financial_services", 
+        industry: Optional industry context to tailor analysis (e.g., "retail", "financial_services",
                  "healthcare", "hospitality", "technology", "telecommunications", "manufacturing").
                  Improves accuracy by applying industry-specific terminology and benchmarks.
         analysis_mode: Type of analysis to perform:
@@ -151,26 +153,29 @@ async def analyze_business_sentiment(
         ToolError: For other errors during processing.
     """
     start_time = time.time()
-    
+
     # Parameter validation
     if not text or not isinstance(text, str):
         raise ToolInputError(
-            "Input text must be a non-empty string.",
-            param_name="text",
-            provided_value=text
+            "Input text must be a non-empty string.", param_name="text", provided_value=text
         )
-    
+
     valid_analysis_modes = [
-        "standard", "comprehensive", "customer_experience", "product_feedback", 
-        "brand_perception", "support_ticket", "sales_opportunity"
+        "standard",
+        "comprehensive",
+        "customer_experience",
+        "product_feedback",
+        "brand_perception",
+        "support_ticket",
+        "sales_opportunity",
     ]
     if analysis_mode not in valid_analysis_modes:
         raise ToolInputError(
             f"Invalid analysis_mode. Must be one of: {', '.join(valid_analysis_modes)}",
             param_name="analysis_mode",
-            provided_value=analysis_mode
+            provided_value=analysis_mode,
         )
-    
+
     # Construct the analysis prompt based on parameters
     system_prompt = _build_sentiment_system_prompt(
         industry=industry,
@@ -181,9 +186,9 @@ async def analyze_business_sentiment(
         intent_detection=intent_detection,
         risk_assessment=risk_assessment,
         language=language,
-        threshold_config=threshold_config
+        threshold_config=threshold_config,
     )
-    
+
     user_prompt = f"""
     Analyze the following business text according to the specified parameters:
     
@@ -194,10 +199,10 @@ async def analyze_business_sentiment(
     
     Provide a detailed JSON response according to the format specified in the system instructions.
     """
-    
+
     # Combined prompt for all providers
     combined_prompt = f"{system_prompt}\n\n{user_prompt}"
-    
+
     try:
         # Consistently use generate_completion for all providers
         completion_result = await generate_completion(
@@ -206,12 +211,14 @@ async def analyze_business_sentiment(
             model=model,
             temperature=0.2,
             max_tokens=2000,
-            additional_params={"response_format": {"type": "json_object"}} if provider.lower() == "openai" else None
+            additional_params={"response_format": {"type": "json_object"}}
+            if provider.lower() == "openai"
+            else None,
         )
-        
+
         # Extract response text from the completion result
         response_text = completion_result["text"].strip()
-        
+
         # Extract JSON response
         try:
             # Try to extract JSON if wrapped in code blocks
@@ -225,15 +232,15 @@ async def analyze_business_sentiment(
                 json_end = response_text.find("```", json_start)
                 if json_end > json_start:
                     response_text = response_text[json_start:json_end].strip()
-            
+
             # Parse and validate JSON
             analysis_data = json.loads(response_text)
-            
+
             # Validate minimum required fields
             if "core_metrics" not in analysis_data:
                 logger.warning("Missing 'core_metrics' in response, adding empty object")
                 analysis_data["core_metrics"] = {}
-            
+
             # Ensure core metrics contains primary sentiment
             core_metrics = analysis_data["core_metrics"]
             if "primary_sentiment" not in core_metrics:
@@ -246,10 +253,10 @@ async def analyze_business_sentiment(
                     primary_sentiment = "neutral"
                 core_metrics["primary_sentiment"] = primary_sentiment
                 logger.debug(f"Added missing primary_sentiment: {primary_sentiment}")
-            
+
             # Populate metadata
             processing_time = time.time() - start_time
-            
+
             # Extract provider and model info from completion result
             result_provider = completion_result.get("provider", provider)
             result_model = completion_result.get("model", model)
@@ -257,7 +264,7 @@ async def analyze_business_sentiment(
             output_tokens = completion_result.get("tokens", {}).get("output", 0)
             total_tokens = completion_result.get("tokens", {}).get("total", 0)
             cost = completion_result.get("cost", 0.0)
-            
+
             meta = {
                 "provider": result_provider,
                 "model": result_model,
@@ -270,47 +277,41 @@ async def analyze_business_sentiment(
                 },
                 "cost": cost,
                 "processing_time": processing_time,
-                "version": "2.4.0"  # Tool version
+                "version": "2.4.0",  # Tool version
             }
-            
+
             # Include metadata in the final response
             analysis_data["meta"] = meta
             analysis_data["success"] = True
-            
+
             # Log successful completion
             logger.success(
                 f"Business sentiment analysis completed successfully with {result_provider}/{result_model}",
                 emoji_key=TaskType.CLASSIFICATION.value,
                 analysis_mode=analysis_mode,
                 sentiment=core_metrics.get("primary_sentiment", "unknown"),
-                tokens={
-                    "input": input_tokens,
-                    "output": output_tokens
-                },
+                tokens={"input": input_tokens, "output": output_tokens},
                 cost=cost,
-                time=processing_time
+                time=processing_time,
             )
-            
+
             return analysis_data
-            
+
         except json.JSONDecodeError as e:
             logger.error(
                 f"Failed to parse JSON response: {e}",
                 emoji_key="error",
-                raw_response=response_text[:500]  # Log partial response for debugging
+                raw_response=response_text[:500],  # Log partial response for debugging
             )
             raise ToolError(
                 f"Failed to parse business sentiment analysis response: {e}",
                 error_code="invalid_response_format",
-                details={"raw_response": response_text[:500]}
+                details={"raw_response": response_text[:500]},
             ) from e
-            
+
     except Exception as e:
         raise ProviderError(
-            f"Business sentiment analysis failed: {str(e)}",
-            provider=provider,
-            model=model,
-            cause=e
+            f"Business sentiment analysis failed: {str(e)}", provider=provider, model=model, cause=e
         ) from e
 
 
@@ -320,13 +321,13 @@ def _build_sentiment_system_prompt(
     entity_extraction: bool,
     aspect_based: bool,
     competitive_analysis: bool,
-    intent_detection: bool, 
+    intent_detection: bool,
     risk_assessment: bool,
     language: str,
-    threshold_config: Optional[Dict[str, float]]
+    threshold_config: Optional[Dict[str, float]],
 ) -> str:
     """Builds a comprehensive system prompt for business sentiment analysis based on parameters."""
-    
+
     # Base prompt with core instructions
     base_prompt = """
     You are an enterprise-grade business sentiment analysis system designed to extract actionable insights from customer and stakeholder feedback. Your analysis should be precise, nuanced, and tailored to business decision-making.
@@ -338,32 +339,26 @@ def _build_sentiment_system_prompt(
     
     All numerical scores should be consistent (higher is better unless otherwise specified) and normalized within their specified ranges.
     """
-    
+
     # Industry-specific tailoring
     industry_prompt = ""
     if industry:
         industry_mappings = {
             "retail": "Retail and e-commerce context: Focus on product quality, shopping experience, delivery, returns, and customer service. Include retail-specific metrics like purchase satisfaction and repeat purchase intent.",
-            
             "financial_services": "Financial services context: Focus on trust, security, transparency, and service quality. Include financial-specific metrics like perceived financial benefit, trust indicator, and financial confidence impact.",
-            
             "healthcare": "Healthcare context: Focus on care quality, staff interactions, facility experience, and outcomes. Include healthcare-specific metrics like perceived care quality, staff empathy, and outcome satisfaction.",
-            
             "hospitality": "Hospitality context: Focus on accommodations, amenities, staff service, and overall experience. Include hospitality-specific metrics like comfort rating, staff attentiveness, and value perception.",
-            
             "technology": "Technology/SaaS context: Focus on software/product functionality, reliability, ease of use, and technical support. Include tech-specific metrics like feature satisfaction, reliability perception, and technical resolution satisfaction.",
-            
             "telecommunications": "Telecommunications context: Focus on service reliability, coverage, customer support, and value. Include telecom-specific metrics like service reliability rating, coverage satisfaction, and value perception.",
-            
-            "manufacturing": "Manufacturing context: Focus on product quality, durability, specifications adherence, and support. Include manufacturing-specific metrics like quality rating, durability perception, and technical specification satisfaction."
+            "manufacturing": "Manufacturing context: Focus on product quality, durability, specifications adherence, and support. Include manufacturing-specific metrics like quality rating, durability perception, and technical specification satisfaction.",
         }
-        
+
         if industry.lower() in industry_mappings:
             industry_prompt = f"\nINDUSTRY CONTEXT: {industry_mappings[industry.lower()]}\n"
             industry_prompt += "\nInclude an 'industry_specific_insights' section with metrics and insights specific to this industry."
         else:
             industry_prompt = f"\nINDUSTRY CONTEXT: {industry} - Apply industry-specific terminology and standards.\n"
-    
+
     # Analysis mode specification
     mode_prompt = "\nANALYSIS MODE: "
     if analysis_mode == "standard":
@@ -380,10 +375,10 @@ def _build_sentiment_system_prompt(
         mode_prompt += "Support ticket focus: Emphasize issue categorization, severity, urgency, and resolution path. Detect technical terms and problem indicators."
     elif analysis_mode == "sales_opportunity":
         mode_prompt += "Sales opportunity focus: Emphasize purchase intent, objections, and decision factors. Analyze buying signals and sales readiness indicators."
-    
+
     # Optional analysis components
     optional_components = []
-    
+
     if entity_extraction:
         optional_components.append("""
         ENTITY EXTRACTION: Extract and categorize business entities mentioned in the text.
@@ -391,7 +386,7 @@ def _build_sentiment_system_prompt(
         - Normalize entity names when variations of the same entity are mentioned.
         - Exclude generic mentions and focus on specific named entities.
         """)
-    
+
     if aspect_based:
         optional_components.append("""
         ASPECT-BASED SENTIMENT: Break down sentiment by specific aspects or features mentioned.
@@ -400,7 +395,7 @@ def _build_sentiment_system_prompt(
         - Only include aspects explicitly mentioned or strongly implied in the text.
         - Score each aspect from -1.0 (extremely negative) to 1.0 (extremely positive).
         """)
-    
+
     if competitive_analysis:
         optional_components.append("""
         COMPETITIVE ANALYSIS: Identify and analyze competitor mentions and comparisons.
@@ -409,7 +404,7 @@ def _build_sentiment_system_prompt(
         - Identify perceived advantages and disadvantages relative to competitors.
         - Score comparative sentiment from -1.0 (negative comparison) to 1.0 (positive comparison).
         """)
-    
+
     if intent_detection:
         optional_components.append("""
         INTENT DETECTION: Identify customer intentions and likely next actions.
@@ -418,7 +413,7 @@ def _build_sentiment_system_prompt(
         - Detect specific intents like information requests, cancellation warnings, escalation threats.
         - Score intent probabilities from 0.0 (no indication) to 1.0 (strong indication).
         """)
-    
+
     if risk_assessment:
         optional_components.append("""
         RISK ASSESSMENT: Evaluate potential business risks in the feedback.
@@ -427,24 +422,24 @@ def _build_sentiment_system_prompt(
         - Provide an escalation probability and urgency level.
         - Flag sensitive content that may require special attention.
         """)
-    
+
     # Language specification
     language_prompt = f"\nLANGUAGE: Analyze text in {language}. Ensure all scores and categorizations are correctly interpreted within cultural and linguistic context."
-    
+
     # Threshold configurations if provided
     threshold_prompt = ""
     if threshold_config and isinstance(threshold_config, dict):
         threshold_prompt = "\nTHRESHOLD CONFIGURATION:"
         for metric, value in threshold_config.items():
             threshold_prompt += f"\n- {metric}: {value}"
-    
+
     # Combine all prompt components
     full_prompt = base_prompt + industry_prompt + mode_prompt + language_prompt + threshold_prompt
-    
+
     if optional_components:
         full_prompt += "\n\nADDITIONAL ANALYSIS COMPONENTS:"
         full_prompt += "\n".join(optional_components)
-    
+
     # Output format specification
     output_format = """
     RESPONSE FORMAT: Respond only with a valid JSON object containing all applicable sections based on the analysis parameters.
@@ -460,9 +455,9 @@ def _build_sentiment_system_prompt(
     
     Ensure all numerical values are normalized to their specified ranges and all categorical values use consistent terminology.
     """
-    
+
     full_prompt += output_format
-    
+
     return full_prompt
 
 
@@ -474,7 +469,7 @@ async def analyze_business_text_batch(
     aggregate_results: bool = True,
     max_concurrency: int = 3,
     provider: str = Provider.OPENAI.value,
-    model: Optional[str] = None
+    model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Processes a batch of business texts for sentiment analysis with aggregated insights.
 
@@ -558,85 +553,79 @@ async def analyze_business_text_batch(
     total_cost = 0.0
     success_count = 0
     error_count = 0
-    
+
     # Validate inputs
     if not texts or not isinstance(texts, list):
         raise ToolInputError(
             "The 'texts' parameter must be a non-empty list of strings.",
             param_name="texts",
-            provided_value=texts
+            provided_value=texts,
         )
-    
+
     if not analysis_config or not isinstance(analysis_config, dict):
         raise ToolInputError(
             "The 'analysis_config' parameter must be a dictionary of configuration options.",
             param_name="analysis_config",
-            provided_value=analysis_config
+            provided_value=analysis_config,
         )
-    
+
     # Process texts with concurrency control
     import asyncio
+
     semaphore = asyncio.Semaphore(max_concurrency)
     individual_results = []
     all_analyses = []
-    
+
     async def process_text(idx: int, text: str):
         nonlocal total_cost, success_count, error_count
-        
+
         async with semaphore:
             text_preview = text[:50] + ("..." if len(text) > 50 else "")
-            logger.debug(f"Processing text {idx+1}/{len(texts)}: {text_preview}")
-            
+            logger.debug(f"Processing text {idx + 1}/{len(texts)}: {text_preview}")
+
             try:
                 # Create a copy of analysis_config to avoid modifying the original
                 config = analysis_config.copy()
-                
+
                 # Add provider and model to config
                 config["provider"] = provider
                 config["model"] = model
-                
+
                 # Process the individual text using our refactored analyze_business_sentiment
-                result = await analyze_business_sentiment(
-                    text=text,
-                    **config
-                )
-                
+                result = await analyze_business_sentiment(text=text, **config)
+
                 # Update metrics
                 total_cost += result.get("meta", {}).get("cost", 0.0)
                 success_count += 1
-                
+
                 # Record result
-                individual_results.append({
-                    "text_id": idx,
-                    "text_preview": text_preview,
-                    "analysis": result
-                })
-                
+                individual_results.append(
+                    {"text_id": idx, "text_preview": text_preview, "analysis": result}
+                )
+
                 # Store for aggregation
                 all_analyses.append(result)
-                
+
                 return result
-                
+
             except Exception as e:
                 logger.error(f"Error analyzing text {idx}: {str(e)}", exc_info=True)
                 error_count += 1
-                
+
                 # Record error
-                individual_results.append({
-                    "text_id": idx,
-                    "text_preview": text_preview,
-                    "error": str(e)
-                })
-                
+                individual_results.append(
+                    {"text_id": idx, "text_preview": text_preview, "error": str(e)}
+                )
+
                 return None
-    
+
     # Create and run tasks
     tasks = [process_text(i, text) for i, text in enumerate(texts)]
     await asyncio.gather(*tasks)
-    
+
     # Sort results by text_id to maintain original order
     individual_results.sort(key=lambda x: x["text_id"])
-    
+
     # Build response
     result = {
         "individual_results": individual_results,
@@ -646,11 +635,11 @@ async def analyze_business_text_batch(
             "error_count": error_count,
             "processing_time": time.time() - start_time,
             "total_cost": total_cost,
-            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
         },
-        "success": True
+        "success": True,
     }
-    
+
     # Calculate aggregate insights if requested and we have successful analyses
     if aggregate_results and all_analyses:
         try:
@@ -659,13 +648,13 @@ async def analyze_business_text_batch(
         except Exception as e:
             logger.error(f"Error calculating aggregate insights: {str(e)}", exc_info=True)
             result["aggregate_insights_error"] = str(e)
-    
+
     return result
 
 
 def _calculate_aggregate_insights(analyses: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Calculates aggregate insights across multiple business sentiment analyses."""
-    
+
     # Initialize aggregation containers
     sentiment_counts = {"positive": 0, "neutral": 0, "negative": 0}
     sentiment_scores = []
@@ -673,50 +662,46 @@ def _calculate_aggregate_insights(analyses: List[Dict[str, Any]]) -> Dict[str, A
     loyalty_indicators = []
     aspect_sentiments = {}
     topics = {}
-    mentioned_entities = {
-        "products": {},
-        "features": {},
-        "services": {}
-    }
-    
+    mentioned_entities = {"products": {}, "features": {}, "services": {}}
+
     # Process each analysis
     for analysis in analyses:
         # Skip any analyses without core_metrics
         if "core_metrics" not in analysis:
             continue
-        
+
         core = analysis.get("core_metrics", {})
         business = analysis.get("business_dimensions", {})
-        
+
         # Sentiment distribution
         sentiment = core.get("primary_sentiment", "neutral").lower()
         if sentiment in sentiment_counts:
             sentiment_counts[sentiment] += 1
-        
+
         # Collect numerical metrics
         if "sentiment_score" in core:
             sentiment_scores.append(core["sentiment_score"])
-        
+
         if "satisfaction_score" in business:
             satisfaction_scores.append(business["satisfaction_score"])
-            
+
         if "loyalty_indicators" in business:
             loyalty_indicators.append(business["loyalty_indicators"])
-        
+
         # Aspect sentiments
         for aspect, score in analysis.get("aspect_sentiment", {}).items():
             if aspect not in aspect_sentiments:
                 aspect_sentiments[aspect] = {"scores": [], "count": 0}
-            
+
             aspect_sentiments[aspect]["scores"].append(score)
             aspect_sentiments[aspect]["count"] += 1
-        
+
         # Topics
         for topic in analysis.get("message_characteristics", {}).get("key_topics", []):
             if topic not in topics:
                 topics[topic] = 0
             topics[topic] += 1
-        
+
         # Entity mentions
         for entity_type, entities in analysis.get("entity_extraction", {}).items():
             if entity_type in mentioned_entities and isinstance(entities, list):
@@ -724,49 +709,51 @@ def _calculate_aggregate_insights(analyses: List[Dict[str, Any]]) -> Dict[str, A
                     if entity not in mentioned_entities[entity_type]:
                         mentioned_entities[entity_type][entity] = 0
                     mentioned_entities[entity_type][entity] += 1
-    
+
     # Calculate distributions as percentages
     total_sentiments = sum(sentiment_counts.values())
     sentiment_distribution = {
-        k: round(v / total_sentiments, 2) if total_sentiments else 0 
+        k: round(v / total_sentiments, 2) if total_sentiments else 0
         for k, v in sentiment_counts.items()
     }
-    
+
     # Calculate average metrics
     average_metrics = {}
     if sentiment_scores:
         average_metrics["sentiment_score"] = sum(sentiment_scores) / len(sentiment_scores)
-    
+
     if satisfaction_scores:
         average_metrics["satisfaction_score"] = sum(satisfaction_scores) / len(satisfaction_scores)
-    
+
     if loyalty_indicators:
         average_metrics["loyalty_indicators"] = sum(loyalty_indicators) / len(loyalty_indicators)
-    
+
     # Process aspect sentiments
     top_aspects = []
     for aspect, data in aspect_sentiments.items():
         avg_sentiment = sum(data["scores"]) / len(data["scores"]) if data["scores"] else 0
-        top_aspects.append({
-            "name": aspect,
-            "avg_sentiment": round(avg_sentiment, 2),
-            "mention_count": data["count"]
-        })
-    
+        top_aspects.append(
+            {
+                "name": aspect,
+                "avg_sentiment": round(avg_sentiment, 2),
+                "mention_count": data["count"],
+            }
+        )
+
     # Sort aspects by mention count
     top_aspects.sort(key=lambda x: x["mention_count"], reverse=True)
-    
+
     # Process topics
     key_topics = [{"topic": k, "mention_count": v} for k, v in topics.items()]
     key_topics.sort(key=lambda x: x["mention_count"], reverse=True)
-    
+
     # Build aggregated insights
     aggregate_insights = {
         "sentiment_distribution": sentiment_distribution,
         "average_metrics": average_metrics,
         "top_aspects": top_aspects[:10],  # Limit to top 10
-        "key_topics": key_topics[:10],    # Limit to top 10
-        "entity_mention_frequencies": mentioned_entities
+        "key_topics": key_topics[:10],  # Limit to top 10
+        "entity_mention_frequencies": mentioned_entities,
     }
-    
+
     return aggregate_insights

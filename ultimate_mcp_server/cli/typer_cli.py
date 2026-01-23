@@ -1,4 +1,5 @@
 """Typer CLI implementation for the Ultimate MCP Server."""
+
 import asyncio
 import os
 import sys
@@ -33,7 +34,7 @@ console = Console(file=sys.stderr)  # Use stderr to avoid interfering with MCP p
 # Create typer app
 app = typer.Typer(
     name="umcp",
-    help= (
+    help=(
         "[bold green]Ultimate MCP Server[/bold green]: Multi-provider LLM management server\n"
         "[italic]Unified CLI to run your server, manage providers, and more.[/italic]"
     ),
@@ -45,7 +46,7 @@ app = typer.Typer(
 
 def version_callback(value: bool):
     """Show the version information and exit.
-    
+
     This callback is triggered by the --version/-v flag and displays
     the current version of Ultimate MCP Server before exiting.
     """
@@ -70,11 +71,9 @@ TOOL_TO_EXAMPLE_MAP: Dict[str, str] = {
     "stream_completion": "simple_completion_demo.py",
     "chat_completion": "claude_integration_demo.py",
     "multi_completion": "multi_provider_demo.py",
-    
     # Provider tools
     "get_provider_status": "multi_provider_demo.py",
     "list_models": "multi_provider_demo.py",
-    
     # Document tools
     "summarize_document": "document_conversion_and_processing_demo.py",
     "extract_entities": "document_conversion_and_processing_demo.py",
@@ -82,58 +81,44 @@ TOOL_TO_EXAMPLE_MAP: Dict[str, str] = {
     "process_document_batch": "document_conversion_and_processing_demo.py",
     "extract_text_from_pdf": "document_conversion_and_processing_demo.py",
     "process_image_ocr": "document_conversion_and_processing_demo.py",
-    
     # Extraction tools
     "extract_json": "advanced_extraction_demo.py",
     "extract_table": "advanced_extraction_demo.py",
     "extract_key_value_pairs": "advanced_extraction_demo.py",
     "extract_semantic_schema": "advanced_extraction_demo.py",
-    
     # Entity graph tools
     "extract_entity_graph": "entity_relation_graph_demo.py",
-    
     # RAG tools
     "create_knowledge_base": "rag_example.py",
     "add_documents": "rag_example.py",
     "retrieve_context": "rag_example.py",
     "generate_with_rag": "rag_example.py",
-    
     # Classification tools
     "text_classification": "text_classification_demo.py",
-    
     # Tournament tools
     "create_tournament": "tournament_text_demo.py",
     "list_tournaments": "tournament_text_demo.py",
     "get_tournament_results": "tournament_text_demo.py",
-    
     # Optimization tools
     "estimate_cost": "cost_optimization.py",
     "compare_models": "cost_optimization.py",
     "recommend_model": "cost_optimization.py",
-    
     # Filesystem tools
     "read_file": "filesystem_operations_demo.py",
     "write_file": "filesystem_operations_demo.py",
     "list_directory": "filesystem_operations_demo.py",
     "search_files": "filesystem_operations_demo.py",
-    
-
     # HTML tools
     "clean_and_format_text_as_markdown": "html_to_markdown_demo.py",
-    
     # Text comparison tools
     "compare_documents_redline": "text_redline_demo.py",
-    
     # Marqo search tools
     "marqo_fused_search": "marqo_fused_search_demo.py",
-    
     # SQL tools
     "connect_to_database": "sql_database_interactions_demo.py",
     "execute_query": "sql_database_interactions_demo.py",
-    
     # Audio tools
     "transcribe_audio": "audio_transcription_demo.py",
-    
     # Browser automation tools
     "browser_init": "browser_automation_demo.py",
     "execute_web_workflow": "browser_automation_demo.py",
@@ -428,19 +413,20 @@ def run(
         f"Workers: [cyan]{workers or 'default from config'}[/cyan]\n"
         f"Transport mode: [cyan]{transport_mode}[/cyan]"
     )
-    
+
     # Tool Loading Status
     if load_all_tools:
         server_info_str += "\nTool Loading: [yellow]All Available Tools[/yellow]"
     else:
-        server_info_str += "\nTool Loading: [yellow]Base Toolset Only[/yellow] (Use --load-all-tools to load all)"
+        server_info_str += (
+            "\nTool Loading: [yellow]Base Toolset Only[/yellow] (Use --load-all-tools to load all)"
+        )
         # Format the categories for display
         category_lines = []
         for category, tools in BASE_TOOLSET_CATEGORIES.items():
             category_lines.append(f"    [cyan]{category}[/cyan]: {', '.join(tools)}")
-        
-        server_info_str += "\n  [bold]Includes:[/bold]\n" + "\n".join(category_lines)
 
+        server_info_str += "\n  [bold]Includes:[/bold]\n" + "\n".join(category_lines)
 
     # Print tool filtering info if enabled
     if include_tools or exclude_tools:
@@ -450,16 +436,22 @@ def run(
         if exclude_tools:
             server_info_str += f"\nExcluding: [red]{', '.join(exclude_tools)}[/red]"
 
-    console.print(Panel(server_info_str, title="[bold blue]Starting Ultimate MCP Server[/bold blue]", expand=False))
-    console.print() # Add a newline for spacing
-    
+    console.print(
+        Panel(
+            server_info_str,
+            title="[bold blue]Starting Ultimate MCP Server[/bold blue]",
+            expand=False,
+        )
+    )
+    console.print()  # Add a newline for spacing
+
     # Convert transport_mode enum to string and handle aliases
     if transport_mode == TransportMode.SHTTP:
         actual_transport_mode = "streamable-http"
     else:
         # Convert enum to string value (e.g., TransportMode.SSE -> "sse")
         actual_transport_mode = transport_mode.value
-    
+
     # Run the server
     run_server(
         host=host,
@@ -480,9 +472,9 @@ def providers(
     """
     [bold green]List Available Providers[/bold green]
 
-    Display configured LLM providers (OpenAI, Anthropic, Gemini, etc.) 
+    Display configured LLM providers (OpenAI, Anthropic, Gemini, etc.)
     with their connection status, default models, and API key validation.
-    
+
     Use this command to verify your configuration, troubleshoot API keys,
     or explore available models across all providers.
 
@@ -499,7 +491,11 @@ def providers(
 
 @app.command(name="test")
 def test(
-    provider: str = typer.Argument(..., help="Provider to test (openai, anthropic, deepseek, gemini)", rich_help_panel="Test Options"),
+    provider: str = typer.Argument(
+        ...,
+        help="Provider to test (openai, anthropic, deepseek, gemini)",
+        rich_help_panel="Test Options",
+    ),
     model: Optional[str] = MODEL_OPTION,
     prompt: str = PROMPT_OPTION,
 ):
@@ -509,7 +505,7 @@ def test(
     Verify connectivity and functionality of an LLM provider by sending a test
     prompt and displaying the response. This command performs a full API round-trip
     to validate your credentials, model availability, and proper configuration.
-    
+
     The output includes the response text, token counts, cost estimate,
     and response time metrics to help diagnose performance issues.
 
@@ -521,11 +517,17 @@ def test(
     Examples:
       umcp test openai  # Quick health check with default settings
     """
-    with console.status(f"[bold green]Testing provider '{provider}'..."): 
+    with console.status(f"[bold green]Testing provider '{provider}'..."):
         try:
             asyncio.run(test_provider(provider=provider, model=model, prompt=prompt))
         except Exception as e:
-            console.print(Panel(f"Failed to test provider '{provider}':\n{str(e)}", title="[bold red]Test Error[/bold red]", border_style="red"))
+            console.print(
+                Panel(
+                    f"Failed to test provider '{provider}':\n{str(e)}",
+                    title="[bold red]Test Error[/bold red]",
+                    border_style="red",
+                )
+            )
             raise typer.Exit(code=1) from e
 
 
@@ -545,9 +547,9 @@ def complete(
     Request text generation directly from an LLM provider through the CLI.
     This command bypasses the server's MCP endpoint and sends requests
     directly to the provider's API, useful for testing or quick generations.
-    
+
     Supports input from arguments, stdin (piped content), or interactive prompt.
-    The command provides full control over provider selection, model choice, 
+    The command provides full control over provider selection, model choice,
     and generation parameters. Results include token counts and cost estimates.
 
     Usage:
@@ -566,7 +568,7 @@ def complete(
         if sys.stdin.isatty():
             console.print("Enter prompt (Ctrl+D to finish):")
         prompt = sys.stdin.read().strip()
-    
+
     asyncio.run(
         generate_completion(
             provider=provider,
@@ -589,9 +591,9 @@ def cache(
     [bold green]Cache Management[/bold green]
 
     Monitor and maintain the server's response cache system.
-    Caching stores previous LLM responses to avoid redundant API calls, 
+    Caching stores previous LLM responses to avoid redundant API calls,
     significantly reducing costs and latency for repeated or similar requests.
-    
+
     The status view shows backend type, item count, hit rate percentage,
     and estimated cost savings from cache hits. Clearing the cache removes
     all stored responses, which may be necessary after configuration changes
@@ -620,10 +622,16 @@ def cache(
             try:
                 asyncio.run(check_cache(show_status=status, clear=should_clear))
             except Exception as e:
-                console.print(Panel(f"Failed to access cache:\n{str(e)}", title="[bold red]Cache Error[/bold red]", border_style="red"))
+                console.print(
+                    Panel(
+                        f"Failed to access cache:\n{str(e)}",
+                        title="[bold red]Cache Error[/bold red]",
+                        border_style="red",
+                    )
+                )
                 raise typer.Exit(code=1) from e
-    elif not clear: # If only clear was specified but user aborted
-        pass # Do nothing, already printed message
+    elif not clear:  # If only clear was specified but user aborted
+        pass  # Do nothing, already printed message
     else:
         console.print("Use --status to view status or --clear to clear the cache.")
 
@@ -641,7 +649,7 @@ def benchmark(
     Compare performance metrics and costs across different LLM providers and models.
     The benchmark sends identical prompts to each selected provider/model combination
     and measures response time, token processing speed, and cost per request.
-    
+
     Results are presented in a table format showing average metrics across
     multiple runs to ensure statistical validity. This helps identify the
     most performant or cost-effective options for your specific use cases.
@@ -651,7 +659,7 @@ def benchmark(
       umcp benchmark --providers openai,anthropic  # Test specific providers
       umcp benchmark --models gpt-4o,claude-3-5-haiku  # Test specific models
       umcp benchmark --prompt "Explain quantum computing" --runs 5  # Custom benchmark
-      
+
     Examples:
       umcp benchmark --runs 3 --providers openai,gemini  # Compare top providers
     """
@@ -669,7 +677,7 @@ def tools(
     Display the MCP tools registered in the server, organized by functional categories.
     These tools represent the server's capabilities that can be invoked by AI agents
     through the Model Context Protocol (MCP) interface.
-    
+
     Tools are grouped into logical categories like completion, document processing,
     filesystem access, browser automation, and more. For each tool, you can
     optionally view associated example scripts that demonstrate its usage patterns.
@@ -686,72 +694,53 @@ def tools(
     tool_categories: Dict[str, List[str]] = {
         "completion": [
             "generate_completion",
-            "stream_completion", 
-            "chat_completion", 
-            "multi_completion"
+            "stream_completion",
+            "chat_completion",
+            "multi_completion",
         ],
         "document": [
             "summarize_document",
             "extract_entities",
             "chunk_document",
-            "process_document_batch"
+            "process_document_batch",
         ],
         "extraction": [
             "extract_json",
             "extract_table",
             "extract_key_value_pairs",
-            "extract_semantic_schema"
+            "extract_semantic_schema",
         ],
-        "rag": [
-            "create_knowledge_base",
-            "add_documents",
-            "retrieve_context",
-            "generate_with_rag"
-        ],
-        "filesystem": [
-            "read_file",
-            "write_file",
-            "list_directory",
-            "search_files"
-        ],
-        "browser": [
-            "browser_init",
-            "browser_navigate",
-            "browser_click",
-            "execute_web_workflow"
-        ]
+        "rag": ["create_knowledge_base", "add_documents", "retrieve_context", "generate_with_rag"],
+        "filesystem": ["read_file", "write_file", "list_directory", "search_files"],
+        "browser": ["browser_init", "browser_navigate", "browser_click", "execute_web_workflow"],
     }
-    
+
     # Filter by category if specified
     if category and category in tool_categories:
         categories_to_show = {category: tool_categories[category]}
     else:
         categories_to_show = tool_categories
-    
+
     # Create Rich table for display
     table = Table(title="Ultimate MCP Server Tools")
     table.add_column("Category", style="cyan")
     table.add_column("Tool", style="green")
-    
+
     if show_examples:
         table.add_column("Example Script", style="yellow")
-    
+
     # Add rows to table
     for module_name, tool_names in sorted(categories_to_show.items()):
         for tool_name in sorted(tool_names):
             example_script = TOOL_TO_EXAMPLE_MAP.get(tool_name, "")
-            
+
             if show_examples:
-                table.add_row(
-                    module_name, 
-                    tool_name,
-                    example_script if example_script else "N/A"
-                )
+                table.add_row(module_name, tool_name, example_script if example_script else "N/A")
             else:
                 table.add_row(module_name, tool_name)
-    
+
     console.print(table)
-    
+
     # Print help for running examples
     if show_examples:
         console.print("\n[bold]Tip:[/bold] Run examples using the command:")
@@ -770,7 +759,7 @@ def examples(
     Browse and execute the demonstration Python scripts included with Ultimate MCP Server.
     These examples showcase real-world usage patterns and integration techniques for
     different server capabilities, from basic completions to complex workflows.
-    
+
     Examples are organized by functional category (text-generation, document-processing,
     browser-automation, etc.) and contain fully functional code that interacts with
     a running MCP server. They serve as both educational resources and starting
@@ -789,37 +778,45 @@ def examples(
     # Ensure we have the examples directory
     project_root = Path(__file__).parent.parent.parent
     examples_dir = project_root / "examples"
-    
+
     if not examples_dir.exists() or not examples_dir.is_dir():
-        console.print(f"[bold red]Error:[/bold red] Examples directory not found at: {examples_dir}")
-        console.print(Panel(f"Examples directory not found at: {examples_dir}", title="[bold red]Error[/bold red]", border_style="red"))
+        console.print(
+            f"[bold red]Error:[/bold red] Examples directory not found at: {examples_dir}"
+        )
+        console.print(
+            Panel(
+                f"Examples directory not found at: {examples_dir}",
+                title="[bold red]Error[/bold red]",
+                border_style="red",
+            )
+        )
         return 1
-    
+
     # If just listing examples
     if list_examples or not example_name:
         # Create Rich table for display
         table = Table(title="Ultimate MCP Server Example Scripts")
         table.add_column("Category", style="cyan")
         table.add_column("Example Script", style="green")
-        
+
         # List available examples by category
         for category_name, script_names in sorted(EXAMPLE_CATEGORIES.items()):
             for script_name in sorted(script_names):
                 table.add_row(category_name, script_name)
-        
+
         console.print(table)
-        
+
         # Print help for running examples
         console.print("\n[bold]Run an example:[/bold]")
         console.print("  [cyan]umcp examples <example_name>[/cyan]")
-        
+
         return 0
-    
+
     # Run the specified example
     example_file = None
-    
+
     # Check if .py extension was provided
-    if example_name.endswith('.py'):
+    if example_name.endswith(".py"):
         example_path = examples_dir / example_name
         if example_path.exists():
             example_file = example_path
@@ -835,34 +832,52 @@ def examples(
                 example_path = examples_dir / example_script
                 if example_path.exists():
                     example_file = example_path
-    
+
     if not example_file:
         console.print(f"[bold red]Error:[/bold red] Example '{example_name}' not found")
-        console.print(Panel(f"Example script '{example_name}' not found in {examples_dir}", title="[bold red]Error[/bold red]", border_style="red"))
+        console.print(
+            Panel(
+                f"Example script '{example_name}' not found in {examples_dir}",
+                title="[bold red]Error[/bold red]",
+                border_style="red",
+            )
+        )
         return 1
-    
+
     # Run the example script
     console.print(f"[bold blue]Running example:[/bold blue] {example_file.name}")
-    
+
     # Change to the project root directory to ensure imports work
     os.chdir(project_root)
-    
+
     # Use subprocess to run the script
     import subprocess
+
     try:
         # Execute the Python script
-        result = subprocess.run(
-            [sys.executable, str(example_file)], 
-            check=True
-        )
+        result = subprocess.run([sys.executable, str(example_file)], check=True)
         return result.returncode
     except subprocess.CalledProcessError as e:
-        console.print(f"[bold red]Error:[/bold red] Example script failed with exit code {e.returncode}")
-        console.print(Panel(f"Example script '{example_file.name}' failed with exit code {e.returncode}", title="[bold red]Execution Error[/bold red]", border_style="red"))
+        console.print(
+            f"[bold red]Error:[/bold red] Example script failed with exit code {e.returncode}"
+        )
+        console.print(
+            Panel(
+                f"Example script '{example_file.name}' failed with exit code {e.returncode}",
+                title="[bold red]Execution Error[/bold red]",
+                border_style="red",
+            )
+        )
         return e.returncode
     except Exception as e:
         console.print(f"[bold red]Error:[/bold red] Failed to run example: {str(e)}")
-        console.print(Panel(f"Failed to run example '{example_file.name}':\n{str(e)}", title="[bold red]Execution Error[/bold red]", border_style="red"))
+        console.print(
+            Panel(
+                f"Failed to run example '{example_file.name}':\n{str(e)}",
+                title="[bold red]Execution Error[/bold red]",
+                border_style="red",
+            )
+        )
         return 1
 
 
@@ -871,7 +886,7 @@ def main(
     version: bool = VERSION_OPTION,
 ):
     """Ultimate MCP Server - A comprehensive AI agent operating system.
-    
+
     The Ultimate MCP Server provides a unified interface to manage LLM providers,
     tools, and capabilities through the Model Context Protocol (MCP). It enables
     AI agents to access dozens of powerful capabilities including file operations,
@@ -892,7 +907,7 @@ def main(
 
 def cli():
     """Entry point for CLI package installation.
-    
+
     This function serves as the main entry point when the package is installed
     and the 'umcp' command is invoked. It's referenced in pyproject.toml's
     [project.scripts] section to create the command-line executable.
@@ -901,4 +916,4 @@ def cli():
 
 
 if __name__ == "__main__":
-    app() 
+    app()

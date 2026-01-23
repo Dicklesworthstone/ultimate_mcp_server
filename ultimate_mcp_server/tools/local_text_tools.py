@@ -513,7 +513,7 @@ def _validate_arguments(cmd_name: str, argv: List[str]) -> None:
             forbidden_chars = {
                 char for char in arg if char in _FORBIDDEN_CHARS_SET and char not in "$/();{}<>"
             }
-            
+
             # Special check for file redirection (> followed by a string in quotes)
             # Pattern detects constructs like: print $1 > "file.txt" or print $1 > 'file.txt'
             if re.search(r'>\s*["\']', arg) or re.search(r'print.*>\s*["\']', arg):
@@ -526,7 +526,7 @@ def _validate_arguments(cmd_name: str, argv: List[str]) -> None:
                         "error_code": ToolErrorCode.FORBIDDEN_CHAR.value,
                     },
                 )
-                
+
             if forbidden_chars:
                 raise ToolInputError(
                     f"Argument '{arg}' contains forbidden shell metacharacter(s): {', '.join(sorted(forbidden_chars))}",
@@ -1092,14 +1092,14 @@ def _is_json_or_json_lines(text: str) -> bool:
     """
     try:
         json.loads(text)
-        return True                     # one big doc
+        return True  # one big doc
     except json.JSONDecodeError:
         pass
 
     ok = True
     for ln in text.splitlines():
         ln = ln.strip()
-        if not ln:                      # skip blanks
+        if not ln:  # skip blanks
             continue
         try:
             json.loads(ln)

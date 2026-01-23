@@ -283,9 +283,9 @@ async def safe_tool_call(
                 if stdout_str:
                     output_display += f"\n[bold green]STDOUT ({len(stdout_str)} chars{', TRUNCATED' if stdout_trunc else ''}):[/]\n"
                     # Try syntax highlighting if stdout looks like JSON
-                    stdout_str.strip().startswith(
-                        ("{", "[")
-                    ) and stdout_str.strip().endswith(("}", "]"))
+                    stdout_str.strip().startswith(("{", "[")) and stdout_str.strip().endswith(
+                        ("}", "]")
+                    )
                     # Limit length for display
                     display_stdout = stdout_str[:3000] + ("..." if len(stdout_str) > 3000 else "")
                     # Just add the plain output text instead of the Syntax object
@@ -301,7 +301,9 @@ async def safe_tool_call(
                         ("{", "[")
                     ) and stderr_str.strip().endswith(("}", "]"))
                     if is_stderr_json_like:
-                        stderr_display = stderr_str[:1000] + ("..." if len(stderr_str) > 1000 else "")
+                        stderr_display = stderr_str[:1000] + (
+                            "..." if len(stderr_str) > 1000 else ""
+                        )
                         Syntax(
                             stderr_display,
                             "json",
@@ -403,21 +405,22 @@ async def safe_tool_stream_call(
     """
     tool_name = getattr(stream_func, "__name__", "unknown_stream_tool")
     console.print(
-        Rule(f"[bold magenta]Streaming Demo: {escape(description)}[/bold magenta]",
-             style="magenta")
+        Rule(f"[bold magenta]Streaming Demo: {escape(description)}[/bold magenta]", style="magenta")
     )
     console.print(f"[dim]Calling [bold cyan]{tool_name}[/] with args:[/]")
     console.print(pretty_repr(args, max_length=120, max_string=200))
 
     # ─── call the wrapper ────────────────────────────────────────────────────────
-    stream_obj = stream_func(**args)          # do *not* await yet
-    if inspect.iscoroutine(stream_obj):       # decorator returned coroutine
-        stream_obj = await stream_obj         # now we have AsyncIterator
+    stream_obj = stream_func(**args)  # do *not* await yet
+    if inspect.iscoroutine(stream_obj):  # decorator returned coroutine
+        stream_obj = await stream_obj  # now we have AsyncIterator
 
     if not hasattr(stream_obj, "__aiter__"):
         console.print(
-            Panel(f"[red]Fatal: {tool_name} did not return an async iterator.[/red]",
-                  border_style="red")
+            Panel(
+                f"[red]Fatal: {tool_name} did not return an async iterator.[/red]",
+                border_style="red",
+            )
         )
         return False
 
@@ -427,7 +430,7 @@ async def safe_tool_stream_call(
     console.print("[yellow]--- Streaming Output Start ---[/]")
 
     try:
-        async for line in stream_obj:            # type: ignore[arg-type]
+        async for line in stream_obj:  # type: ignore[arg-type]
             line_count += 1
             buffered += line
             if len(buffered) > 2000 or "\n" in buffered:
@@ -560,7 +563,9 @@ async def demonstrate_ripgrep_advanced():
 
     # Adv 1c: Using Globs to include/exclude
     # Search for 'email' in classification samples, but exclude the news samples file
-    exclude_pattern = shlex.quote(os.path.basename(CLASSIFICATION_SAMPLES_DIR_REL / "news_samples.txt"))
+    exclude_pattern = shlex.quote(
+        os.path.basename(CLASSIFICATION_SAMPLES_DIR_REL / "news_samples.txt")
+    )
     await safe_tool_call(
         run_ripgrep,
         {
@@ -595,7 +600,9 @@ async def demonstrate_ripgrep_advanced():
             logger.warning(f"Could not create symlink for demo: {e}")
 
     # Use relative path for the tool
-    link_path_rel = link_path.relative_to(PROJECT_ROOT) if link_path.exists() else "nonexistent_link.txt"
+    link_path_rel = (
+        link_path.relative_to(PROJECT_ROOT) if link_path.exists() else "nonexistent_link.txt"
+    )
     link_path_quoted = shlex.quote(str(link_path_rel))
     await safe_tool_call(
         run_ripgrep,
@@ -660,10 +667,10 @@ async def demonstrate_awk_advanced():
         run_awk,
         # Find lines with '$', extract the number after '$', sum them
         {
-            "args_str": f"'/[$]/ {{ gsub(/[,USD$]/, \"\"); for(i=1;i<=NF;i++) if ($i ~ /^[0-9.]+$/) sum+=$i }} END {{ printf \"Total Value Mentioned: $%.2f\\n\", sum }}' {contract_file_quoted}",
+            "args_str": f'\'/[$]/ {{ gsub(/[,USD$]/, ""); for(i=1;i<=NF;i++) if ($i ~ /^[0-9.]+$/) sum+=$i }} END {{ printf "Total Value Mentioned: $%.2f\\n", sum }}\' {contract_file_quoted}',
             "input_file": True,
         },
-        "Sum numeric values following '$' in contract using AWK"
+        "Sum numeric values following '$' in contract using AWK",
     )
 
     # Adv 2b: Using BEGIN block and variables to extract definitions
@@ -671,7 +678,7 @@ async def demonstrate_awk_advanced():
         run_awk,
         # Find lines defining terms like ("Acquirer"), print term and line number
         {
-            "args_str": f"'/^\\s*[A-Z][[:alpha:] ]+\\s+\\(.*\"[[:alpha:]].*\"\\)/ {{ if(match($0, /\\(\"([^\"]+)\"\\)/, arr)) {{ term=arr[1]; print \"Term Defined: \", term, \"(Line: \" NR \")\" }} }}' {contract_file_quoted}",
+            "args_str": f'\'/^\\s*[A-Z][[:alpha:] ]+\\s+\\(.*"[[:alpha:]].*"\\)/ {{ if(match($0, /\\("([^"]+)"\\)/, arr)) {{ term=arr[1]; print "Term Defined: ", term, "(Line: " NR ")" }} }}\' {contract_file_quoted}',
             "input_file": True,
         },
         'Extract defined terms (e.g., ("Acquirer")) using AWK and NR',
@@ -682,7 +689,7 @@ async def demonstrate_awk_advanced():
         run_awk,
         # In ARTICLE I, print section number and title, comma separated
         {
-            "args_str": f"'BEGIN {{ OFS=\",\"; print \"Section,Title\" }} /^## ARTICLE I/,/^## ARTICLE II/ {{ if (/^[0-9]\\.[0-9]+\\s/) {{ title=$0; sub(/^[0-9.]+s*/, \"\", title); print $1, title }} }}' {contract_file_quoted}",
+            "args_str": f'\'BEGIN {{ OFS=","; print "Section,Title" }} /^## ARTICLE I/,/^## ARTICLE II/ {{ if (/^[0-9]\\.[0-9]+\\s/) {{ title=$0; sub(/^[0-9.]+s*/, "", title); print $1, title }} }}\' {contract_file_quoted}',
             "input_file": True,
         },
         "Extract section titles from ARTICLE I, CSV formatted (OFS)",
@@ -694,7 +701,7 @@ async def demonstrate_awk_advanced():
             run_awk,
             # Count occurrences based on text before '(' or '%'
             {
-                "args_str": f"-F'|' '/^\\| / && NF>2 {{ gsub(/^ +| +$/, \"\", $2); types[$2]++ }} END {{ print \"Stockholder Counts:\"; for (t in types) print t \":\", types[t] }}' {schedule_file_quoted}",
+                "args_str": f'-F\'|\' \'/^\\| / && NF>2 {{ gsub(/^ +| +$/, "", $2); types[$2]++ }} END {{ print "Stockholder Counts:"; for (t in types) print t ":", types[t] }}\' {schedule_file_quoted}',
                 "input_file": True,
             },
             "Use associative array in AWK to count stockholder types in Schedule 1.2",
@@ -1190,7 +1197,9 @@ async def run_llm_interactive_workflow(
                 messages=history,
                 temperature=0.1,
                 max_tokens=600,  # Increased slightly for potentially complex plans
-                additional_params={"json_mode": True}  # Pass json_mode through additional_params instead
+                additional_params={
+                    "json_mode": True
+                },  # Pass json_mode through additional_params instead
             )
             if not llm_response.get("success"):
                 error_detail = llm_response.get("error", "Unknown error")
@@ -1220,7 +1229,9 @@ async def run_llm_interactive_workflow(
                     messages=history,
                     temperature=0.15,  # Slightly higher temp for retry
                     max_tokens=600,
-                    additional_params={"json_mode": True}  # Pass json_mode through additional_params here too
+                    additional_params={
+                        "json_mode": True
+                    },  # Pass json_mode through additional_params here too
                 )
                 if not llm_response.get("success"):
                     console.print(

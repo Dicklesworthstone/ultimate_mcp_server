@@ -3,6 +3,7 @@
 Provides functions to create, manage, and query knowledge bases (vector stores)
 and generate text responses augmented with retrieved context.
 """
+
 import re
 from typing import Any, Dict, List, Optional
 
@@ -26,6 +27,7 @@ _kb_manager = None
 _kb_retriever = None
 _rag_engine = None
 
+
 def _get_kb_manager():
     """Lazily initializes and returns the Knowledge Base Manager."""
     global _kb_manager
@@ -34,6 +36,7 @@ def _get_kb_manager():
         _kb_manager = get_knowledge_base_manager()
         logger.info("KnowledgeBaseManager initialized.")
     return _kb_manager
+
 
 def _get_kb_retriever():
     """Lazily initializes and returns the Knowledge Base Retriever."""
@@ -44,6 +47,7 @@ def _get_kb_retriever():
         logger.info("KnowledgeBaseRetriever initialized.")
     return _kb_retriever
 
+
 def _get_rag_engine():
     """Lazily initializes and returns the RAG Engine."""
     global _rag_engine
@@ -53,7 +57,9 @@ def _get_rag_engine():
         logger.info("RAGEngine initialized.")
     return _rag_engine
 
+
 # --- Standalone Tool Functions ---
+
 
 @with_tool_metrics
 @with_error_handling
@@ -61,7 +67,7 @@ async def create_knowledge_base(
     name: str,
     description: Optional[str] = None,
     embedding_model: Optional[str] = None,
-    overwrite: bool = False
+    overwrite: bool = False,
 ) -> Dict[str, Any]:
     """Creates a new, empty knowledge base (vector store) to hold documents.
 
@@ -98,23 +104,28 @@ async def create_knowledge_base(
     """
     # Input validation (basic example)
     if not name or not re.match(r"^[a-zA-Z0-9_]+$", name):
-        raise ToolInputError(f"Invalid knowledge base name: '{name}'. Use only letters, numbers, underscores.")
+        raise ToolInputError(
+            f"Invalid knowledge base name: '{name}'. Use only letters, numbers, underscores."
+        )
 
-    kb_manager = _get_kb_manager() # Use lazy getter
+    kb_manager = _get_kb_manager()  # Use lazy getter
     try:
         result = await kb_manager.create_knowledge_base(
-            name=name,
-            description=description,
-            embedding_model=embedding_model,
-            overwrite=overwrite
+            name=name, description=description, embedding_model=embedding_model, overwrite=overwrite
         )
         return result
     except Exception as e:
         logger.error(f"Failed to create knowledge base '{name}': {e}", exc_info=True)
         # Re-raise specific error if possible, otherwise wrap
-        if isinstance(e, (ResourceError, ToolInputError)): 
+        if isinstance(e, (ResourceError, ToolInputError)):
             raise
-        raise ResourceError(f"Failed to create knowledge base '{name}': {str(e)}", resource_type="knowledge_base", resource_id=name, cause=e) from e
+        raise ResourceError(
+            f"Failed to create knowledge base '{name}': {str(e)}",
+            resource_type="knowledge_base",
+            resource_id=name,
+            cause=e,
+        ) from e
+
 
 @with_tool_metrics
 @with_error_handling
@@ -150,7 +161,10 @@ async def list_knowledge_bases() -> Dict[str, Any]:
         return result
     except Exception as e:
         logger.error(f"Failed to list knowledge bases: {e}", exc_info=True)
-        raise ResourceError(f"Failed to list knowledge bases: {str(e)}", resource_type="knowledge_base", cause=e) from e
+        raise ResourceError(
+            f"Failed to list knowledge bases: {str(e)}", resource_type="knowledge_base", cause=e
+        ) from e
+
 
 @with_tool_metrics
 @with_error_handling
@@ -189,9 +203,15 @@ async def delete_knowledge_base(name: str) -> Dict[str, Any]:
         return result
     except Exception as e:
         logger.error(f"Failed to delete knowledge base '{name}': {e}", exc_info=True)
-        if isinstance(e, (ResourceError, ToolInputError)): 
+        if isinstance(e, (ResourceError, ToolInputError)):
             raise
-        raise ResourceError(f"Failed to delete knowledge base '{name}': {str(e)}", resource_type="knowledge_base", resource_id=name, cause=e) from e
+        raise ResourceError(
+            f"Failed to delete knowledge base '{name}': {str(e)}",
+            resource_type="knowledge_base",
+            resource_id=name,
+            cause=e,
+        ) from e
+
 
 @with_tool_metrics
 @with_error_handling
@@ -202,7 +222,7 @@ async def add_documents(
     chunk_size: int = 1000,
     chunk_overlap: int = 200,
     chunk_method: str = "semantic",
-    embedding_model: Optional[str] = None
+    embedding_model: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Adds one or more documents to a specified knowledge base.
 
@@ -252,12 +272,26 @@ async def add_documents(
     """
     if not knowledge_base_name:
         raise ToolInputError("Knowledge base name cannot be empty.")
-    if not documents or not isinstance(documents, list) or not all(isinstance(d, str) for d in documents):
+    if (
+        not documents
+        or not isinstance(documents, list)
+        or not all(isinstance(d, str) for d in documents)
+    ):
         raise ToolInputError("'documents' must be a non-empty list of strings.")
     if metadatas and (not isinstance(metadatas, list) or len(metadatas) != len(documents)):
-        raise ToolInputError("'metadatas', if provided, must be a list with the same length as 'documents'.")
-    if chunk_method not in ["semantic", "token", "sentence", "character", "paragraph"]: # Added more methods
-         raise ToolInputError(f"Invalid chunk_method: '{chunk_method}'. Must be one of: semantic, token, sentence, character, paragraph.")
+        raise ToolInputError(
+            "'metadatas', if provided, must be a list with the same length as 'documents'."
+        )
+    if chunk_method not in [
+        "semantic",
+        "token",
+        "sentence",
+        "character",
+        "paragraph",
+    ]:  # Added more methods
+        raise ToolInputError(
+            f"Invalid chunk_method: '{chunk_method}'. Must be one of: semantic, token, sentence, character, paragraph."
+        )
 
     kb_manager = _get_kb_manager()
     try:
@@ -268,14 +302,22 @@ async def add_documents(
             chunk_size=chunk_size,
             chunk_overlap=chunk_overlap,
             chunk_method=chunk_method,
-            embedding_model=embedding_model
+            embedding_model=embedding_model,
         )
         return result
     except Exception as e:
-        logger.error(f"Failed to add documents to knowledge base '{knowledge_base_name}': {e}", exc_info=True)
+        logger.error(
+            f"Failed to add documents to knowledge base '{knowledge_base_name}': {e}", exc_info=True
+        )
         if isinstance(e, (ResourceError, ToolInputError, ProviderError)):
             raise
-        raise ResourceError(f"Failed to add documents to knowledge base '{knowledge_base_name}': {str(e)}", resource_type="knowledge_base", resource_id=knowledge_base_name, cause=e) from e
+        raise ResourceError(
+            f"Failed to add documents to knowledge base '{knowledge_base_name}': {str(e)}",
+            resource_type="knowledge_base",
+            resource_id=knowledge_base_name,
+            cause=e,
+        ) from e
+
 
 @with_tool_metrics
 @with_error_handling
@@ -284,8 +326,8 @@ async def retrieve_context(
     query: str,
     top_k: int = 5,
     retrieval_method: str = "vector",
-    min_score: Optional[float] = None, # Changed default to None
-    metadata_filter: Optional[Dict[str, Any]] = None
+    min_score: Optional[float] = None,  # Changed default to None
+    metadata_filter: Optional[Dict[str, Any]] = None,
 ) -> Dict[str, Any]:
     """Retrieves relevant document chunks (context) from a knowledge base based on a query.
 
@@ -338,8 +380,10 @@ async def retrieve_context(
         raise ToolInputError("Knowledge base name cannot be empty.")
     if not query or not isinstance(query, str):
         raise ToolInputError("Query must be a non-empty string.")
-    if retrieval_method not in ["vector", "hybrid"]: # Add more methods if supported by backend
-        raise ToolInputError(f"Invalid retrieval_method: '{retrieval_method}'. Must be one of: vector, hybrid.")
+    if retrieval_method not in ["vector", "hybrid"]:  # Add more methods if supported by backend
+        raise ToolInputError(
+            f"Invalid retrieval_method: '{retrieval_method}'. Must be one of: vector, hybrid."
+        )
 
     kb_retriever = _get_kb_retriever()
     try:
@@ -350,29 +394,38 @@ async def retrieve_context(
             # Assuming a specific hybrid method exists or the main retrieve handles it
             # This might need adjustment based on the actual service implementation
             logger.debug(f"Attempting hybrid retrieval for '{knowledge_base_name}'")
-            result = await kb_retriever.retrieve_hybrid( # Or potentially kb_retriever.retrieve with a method flag
+            result = await kb_retriever.retrieve_hybrid(  # Or potentially kb_retriever.retrieve with a method flag
                 knowledge_base_name=knowledge_base_name,
                 query=query,
                 top_k=top_k,
                 min_score=min_score,
-                metadata_filter=metadata_filter
+                metadata_filter=metadata_filter,
             )
-        else: # Default to vector
+        else:  # Default to vector
             logger.debug(f"Attempting vector retrieval for '{knowledge_base_name}'")
             result = await kb_retriever.retrieve(
                 knowledge_base_name=knowledge_base_name,
                 query=query,
                 top_k=top_k,
-                rerank=True, # Assuming rerank is often desired for vector
+                rerank=True,  # Assuming rerank is often desired for vector
                 min_score=min_score,
-                metadata_filter=metadata_filter
+                metadata_filter=metadata_filter,
             )
         return result
     except Exception as e:
-        logger.error(f"Failed to retrieve context from knowledge base '{knowledge_base_name}' for query '{query}': {e}", exc_info=True)
+        logger.error(
+            f"Failed to retrieve context from knowledge base '{knowledge_base_name}' for query '{query}': {e}",
+            exc_info=True,
+        )
         if isinstance(e, (ResourceError, ToolInputError)):
             raise
-        raise ResourceError(f"Failed to retrieve context from knowledge base '{knowledge_base_name}': {str(e)}", resource_type="knowledge_base", resource_id=knowledge_base_name, cause=e) from e
+        raise ResourceError(
+            f"Failed to retrieve context from knowledge base '{knowledge_base_name}': {str(e)}",
+            resource_type="knowledge_base",
+            resource_id=knowledge_base_name,
+            cause=e,
+        ) from e
+
 
 @with_tool_metrics
 @with_error_handling
@@ -386,8 +439,8 @@ async def generate_with_rag(
     temperature: float = 0.3,
     top_k: int = 5,
     retrieval_method: str = "vector",
-    min_score: Optional[float] = None, # Changed default to None
-    include_sources: bool = True
+    min_score: Optional[float] = None,  # Changed default to None
+    include_sources: bool = True,
 ) -> Dict[str, Any]:
     """Generates a response to a query using context retrieved from a knowledge base (RAG).
 
@@ -469,12 +522,19 @@ async def generate_with_rag(
             top_k=top_k,
             retrieval_method=retrieval_method,
             min_score=min_score,
-            include_sources=include_sources
+            include_sources=include_sources,
         )
         return result
     except Exception as e:
-        logger.error(f"RAG generation failed for query on '{knowledge_base_name}': {e}", exc_info=True)
-        if isinstance(e, (ResourceError, ProviderError, ToolInputError)): 
+        logger.error(
+            f"RAG generation failed for query on '{knowledge_base_name}': {e}", exc_info=True
+        )
+        if isinstance(e, (ResourceError, ProviderError, ToolInputError)):
             raise
         # Wrap generic errors
-        raise ResourceError(f"RAG generation failed: {str(e)}", resource_type="knowledge_base", resource_id=knowledge_base_name, cause=e) from e 
+        raise ResourceError(
+            f"RAG generation failed: {str(e)}",
+            resource_type="knowledge_base",
+            resource_id=knowledge_base_name,
+            cause=e,
+        ) from e

@@ -19,14 +19,17 @@ except ImportError:
 
 
 class EvaluationScore(BaseModel):
-    score: float # Primary numerical score
-    details: Optional[str] = None # Textual explanation or breakdown
-    metrics: Dict[str, Any] = Field(default_factory=dict) # Additional quantitative metrics from this evaluator
+    score: float  # Primary numerical score
+    details: Optional[str] = None  # Textual explanation or breakdown
+    metrics: Dict[str, Any] = Field(
+        default_factory=dict
+    )  # Additional quantitative metrics from this evaluator
+
 
 class Evaluator(ABC):
     """Abstract base class for evaluators."""
-    
-    evaluator_type: str # Must be overridden by subclasses, e.g., "llm_grader"
+
+    evaluator_type: str  # Must be overridden by subclasses, e.g., "llm_grader"
 
     def __init__(self, config: Dict[str, Any]):
         """
@@ -37,10 +40,10 @@ class Evaluator(ABC):
 
     @abstractmethod
     async def score(
-        self, 
+        self,
         response_data: ModelResponseData,
         original_prompt: str,
-        tournament_type: Literal["code", "text"] # "code" and "text" were undefined before
+        tournament_type: Literal["code", "text"],  # "code" and "text" were undefined before
     ) -> EvaluationScore:
         """
         Scores a model's response.
@@ -63,12 +66,16 @@ class Evaluator(ABC):
         """
         return None
 
+
 # Example: A registry for evaluators (could be more sophisticated with entry points)
 EVALUATOR_REGISTRY: Dict[str, Type[Evaluator]] = {}
 
+
 def register_evaluator(cls: Type[Evaluator]):
-    if not hasattr(cls, 'evaluator_type') or not cls.evaluator_type:
-        raise ValueError(f"Evaluator class {cls.__name__} must define a 'evaluator_type' attribute.")
+    if not hasattr(cls, "evaluator_type") or not cls.evaluator_type:
+        raise ValueError(
+            f"Evaluator class {cls.__name__} must define a 'evaluator_type' attribute."
+        )
     if cls.evaluator_type in EVALUATOR_REGISTRY:
         raise ValueError(f"Evaluator type '{cls.evaluator_type}' already registered.")
     EVALUATOR_REGISTRY[cls.evaluator_type] = cls

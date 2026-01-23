@@ -45,7 +45,7 @@ __all__ = [
     "setup_ums_api",
     # Database utilities
     "get_database_path",
-    "get_db_connection", 
+    "get_db_connection",
     "execute_query",
     "execute_update",
     "ensure_database_exists",
@@ -70,4 +70,4 @@ __all__ = [
     "calculate_single_state_similarity",
     "analyze_state_transitions",
     "detect_cognitive_anomalies",
-] 
+]

@@ -564,10 +564,10 @@ class OllamaProvider(BaseProvider):
         mirostat_tau: Optional[float] = None,
         mirostat_eta: Optional[float] = None,
         json_mode: bool = False,
-        **kwargs
+        **kwargs,
     ) -> ModelResponse:
         """Generate a completion from Ollama.
-        
+
         Args:
             prompt: Text prompt to send to Ollama (optional if messages provided)
             messages: List of message dictionaries (optional if prompt provided)
@@ -584,28 +584,30 @@ class OllamaProvider(BaseProvider):
             mirostat_eta: Learning rate for mirostat
             json_mode: Request JSON-formatted response
             **kwargs: Additional parameters
-            
+
         Returns:
             ModelResponse object with completion result
         """
         if not self.config.api_url:
             raise ValueError("Ollama API URL not configured")
-            
+
         # Verify we have either prompt or messages
         if prompt is None and not messages:
             raise ValueError("Either prompt or messages must be provided to generate a completion")
-            
+
         # If model is None, use configured default
         model = model or self.get_default_model()
-        
+
         # Only strip provider prefix if it's our provider name, keep organization prefixes
         if "/" in model and model.startswith(f"{self.provider_name}/"):
             model = model.split("/", 1)[1]
-            
-        # If JSON mode is enabled, use the streaming implementation internally 
+
+        # If JSON mode is enabled, use the streaming implementation internally
         # since Ollama's non-streaming JSON mode is inconsistent
         if json_mode:
-            self.logger.debug("JSON mode requested, using streaming implementation internally for reliability")
+            self.logger.debug(
+                "JSON mode requested, using streaming implementation internally for reliability"
+            )
             return await self._generate_completion_via_streaming(
                 prompt=prompt,
                 messages=messages,
@@ -621,27 +623,27 @@ class OllamaProvider(BaseProvider):
                 mirostat_tau=mirostat_tau,
                 mirostat_eta=mirostat_eta,
                 json_mode=True,  # Ensure json_mode is passed through
-                **kwargs
+                **kwargs,
             )
-            
+
         # Log request start
         self.logger.info(
             f"Generating Ollama completion (generate) with model {model}",
-            emoji_key=self.provider_name
+            emoji_key=self.provider_name,
         )
-            
+
         # Convert messages to prompt if messages provided
         using_messages = False
         if messages and not prompt:
             using_messages = True
             # Convert messages to Ollama's chat format
             chat_params = {"messages": []}
-            
+
             # Process messages into Ollama format
             for msg in messages:
                 role = msg.get("role", "").lower()
                 content = msg.get("content", "")
-                
+
                 # Map roles to Ollama's expected format
                 if role == "system":
                     ollama_role = "system"
@@ -653,28 +655,25 @@ class OllamaProvider(BaseProvider):
                     # Default unknown roles to user
                     self.logger.warning(f"Unknown message role '{role}', treating as 'user'")
                     ollama_role = "user"
-                    
-                chat_params["messages"].append({
-                    "role": ollama_role,
-                    "content": content
-                })
-                
+
+                chat_params["messages"].append({"role": ollama_role, "content": content})
+
             # Add model and parameters to chat_params
             chat_params["model"] = model
-            
+
             # Add optional parameters if provided
             if temperature is not None and temperature != 0.7:
                 chat_params["options"] = chat_params.get("options", {})
                 chat_params["options"]["temperature"] = temperature
-                
+
             if max_tokens is not None:
                 chat_params["options"] = chat_params.get("options", {})
                 chat_params["options"]["num_predict"] = max_tokens
-                
+
             if stop:
                 chat_params["options"] = chat_params.get("options", {})
                 chat_params["options"]["stop"] = stop
-                
+
             # Add other parameters if provided
             for param_name, param_value in [
                 ("top_p", top_p),
@@ -683,64 +682,64 @@ class OllamaProvider(BaseProvider):
                 ("presence_penalty", presence_penalty),
                 ("mirostat", mirostat),
                 ("mirostat_tau", mirostat_tau),
-                ("mirostat_eta", mirostat_eta)
+                ("mirostat_eta", mirostat_eta),
             ]:
                 if param_value is not None:
                     chat_params["options"] = chat_params.get("options", {})
                     chat_params["options"][param_name] = param_value
-            
+
             # Add json_mode if requested (as format option)
             if json_mode:
                 chat_params["options"] = chat_params.get("options", {})
                 chat_params["options"]["format"] = "json"
-                
+
                 # For Ollama non-streaming completions, we need to force the system message
                 # because the format param alone isn't reliable
                 kwargs["add_json_instructions"] = True
-                
+
                 # Only add system message instruction as a fallback if explicitly requested
                 add_json_instructions = kwargs.pop("add_json_instructions", False)
-                
+
                 # Add system message for json_mode only if requested
                 if add_json_instructions:
                     has_system = any(msg.get("role", "").lower() == "system" for msg in messages)
                     if not has_system:
                         # Add JSON instruction as a system message
-                        chat_params["messages"].insert(0, {
-                            "role": "system", 
-                            "content": "You must respond with valid JSON. Format your entire response as a JSON object with properly quoted keys and values."
-                        })
+                        chat_params["messages"].insert(
+                            0,
+                            {
+                                "role": "system",
+                                "content": "You must respond with valid JSON. Format your entire response as a JSON object with properly quoted keys and values.",
+                            },
+                        )
                         self.logger.debug("Added JSON system instructions for chat_params")
-                
+
             # Add any additional kwargs as options
             if kwargs:
                 chat_params["options"] = chat_params.get("options", {})
                 chat_params["options"].update(kwargs)
-                
+
             # Use chat endpoint
             api_endpoint = self._build_api_url("chat")
             response_type = "chat"
         else:
             # Using generate endpoint with prompt
             # Prepare generate parameters
-            generate_params = {
-                "model": model,
-                "prompt": prompt
-            }
-            
+            generate_params = {"model": model, "prompt": prompt}
+
             # Add optional parameters if provided
             if temperature is not None and temperature != 0.7:
                 generate_params["options"] = generate_params.get("options", {})
                 generate_params["options"]["temperature"] = temperature
-                
+
             if max_tokens is not None:
                 generate_params["options"] = generate_params.get("options", {})
                 generate_params["options"]["num_predict"] = max_tokens
-                
+
             if stop:
                 generate_params["options"] = generate_params.get("options", {})
                 generate_params["options"]["stop"] = stop
-                
+
             # Add other parameters if provided
             for param_name, param_value in [
                 ("top_p", top_p),
@@ -749,40 +748,42 @@ class OllamaProvider(BaseProvider):
                 ("presence_penalty", presence_penalty),
                 ("mirostat", mirostat),
                 ("mirostat_tau", mirostat_tau),
-                ("mirostat_eta", mirostat_eta)
+                ("mirostat_eta", mirostat_eta),
             ]:
                 if param_value is not None:
                     generate_params["options"] = generate_params.get("options", {})
                     generate_params["options"][param_name] = param_value
-                    
+
             # Add json_mode if requested (as format option)
             if json_mode:
                 generate_params["options"] = generate_params.get("options", {})
                 generate_params["options"]["format"] = "json"
-                
+
                 # For Ollama non-streaming completions, we need to force the JSON instructions
                 # because the format param alone isn't reliable
                 kwargs["add_json_instructions"] = True
-                
+
                 # Only enhance prompt with JSON instructions if explicitly requested
                 add_json_instructions = kwargs.pop("add_json_instructions", False)
                 if add_json_instructions:
                     # Enhance prompt with JSON instructions for better compliance
-                    generate_params["prompt"] = f"Please respond with valid JSON only. {prompt}\nEnsure your entire response is a valid, parseable JSON object with properly quoted keys and values."
+                    generate_params["prompt"] = (
+                        f"Please respond with valid JSON only. {prompt}\nEnsure your entire response is a valid, parseable JSON object with properly quoted keys and values."
+                    )
                     self.logger.debug("Enhanced prompt with JSON instructions for generate_params")
-                
+
             # Add any additional kwargs as options
             if kwargs:
                 generate_params["options"] = generate_params.get("options", {})
                 generate_params["options"].update(kwargs)
-                
+
             # Use generate endpoint
             api_endpoint = self._build_api_url("generate")
             response_type = "generate"  # noqa: F841
-            
+
         # Start timer for tracking
         start_time = time.time()
-        
+
         try:
             # Make HTTP request to Ollama
             async with httpx.AsyncClient(timeout=self.config.request_timeout) as client:
@@ -792,42 +793,50 @@ class OllamaProvider(BaseProvider):
                 else:
                     # Using generate endpoint
                     response = await client.post(api_endpoint, json=generate_params)
-                
+
                 # Check for HTTP errors
                 response.raise_for_status()
-                
+
                 # Parse response - handle multi-line JSON data which can happen with json_mode
                 try:
                     # First try regular JSON parsing
                     result = response.json()
                 except json.JSONDecodeError as e:
                     # If that fails, try parsing line by line and concatenate responses
-                    self.logger.debug("Response contains multiple JSON objects, parsing line by line")
+                    self.logger.debug(
+                        "Response contains multiple JSON objects, parsing line by line"
+                    )
                     content = response.text
-                    lines = content.strip().split('\n')
-                    
+                    lines = content.strip().split("\n")
+
                     # If we have multiple JSON objects
                     if len(lines) > 1:
                         # For multiple objects, take the last one which should have the final response
                         # This happens in some Ollama versions when using format=json
                         try:
-                            result = json.loads(lines[-1])  # Use the last line, which typically has the complete response
-                            
+                            result = json.loads(
+                                lines[-1]
+                            )  # Use the last line, which typically has the complete response
+
                             # Verify result has response/message field, if not try the first line
                             if using_messages and "message" not in result:
                                 result = json.loads(lines[0])
                             elif not using_messages and "response" not in result:
                                 result = json.loads(lines[0])
-                                
+
                         except json.JSONDecodeError as e:
-                            raise RuntimeError(f"Failed to parse Ollama JSON response: {str(e)}. Response: {content[:200]}...") from e
+                            raise RuntimeError(
+                                f"Failed to parse Ollama JSON response: {str(e)}. Response: {content[:200]}..."
+                            ) from e
                     else:
                         # If we only have one line but still got a JSON error
-                        raise RuntimeError(f"Invalid JSON in Ollama response: {content[:200]}...") from e
-                
+                        raise RuntimeError(
+                            f"Invalid JSON in Ollama response: {content[:200]}..."
+                        ) from e
+
                 # Calculate processing time
                 processing_time = time.time() - start_time
-                
+
                 # Extract response text based on endpoint
                 if using_messages:
                     # Extract from chat endpoint
@@ -835,39 +844,43 @@ class OllamaProvider(BaseProvider):
                 else:
                     # Extract from generate endpoint
                     completion_text = result.get("response", "")
-                
+
                 # Log the raw response for debugging
                 self.logger.debug(f"Raw Ollama response: {result}")
                 self.logger.debug(f"Extracted completion text: {completion_text[:500]}...")
-                
+
                 # For JSON mode, ensure the completion text is properly formatted JSON
                 if json_mode and completion_text:
                     # Always use add_json_instructions for this model since it seems to need it
                     if "gemma" in model.lower():
                         # Force adding instructions for gemma models specifically
                         kwargs["add_json_instructions"] = True
-                
+
                     try:
                         # First try to extract JSON using our comprehensive method
                         extracted_json = self._extract_json_from_text(completion_text)
                         self.logger.debug(f"Extracted JSON: {extracted_json[:500]}...")
-                        
+
                         # If we found valid JSON, parse and format it
                         json_data = json.loads(extracted_json)
-                        
+
                         # If successful, format it nicely with indentation
                         if isinstance(json_data, (dict, list)):
                             completion_text = json.dumps(json_data, indent=2)
                             self.logger.debug("Successfully parsed and formatted JSON response")
                         else:
-                            self.logger.warning(f"JSON response is not a dict or list: {type(json_data)}")
+                            self.logger.warning(
+                                f"JSON response is not a dict or list: {type(json_data)}"
+                            )
                     except (json.JSONDecodeError, TypeError) as e:
-                        self.logger.warning(f"Failed to extract valid JSON from response: {str(e)[:100]}...")
-                
+                        self.logger.warning(
+                            f"Failed to extract valid JSON from response: {str(e)[:100]}..."
+                        )
+
                 # Calculate token usage
                 prompt_tokens = result.get("prompt_eval_count", 0)
                 completion_tokens = result.get("eval_count", 0)
-                
+
                 # Format the standardized response
                 model_response = ModelResponse(
                     text=completion_text,
@@ -876,35 +889,37 @@ class OllamaProvider(BaseProvider):
                     input_tokens=prompt_tokens,
                     output_tokens=completion_tokens,
                     processing_time=processing_time,
-                    raw_response=result
+                    raw_response=result,
                 )
-                
+
                 # Add message field for chat_completion compatibility
                 model_response.message = {"role": "assistant", "content": completion_text}
-                
+
                 # Ensure there's always a value returned for JSON mode to prevent empty displays
                 if json_mode and (not completion_text or not completion_text.strip()):
                     # If we got an empty response, create a default one
                     default_json = {
                         "response": "No content was returned by the model",
-                        "error": "Empty response with json_mode enabled"
+                        "error": "Empty response with json_mode enabled",
                     }
                     completion_text = json.dumps(default_json, indent=2)
                     model_response.text = completion_text
                     model_response.message["content"] = completion_text
-                    self.logger.warning("Empty response with JSON mode, returning default JSON structure")
-                
+                    self.logger.warning(
+                        "Empty response with JSON mode, returning default JSON structure"
+                    )
+
                 # Log success
                 self.logger.success(
                     f"Ollama completion successful with model {model}",
                     emoji_key="completion_success",
                     tokens={"input": prompt_tokens, "output": completion_tokens},
                     time=processing_time,
-                    model=model
+                    model=model,
                 )
-                
+
                 return model_response
-                
+
         except httpx.HTTPStatusError as http_err:
             # Handle HTTP errors
             processing_time = time.time() - start_time
@@ -912,41 +927,39 @@ class OllamaProvider(BaseProvider):
                 error_json = http_err.response.json()
                 error_msg = error_json.get("error", str(http_err))
             except (json.JSONDecodeError, KeyError):
-                error_msg = f"HTTP error: {http_err.response.status_code} - {http_err.response.text}"
-                
+                error_msg = (
+                    f"HTTP error: {http_err.response.status_code} - {http_err.response.text}"
+                )
+
             self.logger.error(
                 f"Ollama API error: {error_msg}",
                 emoji_key="error",
                 status_code=http_err.response.status_code,
-                model=model
+                model=model,
             )
-            
+
             raise ConnectionError(f"Ollama API error: {error_msg}") from http_err
-            
+
         except httpx.RequestError as req_err:
             # Handle request errors (e.g., connection issues)
             processing_time = time.time() - start_time
             error_msg = f"Request error: {str(req_err)}"
-            
-            self.logger.error(
-                f"Ollama request error: {error_msg}",
-                emoji_key="error",
-                model=model
-            )
-            
+
+            self.logger.error(f"Ollama request error: {error_msg}", emoji_key="error", model=model)
+
             raise ConnectionError(f"Ollama request error: {error_msg}") from req_err
-            
+
         except Exception as e:
             # Handle other unexpected errors
             processing_time = time.time() - start_time
-            
+
             self.logger.error(
                 f"Unexpected error calling Ollama: {str(e)}",
                 emoji_key="error",
                 model=model,
-                exc_info=True
+                exc_info=True,
             )
-            
+
             raise RuntimeError(f"Unexpected error calling Ollama: {str(e)}") from e
 
     async def generate_completion_stream(
@@ -964,8 +977,10 @@ class OllamaProvider(BaseProvider):
         try:
             # Verify we have either prompt or messages
             if prompt is None and not messages:
-                raise ValueError("Either prompt or messages must be provided to generate a streaming completion")
-                
+                raise ValueError(
+                    "Either prompt or messages must be provided to generate a streaming completion"
+                )
+
             # Check if provider is initialized before attempting to generate
             if not self._initialized:
                 try:
@@ -1021,18 +1036,18 @@ class OllamaProvider(BaseProvider):
 
             # Flag to track if we're using messages format
             using_messages = False
-            
+
             # Prepare the payload based on input type (messages or prompt)
             if messages:
                 using_messages = True  # noqa: F841
                 # Convert messages to Ollama's expected format
                 ollama_messages = []
-                
+
                 # Process messages
                 for msg in messages:
                     role = msg.get("role", "").lower()
                     content = msg.get("content", "")
-                    
+
                     # Map roles to Ollama's expected format
                     if role == "system":
                         ollama_role = "system"
@@ -1044,12 +1059,9 @@ class OllamaProvider(BaseProvider):
                         # Default unknown roles to user
                         self.logger.warning(f"Unknown message role '{role}', treating as 'user'")
                         ollama_role = "user"
-                        
-                    ollama_messages.append({
-                        "role": ollama_role,
-                        "content": content
-                    })
-                
+
+                    ollama_messages.append({"role": ollama_role, "content": content})
+
                 # Build chat payload
                 payload = {
                     "model": model_id,
@@ -1059,10 +1071,10 @@ class OllamaProvider(BaseProvider):
                         "temperature": temperature,
                     },
                 }
-                
+
                 # Use chat endpoint
                 api_endpoint = "chat"
-                
+
             elif system is not None or model_id.startswith(
                 ("llama", "gpt", "claude", "phi", "mistral")
             ):
@@ -1080,7 +1092,7 @@ class OllamaProvider(BaseProvider):
                         "temperature": temperature,
                     },
                 }
-                
+
                 # Use chat endpoint
                 api_endpoint = "chat"
 
@@ -1094,7 +1106,7 @@ class OllamaProvider(BaseProvider):
                         "temperature": temperature,
                     },
                 }
-                
+
                 # Use generate endpoint
                 api_endpoint = "generate"
 
@@ -1119,7 +1131,7 @@ class OllamaProvider(BaseProvider):
                 content_length = sum(len(m.get("content", "")) for m in messages)
             elif prompt:
                 content_length = len(prompt)
-                
+
             self.logger.info(
                 f"Generating Ollama streaming completion ({api_endpoint}) with model {model_id}",
                 emoji_key=self.provider_name,
@@ -1463,23 +1475,23 @@ class OllamaProvider(BaseProvider):
 
     def _extract_json_from_text(self, text: str) -> str:
         """Extract JSON content from text that might include markdown code blocks or explanatory text.
-        
+
         Args:
             text: The raw text response that might contain JSON
-            
+
         Returns:
             Cleaned JSON content
         """
-        
+
         # First check if the text is already valid JSON
         try:
             json.loads(text)
             return text  # Already valid JSON
         except json.JSONDecodeError:
             pass  # Continue with extraction
-        
+
         # Extract JSON from code blocks - common pattern
-        code_block_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', text)
+        code_block_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", text)
         if code_block_match:
             code_content = code_block_match.group(1).strip()
             try:
@@ -1487,32 +1499,32 @@ class OllamaProvider(BaseProvider):
                 return code_content
             except json.JSONDecodeError:
                 # Try to fix common JSON syntax issues like trailing commas
-                fixed_content = re.sub(r',\s*([}\]])', r'\1', code_content)
+                fixed_content = re.sub(r",\s*([}\]])", r"\1", code_content)
                 try:
                     json.loads(fixed_content)
                     return fixed_content
                 except json.JSONDecodeError:
                     pass  # Continue with other extraction methods
-        
+
         # Look for JSON array or object patterns in the content
         # Find the first [ or { and the matching closing ] or }
         stripped = text.strip()
-        
+
         # Try to extract array
-        if '[' in stripped and ']' in stripped:
-            start = stripped.find('[')
+        if "[" in stripped and "]" in stripped:
+            start = stripped.find("[")
             # Find the matching closing bracket
             end = -1
             depth = 0
             for i in range(start, len(stripped)):
-                if stripped[i] == '[':
+                if stripped[i] == "[":
                     depth += 1
-                elif stripped[i] == ']':
+                elif stripped[i] == "]":
                     depth -= 1
                     if depth == 0:
                         end = i + 1
                         break
-            
+
             if end > start:
                 array_content = stripped[start:end]
                 try:
@@ -1520,22 +1532,22 @@ class OllamaProvider(BaseProvider):
                     return array_content
                 except json.JSONDecodeError:
                     pass  # Try other methods
-        
+
         # Try to extract object
-        if '{' in stripped and '}' in stripped:
-            start = stripped.find('{')
+        if "{" in stripped and "}" in stripped:
+            start = stripped.find("{")
             # Find the matching closing bracket
             end = -1
             depth = 0
             for i in range(start, len(stripped)):
-                if stripped[i] == '{':
+                if stripped[i] == "{":
                     depth += 1
-                elif stripped[i] == '}':
+                elif stripped[i] == "}":
                     depth -= 1
                     if depth == 0:
                         end = i + 1
                         break
-            
+
             if end > start:
                 object_content = stripped[start:end]
                 try:
@@ -1543,7 +1555,7 @@ class OllamaProvider(BaseProvider):
                     return object_content
                 except json.JSONDecodeError:
                     pass  # Try other methods
-        
+
         # If all else fails, return the original text
         return text
 
@@ -1567,19 +1579,19 @@ class OllamaProvider(BaseProvider):
         **kwargs: Any,
     ) -> ModelResponse:
         """Generate a completion via streaming and collect the results.
-        
+
         This is a workaround for Ollama's inconsistent behavior with JSON mode
         in non-streaming completions. It uses the streaming API which works reliably
         with JSON mode, and collects all chunks into a single result.
-        
+
         Args:
             Same as generate_completion and generate_completion_stream
-            
+
         Returns:
             ModelResponse: The complete response
         """
         self.logger.debug("Using streaming method internally to handle JSON mode reliably")
-        
+
         # Start the streaming generator
         stream_gen = self.generate_completion_stream(
             prompt=prompt,
@@ -1597,25 +1609,25 @@ class OllamaProvider(BaseProvider):
             mirostat_eta=mirostat_eta,
             system=system,
             json_mode=json_mode,
-            **kwargs
+            **kwargs,
         )
-        
+
         # Collect all text chunks
         combined_text = ""
         metadata = {}
         input_tokens = 0
         output_tokens = 0
         processing_time = 0
-        
+
         try:
             async for chunk, chunk_metadata in stream_gen:
                 if chunk_metadata.get("error"):
                     # If there's an error, raise it
                     raise RuntimeError(chunk_metadata["error"])
-                    
+
                 # Add current chunk to result
                 combined_text += chunk
-                
+
                 # If this is the final chunk with stats, save the metadata
                 if chunk_metadata.get("finished", False):
                     metadata = chunk_metadata
@@ -1625,19 +1637,21 @@ class OllamaProvider(BaseProvider):
         except Exception as e:
             # If streaming fails, re-raise the exception
             raise RuntimeError(f"Error in streaming completion: {str(e)}") from e
-            
+
         # Create a ModelResponse with the combined text
         result = ModelResponse(
             text=combined_text,
-            model=metadata.get("model", f"{self.provider_name}/{model or self.get_default_model()}"),
+            model=metadata.get(
+                "model", f"{self.provider_name}/{model or self.get_default_model()}"
+            ),
             provider=self.provider_name,
             input_tokens=input_tokens,
             output_tokens=output_tokens,
             processing_time=processing_time,
-            raw_response={"streaming_source": True, "metadata": metadata}
+            raw_response={"streaming_source": True, "metadata": metadata},
         )
-        
+
         # Add message field for chat_completion compatibility
         result.message = {"role": "assistant", "content": combined_text}
-        
+
         return result

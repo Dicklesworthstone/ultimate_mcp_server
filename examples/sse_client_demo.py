@@ -8,6 +8,7 @@ Requirements:
 This script connects to a running Ultimate MCP Server server in SSE mode (default: http://127.0.0.1:8013/sse),
 lists available tools, and calls the 'echo' tool if available.
 """
+
 import asyncio
 import sys
 from typing import Optional
@@ -20,6 +21,7 @@ except ImportError:
     sys.exit(1)
 
 DEFAULT_SSE_URL = "http://127.0.0.1:8013/sse"
+
 
 async def main(sse_url: Optional[str] = None):
     sse_url = sse_url or DEFAULT_SSE_URL
@@ -51,7 +53,8 @@ async def main(sse_url: Optional[str] = None):
         print(f"[ERROR] Failed to connect or interact with server: {e}")
         return 1
 
+
 if __name__ == "__main__":
     sse_url = sys.argv[1] if len(sys.argv) > 1 else None
     exit_code = asyncio.run(main(sse_url))
-    sys.exit(exit_code) 
+    sys.exit(exit_code)

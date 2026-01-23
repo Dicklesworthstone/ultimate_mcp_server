@@ -237,11 +237,14 @@ class ConnectionManager:
                     except asyncio.TimeoutError:
                         logger.warning(f"Connection {conn_id} close timed out after 2 seconds")
                         return False
+
                 close_tasks.append(close_with_timeout(conn_id))
-            
+
             # Wait for all connections to close with an overall timeout
             try:
-                await asyncio.wait_for(asyncio.gather(*close_tasks, return_exceptions=True), timeout=5.0)
+                await asyncio.wait_for(
+                    asyncio.gather(*close_tasks, return_exceptions=True), timeout=5.0
+                )
             except asyncio.TimeoutError:
                 logger.warning("Some connections did not close within the 5 second timeout")
 
@@ -328,10 +331,11 @@ _CONN_GAUGE: Optional[Any] = None
 # Flag to track if metrics have been initialized
 _sql_metrics_initialized = False
 
+
 async def initialize_sql_tools():
     """Initialize global state for SQL tools, like starting the cleanup task and metrics."""
     global _sql_metrics_initialized
-    global _Q_CNT, _Q_LAT, _CONN_GAUGE # Ensure globals are declared for assignment
+    global _Q_CNT, _Q_LAT, _CONN_GAUGE  # Ensure globals are declared for assignment
 
     # Initialize metrics only once
     if not _sql_metrics_initialized:
@@ -339,7 +343,9 @@ async def initialize_sql_tools():
         if prom:
             try:
                 # Define metrics
-                _Q_CNT = prom.Counter("mcp_sqltool_calls", "SQL tool calls", ["tool", "action", "db"])
+                _Q_CNT = prom.Counter(
+                    "mcp_sqltool_calls", "SQL tool calls", ["tool", "action", "db"]
+                )
                 latency_buckets = (0.01, 0.05, 0.1, 0.25, 0.5, 1, 2, 5, 10, 30, 60)
                 _Q_LAT = prom.Histogram(
                     "mcp_sqltool_latency_seconds",
@@ -348,8 +354,7 @@ async def initialize_sql_tools():
                     buckets=latency_buckets,
                 )
                 _CONN_GAUGE = prom.Gauge(
-                    "mcp_sqltool_active_connections",
-                    "Number of active SQL connections"
+                    "mcp_sqltool_active_connections", "Number of active SQL connections"
                 )
 
                 # Define the gauge function referencing the global manager
@@ -362,28 +367,38 @@ async def initialize_sql_tools():
                         return len(_connection_manager.connections)
                     except Exception:
                         logger.exception("Error getting active connection count for Prometheus.")
-                        return 0 # Default to 0 if error accessing
+                        return 0  # Default to 0 if error accessing
 
                 _CONN_GAUGE.set_function(_get_active_connections)
                 logger.info("Prometheus metrics initialized for SQL tools.")
-                _sql_metrics_initialized = True # Set flag only after successful initialization
+                _sql_metrics_initialized = True  # Set flag only after successful initialization
 
             except ValueError as e:
                 # Catch the specific duplicate error and log nicely, but don't crash
                 if "Duplicated timeseries" in str(e):
-                    logger.warning(f"Prometheus metrics already registered: {e}. Skipping re-initialization.")
-                    _sql_metrics_initialized = True # Assume they are initialized if duplicate error occurs
+                    logger.warning(
+                        f"Prometheus metrics already registered: {e}. Skipping re-initialization."
+                    )
+                    _sql_metrics_initialized = (
+                        True  # Assume they are initialized if duplicate error occurs
+                    )
                 else:
                     # Re-raise other ValueErrors
-                    logger.error(f"ValueError during Prometheus metric initialization: {e}", exc_info=True)
-                    raise # Re-raise unexpected ValueError
+                    logger.error(
+                        f"ValueError during Prometheus metric initialization: {e}", exc_info=True
+                    )
+                    raise  # Re-raise unexpected ValueError
             except Exception as e:
-                 logger.error(f"Failed to initialize Prometheus metrics for SQL tools: {e}", exc_info=True)
-                 # Continue without metrics if initialization fails? Or raise? Let's continue for now.
+                logger.error(
+                    f"Failed to initialize Prometheus metrics for SQL tools: {e}", exc_info=True
+                )
+                # Continue without metrics if initialization fails? Or raise? Let's continue for now.
 
         else:
             logger.info("Prometheus client not available, metrics disabled for SQL tools.")
-            _sql_metrics_initialized = True # Mark as "initialized" (i.e., done trying) even if prom not present
+            _sql_metrics_initialized = (
+                True  # Mark as "initialized" (i.e., done trying) even if prom not present
+            )
     else:
         logger.debug("SQL tools metrics already initialized, skipping metric creation.")
 

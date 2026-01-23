@@ -1501,7 +1501,9 @@ async def _load_state() -> dict[str, Any] | None:  # Uses global _STATE_FILE, _g
         return None
 
 
-async def _save_state(ctx: BrowserContext):  # Uses global _get_pool, _enc, _STATE_FILE, _key, _playwright_lock
+async def _save_state(
+    ctx: BrowserContext,
+):  # Uses global _get_pool, _enc, _STATE_FILE, _key, _playwright_lock
     """Saves browser state asynchronously using FileSystemTool's write_file."""
     if _STATE_FILE is None:
         logger.warning("Skipping save state: State file path (_STATE_FILE) not initialized.")
@@ -1511,7 +1513,9 @@ async def _save_state(ctx: BrowserContext):  # Uses global _get_pool, _enc, _STA
     async with _playwright_lock:
         # Re-check context validity *after* acquiring the lock
         if not ctx or not ctx.browser or not ctx.browser.is_connected():
-            logger.debug("Skipping save state: Context or browser became invalid/disconnected before save.")
+            logger.debug(
+                "Skipping save state: Context or browser became invalid/disconnected before save."
+            )
             return
 
         loop = asyncio.get_running_loop()
@@ -1531,16 +1535,20 @@ async def _save_state(ctx: BrowserContext):  # Uses global _get_pool, _enc, _STA
                 data_to_write = await loop.run_in_executor(pool, _enc, state_bytes)
             except RuntimeError as e:
                 if "cannot schedule new futures after shutdown" in str(e):
-                    logger.warning("Thread pool is shutdown. Creating a temporary pool for state encryption.")
+                    logger.warning(
+                        "Thread pool is shutdown. Creating a temporary pool for state encryption."
+                    )
                     # Fallback pool creation remains useful
                     with concurrent.futures.ThreadPoolExecutor(max_workers=1) as temp_pool:
                         data_to_write = await loop.run_in_executor(temp_pool, _enc, state_bytes)
                 else:
-                    raise # Re-raise other RuntimeErrors
+                    raise  # Re-raise other RuntimeErrors
 
             # 4. Write the (potentially encrypted) bytes using the standalone filesystem tool
             logger.debug(f"Attempting to save state to: {validated_fpath} using filesystem tool.")
-            write_result = await write_file(path=validated_fpath, content=data_to_write) # Pass bytes
+            write_result = await write_file(
+                path=validated_fpath, content=data_to_write
+            )  # Pass bytes
 
             # 5. Check result from filesystem tool
             if not isinstance(write_result, dict) or not write_result.get("success"):
@@ -1551,11 +1559,11 @@ async def _save_state(ctx: BrowserContext):  # Uses global _get_pool, _enc, _STA
                     f"Failed to save browser state using filesystem tool. Reason: {error_detail}"
                 )
                 # Log but don't raise ToolError here directly, let the maintenance loop handle logging it
-                return # Exit if write failed
+                return  # Exit if write failed
 
             # 6. Log success
             actual_path = write_result.get("path", validated_fpath)
-            logger.debug(f"Successfully saved state to file: {actual_path}") # Changed log level
+            logger.debug(f"Successfully saved state to file: {actual_path}")  # Changed log level
 
         except PlaywrightException as e:
             # Catch errors specifically from ctx.storage_state() if the context closed unexpectedly
@@ -1567,7 +1575,10 @@ async def _save_state(ctx: BrowserContext):  # Uses global _get_pool, _enc, _STA
             logger.error(f"ToolError during save state: {e}")
             # Don't re-raise here, maintenance loop will log the error
         except Exception as e:
-            logger.error(f"Unexpected error saving browser state (path: {validated_fpath}): {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error saving browser state (path: {validated_fpath}): {e}",
+                exc_info=True,
+            )
             # Don't raise ToolError here, let the maintenance loop log the failure
 
 
@@ -1595,7 +1606,7 @@ async def _tab_context(ctx: BrowserContext):  # Uses global _log
                 await _log("page_error", context_id=context_id, action="close", error=str(e))
 
 
-async def _context_maintenance_loop(ctx: BrowserContext): # Uses global _save_state
+async def _context_maintenance_loop(ctx: BrowserContext):  # Uses global _save_state
     """Periodically saves state for the shared context."""
     save_interval_seconds = 15 * 60  # Save every 15 minutes
     context_id = id(ctx)
@@ -1606,7 +1617,9 @@ async def _context_maintenance_loop(ctx: BrowserContext): # Uses global _save_st
             # Check if context is still valid *before* sleeping
             # Use is_connected() for a more robust check
             if not ctx or not ctx.browser or not ctx.browser.is_connected():
-                logger.info(f"Shared context {context_id} seems invalid or disconnected. Stopping maintenance loop.")
+                logger.info(
+                    f"Shared context {context_id} seems invalid or disconnected. Stopping maintenance loop."
+                )
                 break
 
             # Wait for the specified interval
@@ -1614,7 +1627,9 @@ async def _context_maintenance_loop(ctx: BrowserContext): # Uses global _save_st
 
             # Re-check context validity *after* sleeping, before saving
             if not ctx or not ctx.browser or not ctx.browser.is_connected():
-                logger.info(f"Shared context {context_id} became invalid/disconnected during sleep. Stopping maintenance loop.")
+                logger.info(
+                    f"Shared context {context_id} became invalid/disconnected during sleep. Stopping maintenance loop."
+                )
                 break
 
             # Save the state (which now handles its own locking and errors more gracefully)
@@ -1622,10 +1637,12 @@ async def _context_maintenance_loop(ctx: BrowserContext): # Uses global _save_st
 
         except asyncio.CancelledError:
             logger.info(f"Context maintenance loop for {context_id} cancelled.")
-            break # Exit loop cleanly on cancellation
+            break  # Exit loop cleanly on cancellation
         except Exception as e:
             # Log unexpected errors in the loop itself (e.g., during the sleep?)
-            logger.error(f"Unexpected error in context maintenance loop for {context_id}: {e}", exc_info=True)
+            logger.error(
+                f"Unexpected error in context maintenance loop for {context_id}: {e}", exc_info=True
+            )
             # Wait a bit longer before retrying after an unexpected loop error
             await asyncio.sleep(60)
 
@@ -1634,16 +1651,7 @@ async def _context_maintenance_loop(ctx: BrowserContext): # Uses global _save_st
 # --- Replace the existing shutdown function in smart_browser.py ---
 async def shutdown():  # Uses MANY globals
     """Gracefully shut down Playwright, browser, context, VNC, and thread pool."""
-    global \
-        _pw, \
-        _browser, \
-        _ctx, \
-        _vnc_proc, \
-        _thread_pool, \
-        _locator_cache_cleanup_task_handle, \
-        _inactivity_monitor_task_handle, \
-        _is_initialized, \
-        _shutdown_initiated # Added missing global reference
+    global _pw, _browser, _ctx, _vnc_proc, _thread_pool, _locator_cache_cleanup_task_handle, _inactivity_monitor_task_handle, _is_initialized, _shutdown_initiated  # Added missing global reference
 
     # Use lock to prevent concurrent shutdown calls
     # Check _shutdown_initiated flag inside lock for atomicity
@@ -1662,11 +1670,11 @@ async def shutdown():  # Uses MANY globals
     # Set a global shutdown timeout to prevent hanging
     shutdown_timeout = 10.0  # 10 seconds to complete shutdown or we'll force through
     shutdown_start_time = time.monotonic()
-    
+
     # Function to check if shutdown is taking too long
     def is_shutdown_timeout():
         return (time.monotonic() - shutdown_start_time) > shutdown_timeout
-    
+
     # 1. Cancel Background Tasks First
     tasks_to_cancel = [
         (_locator_cache_cleanup_task_handle, "Locator Cache Cleanup Task"),
@@ -1679,9 +1687,9 @@ async def shutdown():  # Uses MANY globals
             try:
                 # Wait briefly for cancellation to complete
                 await asyncio.wait_for(task_handle, timeout=2.0)
-                logger.info(f"{task_name} cancellation confirmed.") # Changed log level
+                logger.info(f"{task_name} cancellation confirmed.")  # Changed log level
             except asyncio.CancelledError:
-                logger.info(f"{task_name} cancellation confirmed.") # Expected outcome
+                logger.info(f"{task_name} cancellation confirmed.")  # Expected outcome
             except asyncio.TimeoutError:
                 logger.warning(f"Timeout waiting for {task_name} cancellation.")
             except Exception as e:
@@ -1693,13 +1701,13 @@ async def shutdown():  # Uses MANY globals
     _inactivity_monitor_task_handle = None
 
     # 2. Cancel any active tab pool operations
-    await tab_pool.cancel_all() # Handles incognito contexts
+    await tab_pool.cancel_all()  # Handles incognito contexts
 
     # 3. Close Playwright resources (under lock to prevent concurrent access)
     async with _playwright_lock:
         # Close Shared Context (save state first, if possible)
         ctx_to_close = _ctx
-        _ctx = None # Immediately unset global reference
+        _ctx = None  # Immediately unset global reference
 
         # Skip state saving if we're already at the timeout
         if is_shutdown_timeout():
@@ -1710,16 +1718,22 @@ async def shutdown():  # Uses MANY globals
             try:
                 # Add timeout for state saving
                 await asyncio.wait_for(_save_state(ctx_to_close), timeout=3.0)
-                logger.info("State saving attempted for shared context.") # Log attempt, success logged within _save_state
+                logger.info(
+                    "State saving attempted for shared context."
+                )  # Log attempt, success logged within _save_state
             except asyncio.TimeoutError:
                 logger.warning("State saving timed out after 3 seconds")
             except Exception as e:
                 # Catch any unexpected error from _save_state itself (should be rare now)
-                logger.error(f"Unexpected error during final state save attempt: {e}", exc_info=True)
+                logger.error(
+                    f"Unexpected error during final state save attempt: {e}", exc_info=True
+                )
         elif ctx_to_close:
-             logger.warning("Skipping final state save: Shared context or browser already closed/disconnected.")
+            logger.warning(
+                "Skipping final state save: Shared context or browser already closed/disconnected."
+            )
         else:
-             logger.debug("Skipping final state save: No shared context exists.")
+            logger.debug("Skipping final state save: No shared context exists.")
         # --- End Robust Check and Save State ---
 
         # Close the context object itself
@@ -1734,13 +1748,15 @@ async def shutdown():  # Uses MANY globals
                 logger.warning("Browser context close timed out after 3 seconds")
             except Exception as e:
                 # Log error but continue shutdown
-                logger.error(f"Error closing shared context object: {e}", exc_info=False) # Keep log less verbose
+                logger.error(
+                    f"Error closing shared context object: {e}", exc_info=False
+                )  # Keep log less verbose
         elif ctx_to_close:
             logger.warning("Skipping browser context close due to shutdown timeout")
 
         # Close Browser
         browser_to_close = _browser
-        _browser = None # Immediately unset global reference
+        _browser = None  # Immediately unset global reference
         if browser_to_close and browser_to_close.is_connected() and not is_shutdown_timeout():
             logger.info("Closing browser instance...")
             try:
@@ -1751,13 +1767,13 @@ async def shutdown():  # Uses MANY globals
             except asyncio.TimeoutError:
                 logger.warning("Browser close timed out after 3 seconds")
             except Exception as e:
-                logger.error(f"Error closing browser: {e}", exc_info=False) # Keep log less verbose
+                logger.error(f"Error closing browser: {e}", exc_info=False)  # Keep log less verbose
         elif browser_to_close and browser_to_close.is_connected():
             logger.warning("Skipping browser close due to shutdown timeout")
 
         # Stop Playwright
         pw_to_stop = _pw
-        _pw = None # Immediately unset global reference
+        _pw = None  # Immediately unset global reference
         if pw_to_stop and not is_shutdown_timeout():
             logger.info("Stopping Playwright...")
             try:
@@ -1767,7 +1783,9 @@ async def shutdown():  # Uses MANY globals
             except asyncio.TimeoutError:
                 logger.warning("Playwright stop timed out after 2 seconds")
             except Exception as e:
-                logger.error(f"Error stopping Playwright: {e}", exc_info=False) # Keep log less verbose
+                logger.error(
+                    f"Error stopping Playwright: {e}", exc_info=False
+                )  # Keep log less verbose
         elif pw_to_stop:
             logger.warning("Skipping Playwright stop due to shutdown timeout")
 
@@ -1778,7 +1796,9 @@ async def shutdown():  # Uses MANY globals
     # 5. Log completion and reset flags
     await _log("browser_shutdown_complete")
     if is_shutdown_timeout():
-        logger.warning("Smart Browser shutdown reached timeout limit - some resources may not be fully released")
+        logger.warning(
+            "Smart Browser shutdown reached timeout limit - some resources may not be fully released"
+        )
     else:
         logger.info("Smart Browser graceful shutdown complete.")
     _is_initialized = False
@@ -1799,23 +1819,24 @@ async def shutdown():  # Uses MANY globals
             time_left = max(0, shutdown_timeout - (time.monotonic() - shutdown_start_time))
             # Use the minimum of 3 seconds or remaining time
             wait_time = min(3.0, time_left)
-            
+
             # Create a separate thread to shut down the pool with a timeout
             import threading
+
             shutdown_complete = threading.Event()
-            
+
             def shutdown_pool_with_timeout():
                 try:
                     pool_to_shutdown.shutdown(wait=True)
                     shutdown_complete.set()
                 except Exception as e:
                     logger.error(f"Error in thread pool shutdown thread: {e}")
-            
+
             # Start the shutdown in a separate thread
             thread = threading.Thread(target=shutdown_pool_with_timeout)
             thread.daemon = True
             thread.start()
-            
+
             # Wait for completion or timeout
             if shutdown_complete.wait(wait_time):
                 logger.info("Thread pool shut down successfully.")
@@ -3367,9 +3388,9 @@ async def _detect_web_obstacles(page: Page) -> Dict[str, Any]:
         "cookie_banner": False,
         "cloudflare_challenge": False,
         "login_required": False,
-        "details": []
+        "details": [],
     }
-    
+
     try:
         # Comprehensive CAPTCHA detection
         captcha_js = """() => {
@@ -3418,26 +3439,26 @@ async def _detect_web_obstacles(page: Page) -> Dict[str, Any]:
             
             return indicators;
         }"""
-        
+
         detected_indicators = await page.evaluate(captcha_js)
-        
+
         # Process results
         for indicator in detected_indicators:
-            if 'captcha' in indicator:
+            if "captcha" in indicator:
                 obstacles["captcha_detected"] = True
                 obstacles["details"].append(f"CAPTCHA detected: {indicator}")
-            elif 'cookie' in indicator:
+            elif "cookie" in indicator:
                 obstacles["cookie_banner"] = True
                 obstacles["details"].append(f"Cookie banner detected: {indicator}")
-            elif 'cloudflare' in indicator:
+            elif "cloudflare" in indicator:
                 obstacles["cloudflare_challenge"] = True
                 obstacles["details"].append(f"Cloudflare challenge detected: {indicator}")
-            elif 'login' in indicator:
+            elif "login" in indicator:
                 obstacles["login_required"] = True
                 obstacles["details"].append(f"Login requirement detected: {indicator}")
-        
+
         return obstacles
-        
+
     except Exception as e:
         logger.warning(f"Error detecting web obstacles: {e}")
         return obstacles
@@ -3471,27 +3492,43 @@ async def smart_click(
     # First, detect web obstacles that might interfere with automation
     try:
         obstacles = await _detect_web_obstacles(page)
-        
+
         # Handle CAPTCHA detection - fail early if trying to click CAPTCHA
-        if obstacles["captcha_detected"] and ("captcha" in effective_task_hint.lower() or "recaptcha" in effective_task_hint.lower()):
-            logger.error(f"Cannot click CAPTCHA element: '{effective_task_hint}'. CAPTCHAs are designed to prevent automation.")
+        if obstacles["captcha_detected"] and (
+            "captcha" in effective_task_hint.lower() or "recaptcha" in effective_task_hint.lower()
+        ):
+            logger.error(
+                f"Cannot click CAPTCHA element: '{effective_task_hint}'. CAPTCHAs are designed to prevent automation."
+            )
             raise ToolError(
                 f"CAPTCHA interaction blocked for task: '{effective_task_hint}'. "
                 "Manual intervention required. CAPTCHAs cannot be automatically solved."
             )
-        
+
         # Log any obstacles detected for diagnostic purposes
-        if any([obstacles["captcha_detected"], obstacles["cookie_banner"], obstacles["cloudflare_challenge"], obstacles["login_required"]]):
-            await _log("smart_click_obstacles_detected", task_hint=effective_task_hint, obstacles=obstacles)
+        if any(
+            [
+                obstacles["captcha_detected"],
+                obstacles["cookie_banner"],
+                obstacles["cloudflare_challenge"],
+                obstacles["login_required"],
+            ]
+        ):
+            await _log(
+                "smart_click_obstacles_detected", task_hint=effective_task_hint, obstacles=obstacles
+            )
             logger.info(f"Web obstacles detected before click attempt: {obstacles['details']}")
-            
+
             # Try to handle cookie banners automatically
             if obstacles["cookie_banner"]:
                 logger.info("Attempting to dismiss cookie banner before main click action...")
                 cookie_selectors = [
-                    'button:has-text("Accept")', 'button:has-text("Accept All")', 
-                    'button:has-text("OK")', 'button:has-text("Allow")',
-                    '[id*="accept" i]', '[class*="accept" i]'
+                    'button:has-text("Accept")',
+                    'button:has-text("Accept All")',
+                    'button:has-text("OK")',
+                    'button:has-text("Allow")',
+                    '[id*="accept" i]',
+                    '[class*="accept" i]',
                 ]
                 for selector in cookie_selectors:
                     try:
@@ -3502,14 +3539,16 @@ async def smart_click(
                         break
                     except Exception:
                         continue
-            
+
             # Give Cloudflare challenges a moment to complete
             if obstacles["cloudflare_challenge"]:
                 logger.info("Cloudflare challenge detected, waiting briefly...")
                 await asyncio.sleep(3)
-                
+
     except Exception as obstacle_err:
-        logger.warning(f"Error during obstacle detection: {obstacle_err}. Proceeding with click attempt.")
+        logger.warning(
+            f"Error during obstacle detection: {obstacle_err}. Proceeding with click attempt."
+        )
 
     loc_helper = EnhancedLocator(page)
     # Prepare log details, prioritizing target_kwargs if available
@@ -3717,9 +3756,11 @@ async def smart_type(
 try:
     from ultimate_mcp_server.tools.base import with_error_handling, with_tool_metrics
 except ImportError as e:
-     # This indicates the cycle might still exist or base failed to load for other reasons
-     logger.critical(f"CRITICAL: Failed to late-import base decorators needed for Smart Browser tools: {e}")
-     raise
+    # This indicates the cycle might still exist or base failed to load for other reasons
+    logger.critical(
+        f"CRITICAL: Failed to late-import base decorators needed for Smart Browser tools: {e}"
+    )
+    raise
 
 
 @with_tool_metrics
@@ -6540,7 +6581,7 @@ async def run_steps(
                     raise ToolInputError(
                         f"Step {step_num} ('click'): Missing required argument 'task_hint'."
                     )
-                
+
                 # Check for and handle common obstacles like reCAPTCHA
                 if "recaptcha" in hint.lower() or "captcha" in hint.lower():
                     # Try to detect CAPTCHA presence first
@@ -6553,7 +6594,9 @@ async def run_steps(
                     }"""
                     captcha_detected = await page.evaluate(captcha_js)
                     if captcha_detected:
-                        logger.warning(f"Step {step_num}: CAPTCHA detected but cannot be automatically solved. Marking as failed.")
+                        logger.warning(
+                            f"Step {step_num}: CAPTCHA detected but cannot be automatically solved. Marking as failed."
+                        )
                         step_result["error"] = "CAPTCHA detected - requires manual intervention"
                         step_result["success"] = False
                         # Continue to finally block without raising exception
@@ -6703,12 +6746,16 @@ async def run_steps(
             step_result["error"] = error_msg
             step_result["success"] = False  # Ensure success is false on error
             logger.warning(f"Macro Step {step_num} ('{action}') failed: {error_msg}")
-            
+
             # Special handling for CAPTCHA-related errors
             if "captcha" in str(e).lower() or "recaptcha" in str(e).lower():
-                logger.warning(f"Step {step_num}: CAPTCHA-related error detected. Suggesting manual intervention.")
-                step_result["error"] = f"CAPTCHA-related error: {error_msg}. Manual intervention may be required."
-            
+                logger.warning(
+                    f"Step {step_num}: CAPTCHA-related error detected. Suggesting manual intervention."
+                )
+                step_result["error"] = (
+                    f"CAPTCHA-related error: {error_msg}. Manual intervention may be required."
+                )
+
             # Record duration even on failure
             duration_ms = int((time.monotonic() - start_time) * 1000)
             step_result["duration_ms"] = duration_ms
@@ -6722,7 +6769,7 @@ async def run_steps(
                 del log_details["result"]
             await _log("macro_step_result", **log_details)
             results.append(step_result)
-            
+
             # If a 'finish' action succeeded, stop executing further steps
             if action == "finish" and step_result.get("success", False):
                 logger.info(

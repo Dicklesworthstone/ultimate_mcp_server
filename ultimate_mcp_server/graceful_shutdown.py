@@ -26,18 +26,18 @@ _devnull_fd = None
 def _redirect_stderr_to_devnull():
     """Redirect stderr to /dev/null at the OS level"""
     global _original_stderr_fd, _devnull_fd
-    
+
     try:
         if _original_stderr_fd is None:
             # Save original stderr file descriptor
             _original_stderr_fd = os.dup(sys.stderr.fileno())
-            
+
             # Open /dev/null
             _devnull_fd = os.open(os.devnull, os.O_WRONLY)
-            
+
             # Redirect stderr to /dev/null
             os.dup2(_devnull_fd, sys.stderr.fileno())
-            
+
     except Exception:
         # If redirection fails, just continue
         pass
@@ -46,17 +46,17 @@ def _redirect_stderr_to_devnull():
 def _restore_stderr():
     """Restore original stderr"""
     global _original_stderr_fd, _devnull_fd
-    
+
     try:
         if _original_stderr_fd is not None:
             os.dup2(_original_stderr_fd, sys.stderr.fileno())
             os.close(_original_stderr_fd)
             _original_stderr_fd = None
-            
+
         if _devnull_fd is not None:
             os.close(_devnull_fd)
             _devnull_fd = None
-            
+
     except Exception:
         pass
 
@@ -87,14 +87,14 @@ async def _execute_shutdown_handlers():
 def _handle_shutdown_signal(signum, frame):
     """Handle shutdown signals - IMMEDIATE TERMINATION"""
     global _shutdown_in_progress
-    
+
     if _shutdown_in_progress:
         # Force immediate exit on second signal
         os._exit(1)
         return
-        
+
     _shutdown_in_progress = True
-    
+
     # Print final message to original stderr if possible
     try:
         if _original_stderr_fd:
@@ -103,13 +103,13 @@ def _handle_shutdown_signal(signum, frame):
             print("\n[Graceful Shutdown] Signal received. Exiting...", file=sys.__stderr__)
     except Exception:
         pass
-    
+
     # Immediately redirect stderr to suppress any error output
     _redirect_stderr_to_devnull()
-    
+
     # Suppress all warnings
     warnings.filterwarnings("ignore")
-    
+
     # Try to run shutdown handlers quickly, but don't wait long
     try:
         loop = asyncio.get_running_loop()
@@ -127,7 +127,7 @@ def setup_signal_handlers(loop: Optional[asyncio.AbstractEventLoop] = None) -> N
     # Use traditional signal handlers for immediate termination
     signal.signal(signal.SIGINT, _handle_shutdown_signal)
     signal.signal(signal.SIGTERM, _handle_shutdown_signal)
-    
+
     # Also try to set up async handlers if we have a loop
     if loop is not None:
         try:
@@ -146,13 +146,13 @@ def enable_quiet_shutdown():
     """Enable comprehensive quiet shutdown - immediate termination approach"""
     # Set up signal handlers immediately
     setup_signal_handlers()
-    
+
     # Suppress asyncio debug mode
     try:
         asyncio.get_event_loop().set_debug(False)
     except RuntimeError:
         pass
-    
+
     # Suppress warnings
     warnings.filterwarnings("ignore")
 
@@ -167,29 +167,30 @@ def force_silent_exit():
 
 class QuietUvicornServer:
     """Custom Uvicorn server that overrides signal handling for quiet shutdown"""
-    
+
     def __init__(self, config):
         import uvicorn
+
         self.config = config
         self.server = uvicorn.Server(config)
-        
+
     def install_signal_handlers(self):
         """Override uvicorn's signal handlers with our quiet ones"""
         # Set up our own signal handlers instead of uvicorn's
         setup_signal_handlers()
-        
+
     def run(self):
         """Run the server with custom signal handling"""
         # Patch the server's install_signal_handlers method
         self.server.install_signal_handlers = self.install_signal_handlers
-        
+
         # Set up our signal handlers immediately
         setup_signal_handlers()
-        
+
         # Run the server
         self.server.run()
 
 
 def create_quiet_server(config):
     """Create a uvicorn server with quiet shutdown handling"""
-    return QuietUvicornServer(config) 
+    return QuietUvicornServer(config)

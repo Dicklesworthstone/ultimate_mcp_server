@@ -1,4 +1,5 @@
 """Caching service for Ultimate MCP Server."""
+
 from ultimate_mcp_server.services.cache.cache_service import (
     CacheService,
     CacheStats,

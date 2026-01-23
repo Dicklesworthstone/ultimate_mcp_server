@@ -9,6 +9,7 @@ from pydantic import BaseModel, Field
 
 # ---------- Cognitive States Models ----------
 
+
 class CognitiveState(BaseModel):
     state_id: str
     timestamp: float
@@ -142,14 +143,10 @@ class StateDiff(BaseModel):
 
 class StateComparisonRequest(BaseModel):
     state_id_1: str = Field(
-        ...,
-        description="First cognitive state ID for comparison",
-        example="state_abc123"
+        ..., description="First cognitive state ID for comparison", example="state_abc123"
     )
     state_id_2: str = Field(
-        ...,
-        description="Second cognitive state ID for comparison", 
-        example="state_xyz789"
+        ..., description="Second cognitive state ID for comparison", example="state_xyz789"
     )
 
 
@@ -162,8 +159,10 @@ class StateComparisonResponse(BaseModel):
 
 # ---------- Action Monitor Models ----------
 
+
 class StatusIndicator(BaseModel):
     """Action status indicator with visual cues"""
+
     color: str = Field(..., description="Color for visual representation")
     icon: str = Field(..., description="Icon name for the status")
     label: str = Field(..., description="Human-readable status label")
@@ -172,6 +171,7 @@ class StatusIndicator(BaseModel):
 
 class ResourceUsage(BaseModel):
     """Resource usage metrics for an action"""
+
     cpu_usage: float = Field(..., description="CPU usage percentage")
     memory_usage: float = Field(..., description="Memory usage percentage")
     network_io: float = Field(..., description="Network I/O in KB/s")
@@ -180,6 +180,7 @@ class ResourceUsage(BaseModel):
 
 class RunningAction(BaseModel):
     """Model for a currently running action"""
+
     action_id: str = Field(..., description="Unique action identifier")
     workflow_id: Optional[str] = Field(None, description="Associated workflow ID")
     workflow_title: Optional[str] = Field(None, description="Workflow title")
@@ -187,35 +188,29 @@ class RunningAction(BaseModel):
     status: str = Field(..., description="Current execution status")
     started_at: float = Field(..., description="Start timestamp")
     formatted_start_time: str = Field(..., description="ISO formatted start time")
-    execution_time_seconds: float = Field(
-        ..., description="Current execution duration in seconds"
-    )
-    estimated_duration: Optional[float] = Field(
-        None, description="Estimated duration in seconds"
-    )
+    execution_time_seconds: float = Field(..., description="Current execution duration in seconds")
+    estimated_duration: Optional[float] = Field(None, description="Estimated duration in seconds")
     progress_percentage: float = Field(..., description="Estimated progress percentage")
     status_indicator: StatusIndicator = Field(..., description="Visual status indicator")
     performance_category: str = Field(..., description="Performance categorization")
     resource_usage: ResourceUsage = Field(..., description="Current resource usage")
-    tool_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Tool-specific data"
-    )
+    tool_data: Dict[str, Any] = Field(default_factory=dict, description="Tool-specific data")
 
 
 class RunningActionsResponse(BaseModel):
     """Response for currently running actions"""
+
     running_actions: List[RunningAction] = Field(
         ..., description="List of currently executing actions"
     )
     total_running: int = Field(..., description="Total number of running actions")
-    avg_execution_time: float = Field(
-        ..., description="Average execution time of running actions"
-    )
+    avg_execution_time: float = Field(..., description="Average execution time of running actions")
     timestamp: str = Field(..., description="Response timestamp")
 
 
 class QueuedAction(BaseModel):
     """Model for a queued action"""
+
     action_id: str = Field(..., description="Unique action identifier")
     workflow_id: Optional[str] = Field(None, description="Associated workflow ID")
     workflow_title: Optional[str] = Field(None, description="Workflow title")
@@ -228,24 +223,22 @@ class QueuedAction(BaseModel):
     estimated_wait_time: float = Field(..., description="Estimated wait time in seconds")
     priority: int = Field(..., description="Numeric priority value")
     priority_label: str = Field(..., description="Human-readable priority label")
-    tool_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Tool-specific data"
-    )
+    tool_data: Dict[str, Any] = Field(default_factory=dict, description="Tool-specific data")
 
 
 class ActionQueueResponse(BaseModel):
     """Response for action queue status"""
+
     queued_actions: List[QueuedAction] = Field(..., description="List of queued actions")
     total_queued: int = Field(..., description="Total number of queued actions")
     avg_queue_time: float = Field(..., description="Average time in queue")
-    next_action: Optional[QueuedAction] = Field(
-        None, description="Next action to be executed"
-    )
+    next_action: Optional[QueuedAction] = Field(None, description="Next action to be executed")
     timestamp: str = Field(..., description="Response timestamp")
 
 
 class ActionHistoryItem(BaseModel):
     """Model for a single action in history"""
+
     action_id: str = Field(..., description="Unique action identifier")
     workflow_id: Optional[str] = Field(None, description="Associated workflow ID")
     workflow_title: Optional[str] = Field(None, description="Associated workflow title")
@@ -253,41 +246,26 @@ class ActionHistoryItem(BaseModel):
     action_type: Optional[str] = Field(None, description="Type of action")
     status: str = Field(..., description="Action completion status")
     started_at: float = Field(..., description="Unix timestamp when action started")
-    completed_at: Optional[float] = Field(
-        None, description="Unix timestamp when action completed"
-    )
-    execution_duration_seconds: float = Field(
-        ..., description="Total execution time in seconds"
-    )
-    performance_score: float = Field(
-        ..., description="Calculated performance score (0-100)"
-    )
-    efficiency_rating: str = Field(
-        ..., description="Efficiency rating based on time and output"
-    )
+    completed_at: Optional[float] = Field(None, description="Unix timestamp when action completed")
+    execution_duration_seconds: float = Field(..., description="Total execution time in seconds")
+    performance_score: float = Field(..., description="Calculated performance score (0-100)")
+    efficiency_rating: str = Field(..., description="Efficiency rating based on time and output")
     success_rate_impact: int = Field(..., description="Impact on success rate (1 or 0)")
     formatted_start_time: str = Field(..., description="ISO formatted start time")
     formatted_completion_time: Optional[str] = Field(
         None, description="ISO formatted completion time"
     )
-    tool_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Tool-specific data"
-    )
-    result_data: Dict[str, Any] = Field(
-        default_factory=dict, description="Action result data"
-    )
+    tool_data: Dict[str, Any] = Field(default_factory=dict, description="Tool-specific data")
+    result_data: Dict[str, Any] = Field(default_factory=dict, description="Action result data")
     result_size: int = Field(0, description="Size of the result data")
 
 
 class PerformanceSummary(BaseModel):
     """Performance summary statistics"""
+
     avg_score: float = Field(..., description="Average performance score")
-    top_performer: Optional[Dict[str, Any]] = Field(
-        None, description="Best performing tool"
-    )
-    worst_performer: Optional[Dict[str, Any]] = Field(
-        None, description="Worst performing tool"
-    )
+    top_performer: Optional[Dict[str, Any]] = Field(None, description="Best performing tool")
+    worst_performer: Optional[Dict[str, Any]] = Field(None, description="Worst performing tool")
     efficiency_distribution: Dict[str, int] = Field(
         ..., description="Distribution of efficiency ratings"
     )
@@ -295,12 +273,9 @@ class PerformanceSummary(BaseModel):
 
 class ActionHistoryResponse(BaseModel):
     """Response model for action history"""
-    action_history: List[ActionHistoryItem] = Field(
-        ..., description="List of completed actions"
-    )
-    total_actions: int = Field(
-        ..., description="Total number of actions in the time period"
-    )
+
+    action_history: List[ActionHistoryItem] = Field(..., description="List of completed actions")
+    total_actions: int = Field(..., description="Total number of actions in the time period")
     success_rate: float = Field(..., description="Overall success rate percentage")
     avg_execution_time: float = Field(..., description="Average execution time in seconds")
     performance_summary: PerformanceSummary = Field(
@@ -311,45 +286,37 @@ class ActionHistoryResponse(BaseModel):
 
 class OverallMetrics(BaseModel):
     """Overall action execution metrics"""
+
     total_actions: int = Field(..., description="Total number of actions executed")
-    successful_actions: int = Field(
-        ..., description="Number of successfully completed actions"
-    )
+    successful_actions: int = Field(..., description="Number of successfully completed actions")
     failed_actions: int = Field(..., description="Number of failed actions")
-    avg_duration: Optional[float] = Field(
-        None, description="Average execution duration in seconds"
-    )
-    success_rate_percentage: float = Field(
-        ..., description="Overall success rate as percentage"
-    )
-    failure_rate_percentage: float = Field(
-        ..., description="Overall failure rate as percentage"
-    )
+    avg_duration: Optional[float] = Field(None, description="Average execution duration in seconds")
+    success_rate_percentage: float = Field(..., description="Overall success rate as percentage")
+    failure_rate_percentage: float = Field(..., description="Overall failure rate as percentage")
     avg_duration_seconds: float = Field(..., description="Average duration in seconds")
 
 
 class ToolUsageStat(BaseModel):
     """Statistics for a single tool"""
+
     tool_name: str = Field(..., description="Name of the tool")
     usage_count: int = Field(..., description="Number of times the tool was used")
     success_count: int = Field(..., description="Number of successful executions")
-    avg_duration: Optional[float] = Field(
-        None, description="Average execution time in seconds"
-    )
+    avg_duration: Optional[float] = Field(None, description="Average execution time in seconds")
 
 
 class HourlyMetric(BaseModel):
     """Hourly performance metrics"""
+
     hour: str = Field(..., description="Hour of the day (0-23)")
     action_count: int = Field(..., description="Number of actions in this hour")
-    avg_duration: Optional[float] = Field(
-        None, description="Average duration for this hour"
-    )
+    avg_duration: Optional[float] = Field(None, description="Average duration for this hour")
     success_count: int = Field(..., description="Number of successful actions")
 
 
 class PerformanceInsight(BaseModel):
     """Performance insight or recommendation"""
+
     type: str = Field(..., description="Type of insight (warning, info, etc.)")
     title: str = Field(..., description="Title of the insight")
     message: str = Field(..., description="Detailed message")
@@ -358,13 +325,10 @@ class PerformanceInsight(BaseModel):
 
 class ActionMetricsResponse(BaseModel):
     """Response model for action metrics"""
+
     overall_metrics: OverallMetrics = Field(..., description="Overall execution metrics")
-    tool_usage_stats: List[ToolUsageStat] = Field(
-        ..., description="Per-tool usage statistics"
-    )
-    hourly_performance: List[HourlyMetric] = Field(
-        ..., description="Hourly performance breakdown"
-    )
+    tool_usage_stats: List[ToolUsageStat] = Field(..., description="Per-tool usage statistics")
+    hourly_performance: List[HourlyMetric] = Field(..., description="Hourly performance breakdown")
     performance_insights: List[PerformanceInsight] = Field(
         ..., description="Actionable insights and recommendations"
     )
@@ -373,13 +337,13 @@ class ActionMetricsResponse(BaseModel):
 
 # ---------- Artifacts Models ----------
 
+
 class Artifact(BaseModel):
     """Model for a single artifact"""
+
     artifact_id: str = Field(..., description="Unique artifact identifier")
     name: str = Field(..., description="Name of the artifact")
-    artifact_type: str = Field(
-        ..., description="Type of artifact (document, image, code, etc.)"
-    )
+    artifact_type: str = Field(..., description="Type of artifact (document, image, code, etc.)")
     description: Optional[str] = Field(None, description="Description of the artifact")
     file_path: Optional[str] = Field(None, description="File system path to the artifact")
     workflow_id: Optional[str] = Field(None, description="Associated workflow ID")
@@ -391,9 +355,7 @@ class Artifact(BaseModel):
     importance: Optional[float] = Field(None, description="Importance score (1-10)")
     access_count: int = Field(0, description="Number of times accessed")
     tags: List[str] = Field(default_factory=list, description="Associated tags")
-    metadata: Dict[str, Any] = Field(
-        default_factory=dict, description="Additional metadata"
-    )
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional metadata")
     relationship_count: int = Field(0, description="Number of related artifacts")
     version_count: int = Field(0, description="Number of versions")
     formatted_created_at: str = Field(..., description="ISO formatted creation date")
@@ -403,6 +365,7 @@ class Artifact(BaseModel):
 
 class ArtifactsFilter(BaseModel):
     """Filter parameters used in the request"""
+
     artifact_type: Optional[str] = Field(None, description="Type filter applied")
     workflow_id: Optional[str] = Field(None, description="Workflow filter applied")
     tags: Optional[str] = Field(None, description="Tags filter applied")
@@ -413,6 +376,7 @@ class ArtifactsFilter(BaseModel):
 
 class ArtifactsResponse(BaseModel):
     """Response model for artifacts listing"""
+
     artifacts: List[Artifact] = Field(..., description="List of artifacts")
     total: int = Field(..., description="Total number of artifacts matching query")
     has_more: bool = Field(..., description="Whether there are more artifacts available")
@@ -421,6 +385,7 @@ class ArtifactsResponse(BaseModel):
 
 class ArtifactTypeStats(BaseModel):
     """Statistics for a specific artifact type"""
+
     artifact_type: str = Field(..., description="Type of artifact")
     count: int = Field(..., description="Number of artifacts of this type")
     avg_importance: Optional[float] = Field(None, description="Average importance score")
@@ -430,32 +395,30 @@ class ArtifactTypeStats(BaseModel):
 
 class ArtifactOverallStats(BaseModel):
     """Overall artifact statistics"""
+
     total_artifacts: int = Field(..., description="Total number of artifacts")
     unique_types: int = Field(..., description="Number of unique artifact types")
     unique_workflows: int = Field(..., description="Number of unique workflows")
     total_size: int = Field(..., description="Total size of all artifacts in bytes")
     total_size_human: str = Field(..., description="Human-readable total size")
     avg_size: float = Field(..., description="Average artifact size in bytes")
-    latest_created: Optional[float] = Field(
-        None, description="Timestamp of most recent artifact"
-    )
-    earliest_created: Optional[float] = Field(
-        None, description="Timestamp of oldest artifact"
-    )
+    latest_created: Optional[float] = Field(None, description="Timestamp of most recent artifact")
+    earliest_created: Optional[float] = Field(None, description="Timestamp of oldest artifact")
 
 
 class ArtifactStatsResponse(BaseModel):
     """Response model for artifact statistics"""
+
     overall: ArtifactOverallStats = Field(..., description="Overall statistics")
-    by_type: List[ArtifactTypeStats] = Field(
-        ..., description="Statistics broken down by type"
-    )
+    by_type: List[ArtifactTypeStats] = Field(..., description="Statistics broken down by type")
 
 
 # ---------- Memory Quality Models ----------
 
+
 class MemoryDetail(BaseModel):
     """Detailed information about a memory"""
+
     memory_id: str = Field(..., description="Unique memory identifier")
     workflow_id: Optional[str] = Field(None, description="Associated workflow ID")
     memory_type: str = Field(..., description="Type of memory")
@@ -465,6 +428,7 @@ class MemoryDetail(BaseModel):
 
 class DuplicateGroup(BaseModel):
     """Group of duplicate memories"""
+
     cluster_id: str = Field(..., description="Unique identifier for this duplicate cluster")
     content_preview: str = Field(..., description="Preview of the duplicated content")
     duplicate_count: int = Field(..., description="Number of duplicates in this group")
@@ -479,15 +443,19 @@ class DuplicateGroup(BaseModel):
 
 class DuplicatesResponse(BaseModel):
     """Response model for duplicate analysis"""
+
     success: bool = Field(..., description="Whether analysis completed successfully")
     clusters: List[DuplicateGroup] = Field(..., description="List of duplicate groups")
-    duplicate_groups: List[DuplicateGroup] = Field(..., description="Alias for clusters (backward compatibility)")
+    duplicate_groups: List[DuplicateGroup] = Field(
+        ..., description="Alias for clusters (backward compatibility)"
+    )
     total_groups: int = Field(..., description="Total number of duplicate groups found")
     total_duplicates: int = Field(..., description="Total number of duplicate memories")
 
 
 class OrphanedMemory(BaseModel):
     """Model for an orphaned memory"""
+
     memory_id: str = Field(..., description="Unique memory identifier")
     content: str = Field(..., description="Memory content")
     memory_type: str = Field(..., description="Type of memory")
@@ -497,6 +465,7 @@ class OrphanedMemory(BaseModel):
 
 class OrphanedMemoriesResponse(BaseModel):
     """Response model for orphaned memories"""
+
     success: bool = Field(..., description="Whether query completed successfully")
     orphaned_memories: List[OrphanedMemory] = Field(..., description="List of orphaned memories")
     total_orphaned: int = Field(..., description="Total count of orphaned memories")
@@ -505,24 +474,19 @@ class OrphanedMemoriesResponse(BaseModel):
 
 class BulkOperationRequest(BaseModel):
     """Request model for bulk operations"""
+
     operation_type: str = Field(
-        ...,
-        description="Type of bulk operation to perform",
-        regex="^(delete|archive|merge)$"
+        ..., description="Type of bulk operation to perform", regex="^(delete|archive|merge)$"
     )
-    memory_ids: List[str] = Field(
-        ...,
-        description="List of memory IDs to operate on",
-        min_items=1
-    )
+    memory_ids: List[str] = Field(..., description="List of memory IDs to operate on", min_items=1)
     target_memory_id: Optional[str] = Field(
-        None,
-        description="Target memory ID for merge operations"
+        None, description="Target memory ID for merge operations"
     )
 
 
 class BulkOperationResponse(BaseModel):
     """Response model for bulk operations"""
+
     success: bool = Field(..., description="Whether operation completed successfully")
     operation_type: str = Field(..., description="Type of operation performed")
     memory_ids: List[str] = Field(..., description="Memory IDs that were operated on")
@@ -535,6 +499,7 @@ class BulkOperationResponse(BaseModel):
 
 class PreviewMemory(BaseModel):
     """Memory preview for bulk operations"""
+
     memory_id: str = Field(..., description="Memory ID")
     content: str = Field(..., description="Memory content")
     memory_type: str = Field(..., description="Type of memory")
@@ -544,65 +509,75 @@ class PreviewMemory(BaseModel):
 
 class BulkOperationPreview(BaseModel):
     """Preview of bulk operation effects"""
+
     operation_type: str = Field(..., description="Type of operation to be performed")
     total_affected: int = Field(..., description="Total memories that will be affected")
     preview_description: str = Field(..., description="Description of what will happen")
     affected_memories: List[PreviewMemory] = Field(..., description="Details of affected memories")
     merge_target: Optional[PreviewMemory] = Field(None, description="Target memory for merge")
-    will_be_deleted: Optional[List[PreviewMemory]] = Field(None, description="Memories to be deleted in merge")
+    will_be_deleted: Optional[List[PreviewMemory]] = Field(
+        None, description="Memories to be deleted in merge"
+    )
 
 
 class BulkPreviewResponse(BaseModel):
     """Response model for bulk operation preview"""
+
     success: bool = Field(..., description="Whether preview generated successfully")
     operation: BulkOperationPreview = Field(..., description="Preview of the operation")
 
 
 # ---------- Working Memory Models ----------
 
+
 class FocusMode(BaseModel):
     """Focus mode configuration"""
+
     enabled: bool = Field(..., description="Whether focus mode is enabled")
-    focus_keywords: List[str] = Field(default_factory=list, description="Keywords for focus filtering")
+    focus_keywords: List[str] = Field(
+        default_factory=list, description="Keywords for focus filtering"
+    )
 
 
 class PerformanceMetrics(BaseModel):
     """Working memory performance metrics"""
-    avg_relevance_score: float = Field(..., description="Average relevance score across all memories")
+
+    avg_relevance_score: float = Field(
+        ..., description="Average relevance score across all memories"
+    )
     optimization_suggestions: int = Field(..., description="Number of optimization suggestions")
 
 
 class WorkingMemoryStatus(BaseModel):
     """Complete working memory system status"""
+
     initialized: bool = Field(..., description="Whether the system is initialized")
     total_capacity: int = Field(..., description="Maximum memory capacity")
     current_size: int = Field(..., description="Current number of memories in pool")
     utilization_percentage: float = Field(..., description="Percentage of capacity used")
     focus_mode: FocusMode = Field(..., description="Focus mode configuration")
     performance_metrics: PerformanceMetrics = Field(..., description="Performance metrics")
-    category_distribution: Dict[str, int] = Field(default_factory=dict, description="Memory count by category")
+    category_distribution: Dict[str, int] = Field(
+        default_factory=dict, description="Memory count by category"
+    )
     last_optimization: str = Field(..., description="ISO timestamp of last optimization")
     optimization_count: int = Field(..., description="Total number of optimizations performed")
 
 
 class InitializeRequest(BaseModel):
     """Request model for initializing working memory"""
+
     capacity: int = Field(
-        100,
-        ge=10,
-        le=1000,
-        description="Maximum number of memories in working pool"
+        100, ge=10, le=1000, description="Maximum number of memories in working pool"
     )
     focus_threshold: float = Field(
-        0.7,
-        ge=0.0,
-        le=1.0,
-        description="Relevance threshold for focus mode"
+        0.7, ge=0.0, le=1.0, description="Relevance threshold for focus mode"
     )
 
 
 class InitializeResponse(BaseModel):
     """Response model for initialization"""
+
     success: bool = Field(..., description="Whether initialization was successful")
     message: str = Field(..., description="Status message")
     configuration: Dict[str, Any] = Field(..., description="Applied configuration")
@@ -610,6 +585,7 @@ class InitializeResponse(BaseModel):
 
 class MemoryItem(BaseModel):
     """Model for a memory in the working pool"""
+
     memory_id: str = Field(..., description="Unique memory identifier")
     content: str = Field(..., description="Memory content")
     category: str = Field(..., description="Memory category")
@@ -622,19 +598,26 @@ class MemoryItem(BaseModel):
 
 class ActiveMemoriesResponse(BaseModel):
     """Response for active memories query"""
-    memories: List[MemoryItem] = Field(..., description="List of active memories sorted by relevance")
+
+    memories: List[MemoryItem] = Field(
+        ..., description="List of active memories sorted by relevance"
+    )
     total_count: int = Field(..., description="Total number of memories matching criteria")
     focus_active: bool = Field(..., description="Whether focus mode filtering is active")
 
 
 class SetFocusModeRequest(BaseModel):
     """Request to set focus mode"""
+
     enabled: bool = Field(..., description="Enable or disable focus mode")
-    keywords: List[str] = Field(default_factory=list, description="Keywords for focus filtering", max_items=20)
+    keywords: List[str] = Field(
+        default_factory=list, description="Keywords for focus filtering", max_items=20
+    )
 
 
 class OptimizeResponse(BaseModel):
     """Response for optimization operation"""
+
     success: bool = Field(..., description="Whether optimization was successful")
     removed_count: int = Field(..., description="Number of memories removed")
     message: str = Field(..., description="Optimization result message")
@@ -642,8 +625,10 @@ class OptimizeResponse(BaseModel):
 
 # ---------- Performance Profiler Models ----------
 
+
 class PerformanceOverviewStats(BaseModel):
     """Overall performance statistics"""
+
     total_actions: int = Field(..., description="Total number of actions executed")
     active_workflows: int = Field(..., description="Number of unique workflows")
     avg_execution_time: float = Field(..., description="Average execution time in seconds")
@@ -660,6 +645,7 @@ class PerformanceOverviewStats(BaseModel):
 
 class TimelineBucket(BaseModel):
     """Performance metrics for a time bucket"""
+
     time_bucket: str = Field(..., description="Time bucket identifier")
     action_count: int = Field(..., description="Number of actions in this bucket")
     avg_duration: Optional[float] = Field(None, description="Average duration in seconds")
@@ -670,6 +656,7 @@ class TimelineBucket(BaseModel):
 
 class ToolUtilization(BaseModel):
     """Tool utilization metrics"""
+
     tool_name: str = Field(..., description="Name of the tool")
     usage_count: int = Field(..., description="Number of times used")
     avg_duration: Optional[float] = Field(None, description="Average execution duration")
@@ -679,6 +666,7 @@ class ToolUtilization(BaseModel):
 
 class Bottleneck(BaseModel):
     """Performance bottleneck information"""
+
     tool_name: str = Field(..., description="Tool causing the bottleneck")
     workflow_id: Optional[str] = Field(None, description="Associated workflow")
     action_id: str = Field(..., description="Action identifier")
@@ -691,6 +679,7 @@ class Bottleneck(BaseModel):
 
 class PerformanceOverviewResponse(BaseModel):
     """Response model for performance overview"""
+
     overview: PerformanceOverviewStats
     timeline: List[TimelineBucket]
     tool_utilization: List[ToolUtilization]
@@ -701,6 +690,7 @@ class PerformanceOverviewResponse(BaseModel):
 
 class ToolBottleneck(BaseModel):
     """Tool performance bottleneck analysis"""
+
     tool_name: str = Field(..., description="Name of the tool")
     total_calls: int = Field(..., description="Total number of calls")
     avg_duration: float = Field(..., description="Average execution duration")
@@ -714,6 +704,7 @@ class ToolBottleneck(BaseModel):
 
 class WorkflowBottleneck(BaseModel):
     """Workflow performance bottleneck"""
+
     workflow_id: str = Field(..., description="Workflow identifier")
     title: Optional[str] = Field(None, description="Workflow title")
     action_count: int = Field(..., description="Number of actions")
@@ -727,17 +718,21 @@ class WorkflowBottleneck(BaseModel):
 
 class ParallelizationOpportunity(BaseModel):
     """Workflow parallelization opportunity"""
+
     workflow_id: str = Field(..., description="Workflow identifier")
     sequential_actions: int = Field(..., description="Number of sequential actions")
     total_sequential_time: float = Field(..., description="Total sequential execution time")
     actual_elapsed_time: float = Field(..., description="Actual elapsed time")
     potential_time_savings: float = Field(..., description="Potential time savings in seconds")
-    parallelization_efficiency: float = Field(..., description="Current parallelization efficiency percentage")
+    parallelization_efficiency: float = Field(
+        ..., description="Current parallelization efficiency percentage"
+    )
     optimization_score: float = Field(..., description="Optimization potential score (0-10)")
 
 
 class ResourceContention(BaseModel):
     """Resource contention analysis"""
+
     tool_name: str = Field(..., description="Tool name")
     concurrent_usage: int = Field(..., description="Number of concurrent usages")
     avg_duration_under_contention: float = Field(..., description="Average duration when contended")
@@ -745,6 +740,7 @@ class ResourceContention(BaseModel):
 
 class OptimizationRecommendation(BaseModel):
     """Performance optimization recommendation"""
+
     type: str = Field(..., description="Type of optimization")
     priority: str = Field(..., description="Priority level (high, medium, low)")
     title: str = Field(..., description="Recommendation title")
@@ -755,6 +751,7 @@ class OptimizationRecommendation(BaseModel):
 
 class BottleneckAnalysisResponse(BaseModel):
     """Response model for bottleneck analysis"""
+
     tool_bottlenecks: List[ToolBottleneck]
     workflow_bottlenecks: List[WorkflowBottleneck]
     parallelization_opportunities: List[ParallelizationOpportunity]
@@ -766,9 +763,10 @@ class BottleneckAnalysisResponse(BaseModel):
 
 class FlameGraphNode(BaseModel):
     """Model for a flame graph node"""
+
     name: str = Field(..., description="Name of the node (workflow, tool, or action)")
     value: float = Field(..., description="Duration in seconds")
-    children: List['FlameGraphNode'] = Field(default_factory=list, description="Child nodes")
+    children: List["FlameGraphNode"] = Field(default_factory=list, description="Child nodes")
     action_id: Optional[str] = Field(None, description="Action ID if this is an action node")
     status: Optional[str] = Field(None, description="Execution status")
     reasoning: Optional[str] = Field(None, description="Reasoning for the action")
@@ -781,6 +779,7 @@ FlameGraphNode.model_rebuild()  # Needed for recursive model
 
 class CriticalPathAction(BaseModel):
     """Model for a critical path action"""
+
     action_id: str = Field(..., description="Action identifier")
     tool_name: str = Field(..., description="Tool used for the action")
     duration: float = Field(..., description="Duration in seconds")
@@ -790,6 +789,7 @@ class CriticalPathAction(BaseModel):
 
 class WorkflowMetrics(BaseModel):
     """Workflow performance metrics"""
+
     total_actions: int = Field(..., description="Total number of actions in workflow")
     total_cpu_time: float = Field(..., description="Total CPU time (sum of all action durations)")
     wall_clock_time: float = Field(..., description="Total wall clock time from start to end")
@@ -801,22 +801,29 @@ class WorkflowMetrics(BaseModel):
 
 class WorkflowAnalysis(BaseModel):
     """Analysis results for workflow optimization"""
+
     bottleneck_tool: Optional[str] = Field(None, description="Tool causing the main bottleneck")
-    parallelization_potential: float = Field(..., description="Potential time savings through parallelization")
+    parallelization_potential: float = Field(
+        ..., description="Potential time savings through parallelization"
+    )
     optimization_score: float = Field(..., description="Overall optimization score (0-10)")
 
 
 class FlameGraphResponse(BaseModel):
     """Response model for flame graph generation"""
+
     flame_graph: FlameGraphNode = Field(..., description="Hierarchical flame graph data")
     metrics: WorkflowMetrics = Field(..., description="Workflow performance metrics")
-    critical_path: List[CriticalPathAction] = Field(..., description="Critical path through the workflow")
+    critical_path: List[CriticalPathAction] = Field(
+        ..., description="Critical path through the workflow"
+    )
     analysis: WorkflowAnalysis = Field(..., description="Workflow optimization analysis")
     timestamp: str = Field(..., description="Response generation timestamp")
 
 
 class DailyTrend(BaseModel):
     """Model for daily performance metrics"""
+
     date: str = Field(..., description="Date in YYYY-MM-DD format")
     action_count: int = Field(..., description="Number of actions executed")
     avg_duration: Optional[float] = Field(None, description="Average action duration in seconds")
@@ -831,6 +838,7 @@ class DailyTrend(BaseModel):
 
 class ToolTrend(BaseModel):
     """Model for tool-specific performance trends"""
+
     tool_name: str = Field(..., description="Name of the tool")
     date: str = Field(..., description="Date in YYYY-MM-DD format")
     usage_count: int = Field(..., description="Number of times used")
@@ -840,6 +848,7 @@ class ToolTrend(BaseModel):
 
 class WorkflowComplexityTrend(BaseModel):
     """Model for workflow complexity trends"""
+
     date: str = Field(..., description="Date in YYYY-MM-DD format")
     workflow_id: str = Field(..., description="Workflow identifier")
     action_count: int = Field(..., description="Number of actions in workflow")
@@ -849,25 +858,38 @@ class WorkflowComplexityTrend(BaseModel):
 
 class TrendAnalysis(BaseModel):
     """Trend analysis results"""
-    performance_trend: str = Field(..., description="Overall performance trend (improving/degrading/stable/insufficient_data)")
-    success_trend: str = Field(..., description="Success rate trend (improving/degrading/stable/insufficient_data)")
+
+    performance_trend: str = Field(
+        ..., description="Overall performance trend (improving/degrading/stable/insufficient_data)"
+    )
+    success_trend: str = Field(
+        ..., description="Success rate trend (improving/degrading/stable/insufficient_data)"
+    )
     data_points: int = Field(..., description="Number of data points analyzed")
     analysis_period_days: int = Field(..., description="Analysis period in days")
 
 
 class InsightMetrics(BaseModel):
     """Performance insight metrics"""
+
     best_performing_day: Optional[DailyTrend] = Field(None, description="Day with best performance")
-    worst_performing_day: Optional[DailyTrend] = Field(None, description="Day with worst performance")
-    peak_throughput_day: Optional[DailyTrend] = Field(None, description="Day with highest throughput")
+    worst_performing_day: Optional[DailyTrend] = Field(
+        None, description="Day with worst performance"
+    )
+    peak_throughput_day: Optional[DailyTrend] = Field(
+        None, description="Day with highest throughput"
+    )
     avg_daily_actions: float = Field(..., description="Average actions per day")
 
 
 class PerformanceTrendsResponse(BaseModel):
     """Response model for performance trends analysis"""
+
     daily_trends: List[DailyTrend] = Field(..., description="Daily performance metrics")
     tool_trends: List[ToolTrend] = Field(..., description="Tool-specific performance trends")
-    workflow_complexity: List[WorkflowComplexityTrend] = Field(..., description="Workflow complexity trends")
+    workflow_complexity: List[WorkflowComplexityTrend] = Field(
+        ..., description="Workflow complexity trends"
+    )
     trend_analysis: TrendAnalysis = Field(..., description="Overall trend analysis")
     patterns: List[PerformancePattern] = Field(..., description="Detected performance patterns")
     insights: InsightMetrics = Field(..., description="Key performance insights")
@@ -876,74 +898,105 @@ class PerformanceTrendsResponse(BaseModel):
 
 class ImpactEstimate(BaseModel):
     """Model for recommendation impact estimates"""
+
     time_savings_potential: float = Field(..., description="Estimated time savings in seconds")
     affected_actions: int = Field(..., description="Number of actions that would benefit")
     cost_benefit_ratio: float = Field(..., description="Ratio of benefit to implementation cost")
     affected_workflows: Optional[int] = Field(None, description="Number of affected workflows")
-    efficiency_improvement: Optional[float] = Field(None, description="Percentage efficiency improvement")
-    reliability_improvement: Optional[float] = Field(None, description="Percentage reliability improvement")
-    user_experience_impact: Optional[str] = Field(None, description="Impact on user experience (high/medium/low)")
+    efficiency_improvement: Optional[float] = Field(
+        None, description="Percentage efficiency improvement"
+    )
+    reliability_improvement: Optional[float] = Field(
+        None, description="Percentage reliability improvement"
+    )
+    user_experience_impact: Optional[str] = Field(
+        None, description="Impact on user experience (high/medium/low)"
+    )
 
 
 class PerformanceRecommendation(BaseModel):
     """Model for a single performance recommendation"""
+
     id: str = Field(..., description="Unique identifier for the recommendation")
-    type: str = Field(..., description="Type of recommendation (tool_optimization, parallelization, reliability_improvement)")
+    type: str = Field(
+        ...,
+        description="Type of recommendation (tool_optimization, parallelization, reliability_improvement)",
+    )
     priority: str = Field(..., description="Priority level (high, medium, low)")
     title: str = Field(..., description="Brief title of the recommendation")
-    description: str = Field(..., description="Detailed description of the issue and recommendation")
-    impact_estimate: ImpactEstimate = Field(..., description="Estimated impact of implementing this recommendation")
+    description: str = Field(
+        ..., description="Detailed description of the issue and recommendation"
+    )
+    impact_estimate: ImpactEstimate = Field(
+        ..., description="Estimated impact of implementing this recommendation"
+    )
     implementation_steps: List[str] = Field(..., description="Step-by-step implementation guide")
-    estimated_effort: str = Field(..., description="Estimated implementation effort (low, medium, high)")
+    estimated_effort: str = Field(
+        ..., description="Estimated implementation effort (low, medium, high)"
+    )
     prerequisites: List[str] = Field(..., description="Prerequisites for implementation")
     metrics_to_track: List[str] = Field(..., description="Metrics to track after implementation")
 
 
 class RecommendationSummary(BaseModel):
     """Summary statistics for recommendations"""
+
     total_recommendations: int = Field(..., description="Total number of recommendations generated")
     high_priority: int = Field(..., description="Number of high priority recommendations")
     medium_priority: int = Field(..., description="Number of medium priority recommendations")
     low_priority: int = Field(..., description="Number of low priority recommendations")
-    estimated_total_savings: float = Field(..., description="Total estimated time savings in seconds")
+    estimated_total_savings: float = Field(
+        ..., description="Total estimated time savings in seconds"
+    )
     analysis_period_hours: int = Field(..., description="Hours of data analyzed")
 
 
 class ImplementationRoadmap(BaseModel):
     """Categorized implementation roadmap"""
-    quick_wins: List[PerformanceRecommendation] = Field(..., description="Low effort, high impact recommendations")
-    major_improvements: List[PerformanceRecommendation] = Field(..., description="High effort, high impact recommendations")
-    maintenance_tasks: List[PerformanceRecommendation] = Field(..., description="Low priority maintenance recommendations")
+
+    quick_wins: List[PerformanceRecommendation] = Field(
+        ..., description="Low effort, high impact recommendations"
+    )
+    major_improvements: List[PerformanceRecommendation] = Field(
+        ..., description="High effort, high impact recommendations"
+    )
+    maintenance_tasks: List[PerformanceRecommendation] = Field(
+        ..., description="Low priority maintenance recommendations"
+    )
 
 
 class PerformanceRecommendationsResponse(BaseModel):
     """Response model for performance recommendations"""
-    recommendations: List[PerformanceRecommendation] = Field(..., description="List of actionable recommendations")
+
+    recommendations: List[PerformanceRecommendation] = Field(
+        ..., description="List of actionable recommendations"
+    )
     summary: RecommendationSummary = Field(..., description="Summary statistics")
-    implementation_roadmap: ImplementationRoadmap = Field(..., description="Recommendations organized by implementation strategy")
+    implementation_roadmap: ImplementationRoadmap = Field(
+        ..., description="Recommendations organized by implementation strategy"
+    )
     timestamp: str = Field(..., description="ISO timestamp of analysis")
 
 
 # ---------- Workflow Management Models ----------
 
+
 class WorkflowScheduleRequest(BaseModel):
     """Request model for scheduling a workflow"""
+
     scheduled_at: datetime = Field(
         ...,
         description="ISO timestamp for when to execute the workflow",
-        example="2024-01-01T12:00:00Z"
+        example="2024-01-01T12:00:00Z",
     )
     priority: int = Field(
-        default=5,
-        ge=1,
-        le=10,
-        description="Execution priority (1=highest, 10=lowest)",
-        example=3
+        default=5, ge=1, le=10, description="Execution priority (1=highest, 10=lowest)", example=3
     )
 
 
 class ScheduleData(BaseModel):
     """Schedule data for the workflow"""
+
     workflow_id: str = Field(..., description="ID of the scheduled workflow")
     scheduled_at: str = Field(..., description="Scheduled execution time")
     priority: int = Field(..., description="Execution priority")
@@ -953,6 +1006,7 @@ class ScheduleData(BaseModel):
 
 class WorkflowScheduleResponse(BaseModel):
     """Response model for workflow scheduling"""
+
     success: bool = Field(..., description="Whether scheduling was successful")
     schedule_id: str = Field(..., description="Unique identifier for this schedule")
     message: str = Field(..., description="Success or error message")
@@ -961,16 +1015,18 @@ class WorkflowScheduleResponse(BaseModel):
 
 class RestoreStateRequest(BaseModel):
     """Request model for restoring a cognitive state"""
+
     restore_mode: str = Field(
         default="full",
         regex="^(full|partial|snapshot)$",
         description="Type of restoration to perform",
-        example="full"
+        example="full",
     )
 
 
 class RestoreData(BaseModel):
     """Restoration data"""
+
     state_id: str = Field(..., description="ID of the state being restored")
     restore_mode: str = Field(..., description="Restoration mode used")
     restored_at: str = Field(..., description="When the restoration occurred")
@@ -979,6 +1035,7 @@ class RestoreData(BaseModel):
 
 class RestoreStateResponse(BaseModel):
     """Response model for state restoration"""
+
     success: bool = Field(..., description="Whether restoration was successful")
     message: str = Field(..., description="Success or error message")
     restore_data: RestoreData = Field(..., description="Details of the restoration")
@@ -986,18 +1043,22 @@ class RestoreStateResponse(BaseModel):
 
 # ---------- Health Check Models ----------
 
+
 class HealthResponse(BaseModel):
     """Health check response"""
+
     status: str = Field(..., description="Health status indicator", example="ok")
     version: str = Field(..., description="Server version string", example="0.1.0")
 
 
 # ---------- Performance Trends Models ----------
 
+
 class PerformancePattern(BaseModel):
     """Detected performance pattern"""
+
     type: str = Field(..., description="Type of pattern detected")
     description: str = Field(..., description="Description of the pattern")
     impact: str = Field(..., description="Impact level (high/medium/low)")
     recommendation: str = Field(..., description="Recommended action")
-    date: Optional[str] = Field(None, description="Date of occurrence for anomalies") 
+    date: Optional[str] = Field(None, description="Date of occurrence for anomalies")

@@ -233,6 +233,7 @@ _main_task = None
 
 # --- Helper Functions ---
 
+
 # Helper function to extract real URL from search engine redirects
 def _extract_real_url(redirect_url: Optional[str]) -> Optional[str]:
     """Attempts to extract the target URL from common search engine redirect links."""
@@ -246,13 +247,17 @@ def _extract_real_url(redirect_url: Optional[str]) -> Optional[str]:
             if "u" in query_params and query_params["u"]:
                 b64_param_raw = query_params["u"][0]
                 # Clean the parameter: remove potential problematic chars (like null bytes) and whitespace
-                b64_param_cleaned = re.sub(r'[\x00-\x1f\s]+', '', b64_param_raw).strip()
+                b64_param_cleaned = re.sub(r"[\x00-\x1f\s]+", "", b64_param_raw).strip()
                 if not b64_param_cleaned:
-                    logger.warning(f"Bing URL parameter 'u' was empty after cleaning: {b64_param_raw}")
+                    logger.warning(
+                        f"Bing URL parameter 'u' was empty after cleaning: {b64_param_raw}"
+                    )
                     return None
 
                 # Remove Bing's "aX" prefix (where X is a digit) before decoding
-                if b64_param_cleaned.startswith(("a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9")):
+                if b64_param_cleaned.startswith(
+                    ("a0", "a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9")
+                ):
                     b64_param_cleaned = b64_param_cleaned[2:]
                     logger.debug("Removed 'aX' prefix from Bing URL parameter")
 
@@ -263,29 +268,35 @@ def _extract_real_url(redirect_url: Optional[str]) -> Optional[str]:
                         b64_to_decode = b64_param_cleaned
                         missing_padding = len(b64_to_decode) % 4
                         if missing_padding:
-                            b64_to_decode += '=' * (4 - missing_padding)
+                            b64_to_decode += "=" * (4 - missing_padding)
                         decoded_bytes = decoder(b64_to_decode)
                         # If decode succeeded, break the loop
                         break
                     except (base64.binascii.Error, ValueError):
                         # Ignore error here, try next decoder
-                        continue 
+                        continue
 
                 if decoded_bytes is None:
-                    logger.warning(f"Failed to Base64 decode Bing URL parameter after cleaning and padding: {b64_param_cleaned}")
+                    logger.warning(
+                        f"Failed to Base64 decode Bing URL parameter after cleaning and padding: {b64_param_cleaned}"
+                    )
                     return None
 
                 # Now try to decode bytes to string
                 try:
                     # Try strict UTF-8 first
-                    decoded_url = decoded_bytes.decode('utf-8', errors='strict')
+                    decoded_url = decoded_bytes.decode("utf-8", errors="strict")
                 except UnicodeDecodeError:
-                    logger.warning(f"UTF-8 strict decode failed for bytes from {b64_param_cleaned}. Trying errors='replace'.")
+                    logger.warning(
+                        f"UTF-8 strict decode failed for bytes from {b64_param_cleaned}. Trying errors='replace'."
+                    )
                     try:
                         # Fallback with replacement characters
-                        decoded_url = decoded_bytes.decode('utf-8', errors='replace')
+                        decoded_url = decoded_bytes.decode("utf-8", errors="replace")
                     except Exception as final_decode_err:
-                        logger.error(f"Final string decode failed even with replace: {final_decode_err}")
+                        logger.error(
+                            f"Final string decode failed even with replace: {final_decode_err}"
+                        )
                         return None
 
                 # Final validation: Does it look like a URL?
@@ -293,20 +304,22 @@ def _extract_real_url(redirect_url: Optional[str]) -> Optional[str]:
                     logger.debug(f"Successfully decoded Bing URL: {decoded_url}")
                     return decoded_url
                 else:
-                    logger.warning(f"Decoded string doesn't look like a valid URL: '{decoded_url[:100]}...'")
+                    logger.warning(
+                        f"Decoded string doesn't look like a valid URL: '{decoded_url[:100]}...'"
+                    )
                     return None
 
         # Google uses 'url=' (less common now, but maybe?)
         elif "google.com" in parsed_url.netloc:
             query_params = parse_qs(parsed_url.query)
             if "url" in query_params and query_params["url"]:
-                 google_url = unquote_plus(query_params["url"][0])
-                 # Validate Google URL as well
-                 if google_url and google_url.startswith("http"):
-                     return google_url
-                 else:
-                     logger.warning(f"Extracted Google URL param is invalid: {google_url}")
-                     return None
+                google_url = unquote_plus(query_params["url"][0])
+                # Validate Google URL as well
+                if google_url and google_url.startswith("http"):
+                    return google_url
+                else:
+                    logger.warning(f"Extracted Google URL param is invalid: {google_url}")
+                    return None
 
         # If no known redirect pattern, return the original URL if it looks valid
         if redirect_url.startswith("http"):
@@ -319,7 +332,9 @@ def _extract_real_url(redirect_url: Optional[str]) -> Optional[str]:
 
     except Exception as e:
         # If parsing fails for any reason, return None
-        logger.warning(f"Error parsing or processing redirect URL {redirect_url}: {e}", exc_info=True)
+        logger.warning(
+            f"Error parsing or processing redirect URL {redirect_url}: {e}", exc_info=True
+        )
         return None
 
 
@@ -329,6 +344,7 @@ def with_current_db_path(params: dict) -> dict:
     if _current_db_path and "db_path" not in params:
         params["db_path"] = _current_db_path
     return params
+
 
 # Helper function to extract ID from result or generate fallback
 def extract_id_or_fallback(result, id_key="workflow_id", fallback_id=None):
@@ -340,7 +356,7 @@ def extract_id_or_fallback(result, id_key="workflow_id", fallback_id=None):
             )
             return fallback_id
         return None
-    
+
     # Try common access patterns
     if isinstance(result.get("result"), dict) and id_key in result["result"]:
         return result["result"][id_key]
@@ -349,24 +365,26 @@ def extract_id_or_fallback(result, id_key="workflow_id", fallback_id=None):
     elif id_key in str(result):
         # Try regex extraction
         import re
+
         pattern = f"['\"]({id_key})['\"]:\\s*['\"]([0-9a-f-]+)['\"]"
         match = re.search(pattern, str(result))
         if match:
             return match.group(2)
-    
+
     # Fallback to provided UUID
     if fallback_id:
         console.print(
             f"[bold yellow]Warning: Could not extract {id_key}, using fallback ID[/bold yellow]"
         )
         return fallback_id
-    
+
     # Generate new UUID as last resort
     new_uuid = str(uuid.uuid4())
     console.print(
         f"[bold yellow]Warning: Could not extract {id_key}, generated new UUID: {new_uuid}[/bold yellow]"
     )
     return new_uuid
+
 
 # Helper function to extract action_id - defined here before it's ever used
 def _get_action_id_from_response(action_start_response):
@@ -378,7 +396,7 @@ def _get_action_id_from_response(action_start_response):
             f"[yellow]Warning: action_start_response is None, using fallback: {fallback_id}[/yellow]"
         )
         return fallback_id
-    
+
     action_id = None
     if isinstance(action_start_response, dict):
         # Try direct access
@@ -389,7 +407,6 @@ def _get_action_id_from_response(action_start_response):
         # Try from result
         if not action_id and isinstance(action_start_response.get("result"), dict):
             action_id = action_start_response["result"].get("action_id")
-    
 
     # Fallback UUID if action_id is still missing
     if not action_id:
@@ -484,17 +501,19 @@ async def cleanup_demo():
     global _cleanup_done
     if _cleanup_done:
         return
-    
+
     logger.info("Starting demo cleanup...")
-    
+
     try:
         # Use a shorter timeout - helps prevent hanging
         await asyncio.wait_for(_do_cleanup(), timeout=4.0)
         logger.info("Cleanup completed successfully within timeout")
     except asyncio.TimeoutError:
         logger.warning("Cleanup timed out after 4 seconds")
-        console.print("[bold yellow]Cleanup timed out. Some resources may not be properly released.[/bold yellow]")
-        
+        console.print(
+            "[bold yellow]Cleanup timed out. Some resources may not be properly released.[/bold yellow]"
+        )
+
         # Last resort effort to close the DB
         try:
             await DBConnection.close_connection()
@@ -622,7 +641,7 @@ async def run_scenario_1_investor_relations():
     pdf_artifact_id = None
     md_artifact_id = None
     analysis_artifact_id = None
-    llm_provider, llm_model = await _get_llm_config("InvestorRelations") # Get LLM config early
+    llm_provider, llm_model = await _get_llm_config("InvestorRelations")  # Get LLM config early
 
     company_name = "Apple"
     ticker = "AAPL"
@@ -701,16 +720,22 @@ async def run_scenario_1_investor_relations():
             real_url = _extract_real_url(redirect_link)
             if real_url:
                 potential_ir_urls.append(
-                    {"title": result.get("title"), "snippet": result.get("snippet"), "url": real_url}
+                    {
+                        "title": result.get("title"),
+                        "snippet": result.get("snippet"),
+                        "url": real_url,
+                    }
                 )
                 # Check if the *real* URL matches
                 if "investor.apple.com" in real_url.lower():
                     ir_url = real_url
-                    break # Found the likely target
+                    break  # Found the likely target
 
         # Fallback if simple check fails: Use LLM to pick the best URL
         if not ir_url and potential_ir_urls:
-            console.print("[yellow]   -> Direct URL match failed, asking LLM to choose best IR URL...[/yellow]")
+            console.print(
+                "[yellow]   -> Direct URL match failed, asking LLM to choose best IR URL...[/yellow]"
+            )
             url_options_str = json.dumps(potential_ir_urls, indent=2)
             pick_url_prompt = f"""From the following search results, choose the SINGLE most likely OFFICIAL Investor Relations homepage URL for {company_name}. Respond ONLY with the chosen URL.
 Search Results:
@@ -733,14 +758,16 @@ Chosen URL:"""
                 chosen_url_raw = llm_pick_res.get("message", {}).get("content", "").strip()
                 # Basic validation
                 if chosen_url_raw.startswith("http"):
-                   ir_url = chosen_url_raw
+                    ir_url = chosen_url_raw
                 else:
-                   logger.warning(f"LLM returned non-URL: {chosen_url_raw}")
+                    logger.warning(f"LLM returned non-URL: {chosen_url_raw}")
 
         # Final fallback: use the first extracted URL
         if not ir_url and potential_ir_urls:
             ir_url = potential_ir_urls[0]["url"]
-            console.print(f"[yellow]   -> LLM fallback failed or skipped, using first extracted URL: {ir_url}[/yellow]")
+            console.print(
+                f"[yellow]   -> LLM fallback failed or skipped, using first extracted URL: {ir_url}[/yellow]"
+            )
 
         assert ir_url, "Could not determine IR URL even with fallbacks"
         console.print(f"[cyan]   -> Identified IR URL:[/cyan] {ir_url}")
@@ -764,23 +791,27 @@ Chosen URL:"""
         # --- 3. Browse IR Page (Initial) ---
         action_browse_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.RESEARCH.value,
-                "title": "Browse IR Page",
-                "reasoning": "Access content.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.RESEARCH.value,
+                    "title": "Browse IR Page",
+                    "reasoning": "Access content.",
+                }
+            ),
             "Start: Browse IR Page",
         )
         browse_res = await safe_tool_call(browse, {"url": ir_url}, "Execute: Browse Initial IR URL")
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_browse_start),
-                "status": ActionStatus.COMPLETED.value,
-                "tool_result": {"page_title": browse_res.get("page_state", {}).get("title")},
-                "summary": "Initial IR page browsed.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_browse_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "tool_result": {"page_title": browse_res.get("page_state", {}).get("title")},
+                    "summary": "Initial IR page browsed.",
+                }
+            ),
             "Complete: Browse IR Page",
         )
         assert browse_res and browse_res.get("success"), f"Failed to browse {ir_url}"
@@ -963,23 +994,27 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
 
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_find_link_start),
-                "status": ActionStatus.COMPLETED.value,
-                "summary": f"Identified download hint: {download_target_hint}",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_find_link_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "summary": f"Identified download hint: {download_target_hint}",
+                }
+            ),
             "Complete: Find Presentation Link",
         )
         mem_res = await safe_tool_call(
             store_memory,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "memory_type": MemoryType.FACT.value,
-                "content": f"Presentation download hint: '{download_target_hint}' on page {presentation_page_url}",
-                "description": "Presentation Download Target Found",
-                "importance": 8.0,
-                "action_id": _get_action_id_from_response(action_find_link_start),
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "memory_type": MemoryType.FACT.value,
+                    "content": f"Presentation download hint: '{download_target_hint}' on page {presentation_page_url}",
+                    "description": "Presentation Download Target Found",
+                    "importance": 8.0,
+                    "action_id": _get_action_id_from_response(action_find_link_start),
+                }
+            ),
             "Store Download Hint Memory",
         )
         link_mem_id = mem_res.get("memory_id") if mem_res.get("success") else None  # noqa: F841
@@ -987,32 +1022,38 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         # --- 5. Download Presentation ---
         action_download_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.TOOL_USE.value,
-                "title": "Download Presentation PDF",
-                "tool_name": "download_via_click",
-                "reasoning": f"Download using hint: {download_target_hint}",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.TOOL_USE.value,
+                    "title": "Download Presentation PDF",
+                    "tool_name": "download_via_click",
+                    "reasoning": f"Download using hint: {download_target_hint}",
+                }
+            ),
             "Start: Download PDF",
         )
         download_res = await safe_tool_call(
             download_via_click,
-            with_current_db_path({
-                "url": presentation_page_url,
-                "task_hint": download_target_hint,
-                "dest_dir": IR_DOWNLOAD_DIR_REL,
-            }),
+            with_current_db_path(
+                {
+                    "url": presentation_page_url,
+                    "task_hint": download_target_hint,
+                    "dest_dir": IR_DOWNLOAD_DIR_REL,
+                }
+            ),
             f"Execute: Download '{download_target_hint}'",
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_download_start),
-                "status": ActionStatus.COMPLETED.value,
-                "tool_result": download_res,
-                "summary": "Attempted PDF download.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_download_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "tool_result": download_res,
+                    "summary": "Attempted PDF download.",
+                }
+            ),
             "Complete: Download PDF",
         )
         assert download_res and download_res.get("success"), "Download failed"
@@ -1023,14 +1064,16 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         console.print(f"[cyan]   -> PDF downloaded to:[/cyan] {downloaded_pdf_path_abs}")
         art_res = await safe_tool_call(
             record_artifact,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_id": download_action_id,
-                "name": Path(downloaded_pdf_path_abs).name,
-                "artifact_type": ArtifactType.FILE.value,
-                "path": downloaded_pdf_path_abs,
-                "metadata": {"source_url": presentation_page_url},
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_id": download_action_id,
+                    "name": Path(downloaded_pdf_path_abs).name,
+                    "artifact_type": ArtifactType.FILE.value,
+                    "path": downloaded_pdf_path_abs,
+                    "metadata": {"source_url": presentation_page_url},
+                }
+            ),
             "Record Downloaded PDF Artifact",
         )
         pdf_artifact_id = art_res.get("artifact_id") if art_res.get("success") else None
@@ -1040,34 +1083,40 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         markdown_rel_path = f"{IR_MARKDOWN_DIR_REL}/{markdown_filename}"
         action_convert_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.TOOL_USE.value,
-                "title": "Convert PDF to Markdown",
-                "tool_name": "convert_document",
-                "reasoning": "Need text format for analysis.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.TOOL_USE.value,
+                    "title": "Convert PDF to Markdown",
+                    "tool_name": "convert_document",
+                    "reasoning": "Need text format for analysis.",
+                }
+            ),
             "Start: Convert PDF",
         )
         convert_res = await safe_tool_call(
             convert_document,
-            with_current_db_path({
-                "document_path": downloaded_pdf_path_abs,
-                "output_format": "markdown",
-                "output_path": markdown_rel_path,
-                "save_to_file": True,
-                "enhance_with_llm": False,
-            }),
+            with_current_db_path(
+                {
+                    "document_path": downloaded_pdf_path_abs,
+                    "output_format": "markdown",
+                    "output_path": markdown_rel_path,
+                    "save_to_file": True,
+                    "enhance_with_llm": False,
+                }
+            ),
             "Execute: Convert Downloaded PDF to Markdown",
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_convert_start),
-                "status": ActionStatus.COMPLETED.value,
-                "tool_result": convert_res,
-                "summary": "Converted PDF to markdown.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_convert_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "tool_result": convert_res,
+                    "summary": "Converted PDF to markdown.",
+                }
+            ),
             "Complete: Convert PDF",
         )
         assert convert_res and convert_res.get("success"), "PDF Conversion failed"
@@ -1078,20 +1127,26 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         convert_action_id = _get_action_id_from_response(action_convert_start)
         art_res = await safe_tool_call(
             record_artifact,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_id": convert_action_id,
-                "name": Path(converted_md_path_abs).name,
-                "artifact_type": ArtifactType.FILE.value,
-                "path": converted_md_path_abs,
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_id": convert_action_id,
+                    "name": Path(converted_md_path_abs).name,
+                    "artifact_type": ArtifactType.FILE.value,
+                    "path": converted_md_path_abs,
+                }
+            ),
             "Record Markdown Artifact",
         )
         md_artifact_id = art_res.get("artifact_id") if art_res.get("success") else None
         if pdf_artifact_id and md_artifact_id:
             # Check that we're linking memory IDs, not artifact IDs
-            if isinstance(pdf_artifact_id, str) and pdf_artifact_id.startswith("mem_") and \
-               isinstance(md_artifact_id, str) and md_artifact_id.startswith("mem_"):
+            if (
+                isinstance(pdf_artifact_id, str)
+                and pdf_artifact_id.startswith("mem_")
+                and isinstance(md_artifact_id, str)
+                and md_artifact_id.startswith("mem_")
+            ):
                 await safe_tool_call(
                     create_memory_link,
                     with_current_db_path(
@@ -1104,7 +1159,9 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
                     "Link MD Artifact to PDF Artifact",
                 )
             else:
-                logger.warning(f"Skipping memory link: IDs do not appear to be memory IDs - pdf:{pdf_artifact_id}, md:{md_artifact_id}")
+                logger.warning(
+                    f"Skipping memory link: IDs do not appear to be memory IDs - pdf:{pdf_artifact_id}, md:{md_artifact_id}"
+                )
         if download_action_id and convert_action_id:
             await safe_tool_call(
                 add_action_dependency,
@@ -1122,13 +1179,15 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         markdown_path_for_rg = Path(converted_md_path_abs).relative_to(PROJECT_ROOT)
         action_extract_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.TOOL_USE.value,
-                "title": "Extract Financial Figures (Ripgrep)",
-                "tool_name": "run_ripgrep",
-                "reasoning": "Find revenue and net income numbers using regex.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.TOOL_USE.value,
+                    "title": "Extract Financial Figures (Ripgrep)",
+                    "tool_name": "run_ripgrep",
+                    "reasoning": "Find revenue and net income numbers using regex.",
+                }
+            ),
             "Start: Ripgrep Extract Financials",
         )
         revenue_pattern_rg = r"Revenue[^$]*\$(\d[\d,]*(?:\.\d+)?)(?:\s*([BM]))?"
@@ -1184,12 +1243,14 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         extraction_summary = f"Ripgrep found: Rev='{revenue_text.strip()}', NI='{net_income_text.strip()}'. Parsed: Rev={extracted_revenue}, NI={extracted_net_income}"
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_extract_start),
-                "status": ActionStatus.COMPLETED.value,
-                "tool_result": {"revenue_res": revenue_res, "ni_res": net_income_res},
-                "summary": extraction_summary,
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_extract_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "tool_result": {"revenue_res": revenue_res, "ni_res": net_income_res},
+                    "summary": extraction_summary,
+                }
+            ),
             "Complete: Extract Financials",
         )
         extract_action_id = _get_action_id_from_response(action_extract_start)
@@ -1197,14 +1258,16 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
         console.print(f"[cyan]   -> Extracted Net Income Value:[/cyan] {extracted_net_income}")
         mem_res = await safe_tool_call(
             store_memory,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "memory_type": MemoryType.FACT.value,
-                "content": extraction_summary,
-                "description": "Extracted Financial Data (Ripgrep)",
-                "importance": 7.5,
-                "action_id": extract_action_id,
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "memory_type": MemoryType.FACT.value,
+                    "content": extraction_summary,
+                    "description": "Extracted Financial Data (Ripgrep)",
+                    "importance": 7.5,
+                    "action_id": extract_action_id,
+                }
+            ),
             "Store Financial Fact Memory",
         )
         extract_mem_id = (
@@ -1228,20 +1291,24 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
             console.print(Rule("Running Pandas Analysis in Sandbox", style="cyan"))
             action_analyze_start = await safe_tool_call(
                 record_action_start,
-                with_current_db_path({
-                    "workflow_id": wf_id,
-                    "action_type": ActionType.TOOL_USE.value,
-                    "title": "Calculate Profit Margin (Pandas)",
-                    "tool_name": "execute_python",
-                    "reasoning": "Use pandas and sandbox to calculate net profit margin from extracted figures.",
-                }),
+                with_current_db_path(
+                    {
+                        "workflow_id": wf_id,
+                        "action_type": ActionType.TOOL_USE.value,
+                        "title": "Calculate Profit Margin (Pandas)",
+                        "tool_name": "execute_python",
+                        "reasoning": "Use pandas and sandbox to calculate net profit margin from extracted figures.",
+                    }
+                ),
                 "Start: Pandas Analysis",
             )
             analyze_action_id = _get_action_id_from_response(action_analyze_start)
             python_code = f"""import pandas as pd; import json; revenue = {extracted_revenue}; net_income = {extracted_net_income}; data = pd.Series({{'Revenue': revenue, 'NetIncome': net_income}}, dtype=float); print("--- Input Data ---\\n{{data}}\\n----------------"); margin = (data['NetIncome'] / data['Revenue']) * 100 if pd.notna(data['Revenue']) and data['Revenue'] != 0 and pd.notna(data['NetIncome']) else None; print(f"Net Profit Margin: {{margin:.2f}}%" if margin is not None else "Cannot calculate margin."); result = {{"revenue_usd": data['Revenue'] if pd.notna(data['Revenue']) else None, "net_income_usd": data['NetIncome'] if pd.notna(data['NetIncome']) else None, "net_profit_margin_pct": margin}}"""
             analysis_res = await safe_tool_call(
                 execute_python,
-                with_current_db_path({"code": python_code, "packages": ["pandas"], "timeout_ms": 15000}),
+                with_current_db_path(
+                    {"code": python_code, "packages": ["pandas"], "timeout_ms": 15000}
+                ),
                 "Execute: Pandas Margin Calculation",
             )
             # Import display_sandbox_result locally or define it
@@ -1258,12 +1325,14 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
             )
             await safe_tool_call(
                 record_action_completion,
-                with_current_db_path({
-                    "action_id": analyze_action_id,
-                    "status": ActionStatus.COMPLETED.value,
-                    "tool_result": final_analysis_result,
-                    "summary": analysis_summary,
-                }),
+                with_current_db_path(
+                    {
+                        "action_id": analyze_action_id,
+                        "status": ActionStatus.COMPLETED.value,
+                        "tool_result": final_analysis_result,
+                        "summary": analysis_summary,
+                    }
+                ),
                 "Complete: Pandas Analysis",
             )
             if (
@@ -1273,13 +1342,15 @@ Respond ONLY with JSON: `{{"action": "...", "args": {{...}}}}` (e.g., `{{"action
             ):
                 art_res = await safe_tool_call(
                     record_artifact,
-                    with_current_db_path({
-                        "workflow_id": wf_id,
-                        "action_id": analyze_action_id,
-                        "name": "financial_analysis.json",
-                        "artifact_type": ArtifactType.JSON.value,
-                        "content": json.dumps(final_analysis_result),
-                    }),
+                    with_current_db_path(
+                        {
+                            "workflow_id": wf_id,
+                            "action_id": analyze_action_id,
+                            "name": "financial_analysis.json",
+                            "artifact_type": ArtifactType.JSON.value,
+                            "content": json.dumps(final_analysis_result),
+                        }
+                    ),
                     "Record Analysis Result Artifact",
                 )
                 analysis_artifact_id = (
@@ -1499,12 +1570,14 @@ async def run_scenario_2_web_research():
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_search_start),
-                "status": ActionStatus.COMPLETED.value,
-                "tool_result": search_res,
-                "summary": f"Found {len(search_res.get('result', {}).get('results', []))} search results.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_search_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "tool_result": search_res,
+                    "summary": f"Found {len(search_res.get('result', {}).get('results', []))} search results.",
+                }
+            ),
             "Complete: Web Search",
         )
         assert search_res and search_res.get("success"), "Web search failed"
@@ -1528,81 +1601,104 @@ async def run_scenario_2_web_research():
                 continue
 
             console.print(
-                Rule(f"Processing Result {i + 1}/{max_results_to_process}: {title} ({url})", style="cyan")
+                Rule(
+                    f"Processing Result {i + 1}/{max_results_to_process}: {title} ({url})",
+                    style="cyan",
+                )
             )
 
             # Fix: Add try/except around browse and summarize
             try:
                 action_browse_start = await safe_tool_call(
                     record_action_start,
-                    with_current_db_path({
-                        "workflow_id": wf_id,
-                        "action_type": ActionType.RESEARCH.value,
-                        "title": f"Browse: {title}",
-                        "reasoning": f"Access content from {url}.", # Include real URL
-                    }),
+                    with_current_db_path(
+                        {
+                            "workflow_id": wf_id,
+                            "action_type": ActionType.RESEARCH.value,
+                            "title": f"Browse: {title}",
+                            "reasoning": f"Access content from {url}.",  # Include real URL
+                        }
+                    ),
                     f"Start: Browse {i + 1}",
                 )
-                browse_res = await safe_tool_call(browse, {"url": url}, f"Execute: Browse URL {i + 1}")
+                browse_res = await safe_tool_call(
+                    browse, {"url": url}, f"Execute: Browse URL {i + 1}"
+                )
                 browse_action_id = _get_action_id_from_response(action_browse_start)
                 await safe_tool_call(
                     record_action_completion,
-                    with_current_db_path({
-                        "action_id": browse_action_id,
-                        "status": ActionStatus.COMPLETED.value
-                        if browse_res.get("success")
-                        else ActionStatus.FAILED.value,
-                        "tool_result": {"page_title": browse_res.get("page_state", {}).get("title")},
-                        "summary": "Page browsed.",
-                    }),
+                    with_current_db_path(
+                        {
+                            "action_id": browse_action_id,
+                            "status": ActionStatus.COMPLETED.value
+                            if browse_res.get("success")
+                            else ActionStatus.FAILED.value,
+                            "tool_result": {
+                                "page_title": browse_res.get("page_state", {}).get("title")
+                            },
+                            "summary": "Page browsed.",
+                        }
+                    ),
                     f"Complete: Browse {i + 1}",
                 )
                 if not browse_res or not browse_res.get("success"):
-                    raise ToolError(f"Failed browse {url}", error_code="BROWSE_FAILED") # Raise to be caught
+                    raise ToolError(
+                        f"Failed browse {url}", error_code="BROWSE_FAILED"
+                    )  # Raise to be caught
 
                 page_state = browse_res.get("page_state")
                 page_content = page_state.get("main_text", "") if page_state else ""
                 # Fix: Check if content was actually extracted
                 if not page_content:
                     logger.warning(f"No main text extracted from {url}")
-                    continue # Skip summarization if no text
+                    continue  # Skip summarization if no text
 
                 action_summarize_start = await safe_tool_call(
                     record_action_start,
-                    with_current_db_path({
-                        "workflow_id": wf_id,
-                        "action_type": ActionType.ANALYSIS.value,
-                        "title": f"Summarize: {title}",
-                        "reasoning": "Extract key points.",
-                    }),
+                    with_current_db_path(
+                        {
+                            "workflow_id": wf_id,
+                            "action_type": ActionType.ANALYSIS.value,
+                            "title": f"Summarize: {title}",
+                            "reasoning": "Extract key points.",
+                        }
+                    ),
                     f"Start: Summarize {i + 1}",
                 )
                 summary_res = await safe_tool_call(
                     summarize_text,
-                    with_current_db_path({
-                        "text_to_summarize": page_content,
-                        "target_tokens": 250,
-                        "workflow_id": wf_id,
-                        "record_summary": True,
-                        # Add source URL to summary metadata
-                        "metadata": {"source_url": url}
-                    }),
+                    with_current_db_path(
+                        {
+                            "text_to_summarize": page_content,
+                            "target_tokens": 250,
+                            "workflow_id": wf_id,
+                            "record_summary": True,
+                            # Add source URL to summary metadata
+                            "metadata": {"source_url": url},
+                        }
+                    ),
                     f"Execute: Summarize {i + 1}",
                 )
                 summarize_action_id = _get_action_id_from_response(action_summarize_start)
                 await safe_tool_call(
                     record_action_completion,
-                    with_current_db_path({
-                        "action_id": summarize_action_id,
-                        "status": ActionStatus.COMPLETED.value
-                        if summary_res.get("success")
-                        else ActionStatus.FAILED.value,
-                        "tool_result": summary_res,
-                        "summary": "Content summarized.",
-                    }),
+                    with_current_db_path(
+                        {
+                            "action_id": summarize_action_id,
+                            "status": ActionStatus.COMPLETED.value
+                            if summary_res.get("success")
+                            else ActionStatus.FAILED.value,
+                            "tool_result": summary_res,
+                            "summary": "Content summarized.",
+                        }
+                    ),
                     f"Complete: Summarize {i + 1}",
                 )
-                if summary_res and summary_res.get("success") and summary_res.get("stored_memory_id"):
+                if (
+                    summary_res
+                    and summary_res.get("success")
+                    and summary_res.get("stored_memory_id")
+                ):
                     summary_mem_id = summary_res["stored_memory_id"]
                     collected_summaries_mem_ids.append(summary_mem_id)
                     if browse_action_id:
@@ -1612,33 +1708,47 @@ async def run_scenario_2_web_research():
                                 {
                                     # Link the summary memory to the browse action's *log* memory
                                     "source_memory_id": summary_mem_id,
-                                    "target_memory_id": (await get_action_details(with_current_db_path({"action_id": browse_action_id}))).get("actions", [{}])[0].get("linked_memory_id"),
+                                    "target_memory_id": (
+                                        await get_action_details(
+                                            with_current_db_path({"action_id": browse_action_id})
+                                        )
+                                    )
+                                    .get("actions", [{}])[0]
+                                    .get("linked_memory_id"),
                                     "link_type": LinkType.DERIVED_FROM.value,
                                 }
                             ),
-                            "Link Summary Memory to Browse Action Log Memory", # Clarify link target
+                            "Link Summary Memory to Browse Action Log Memory",  # Clarify link target
                         )
             except ToolError as e:
                 logger.warning(f"Skipping result {i + 1} due to ToolError: {e}")
-                console.print(f"[yellow]   -> Skipped processing result {i + 1} due to error: {e}[/yellow]")
+                console.print(
+                    f"[yellow]   -> Skipped processing result {i + 1} due to error: {e}[/yellow]"
+                )
                 # Ensure action completion is recorded even on error within the loop
                 failed_action_id = None
-                if 'action_browse_start' in locals() and _get_action_id_from_response(action_browse_start):
-                     failed_action_id = _get_action_id_from_response(action_browse_start)
-                elif 'action_summarize_start' in locals() and _get_action_id_from_response(action_summarize_start):
-                     failed_action_id = _get_action_id_from_response(action_summarize_start)
+                if "action_browse_start" in locals() and _get_action_id_from_response(
+                    action_browse_start
+                ):
+                    failed_action_id = _get_action_id_from_response(action_browse_start)
+                elif "action_summarize_start" in locals() and _get_action_id_from_response(
+                    action_summarize_start
+                ):
+                    failed_action_id = _get_action_id_from_response(action_summarize_start)
 
                 if failed_action_id:
-                     await safe_tool_call(
-                         record_action_completion,
-                         with_current_db_path({
-                             "action_id": failed_action_id,
-                             "status": ActionStatus.FAILED.value,
-                             "summary": f"Failed due to: {e}",
-                         }),
-                         f"Record Failure for Action {failed_action_id[:8]}",
-                     )
-                continue # Move to the next search result
+                    await safe_tool_call(
+                        record_action_completion,
+                        with_current_db_path(
+                            {
+                                "action_id": failed_action_id,
+                                "status": ActionStatus.FAILED.value,
+                                "summary": f"Failed due to: {e}",
+                            }
+                        ),
+                        f"Record Failure for Action {failed_action_id[:8]}",
+                    )
+                continue  # Move to the next search result
 
         # --- 5. Consolidate Findings ---
         all_ids_to_consolidate = list(set(collected_summaries_mem_ids + initial_mem_ids))
@@ -1656,22 +1766,26 @@ async def run_scenario_2_web_research():
             )
             consolidation_res = await safe_tool_call(
                 consolidate_memories,
-                with_current_db_path({
-                    "workflow_id": wf_id,
-                    "target_memories": all_ids_to_consolidate,
-                    "consolidation_type": "insight",
-                    "store_result": True,
-                }),
+                with_current_db_path(
+                    {
+                        "workflow_id": wf_id,
+                        "target_memories": all_ids_to_consolidate,
+                        "consolidation_type": "insight",
+                        "store_result": True,
+                    }
+                ),
                 "Execute: Consolidate Insights",
             )
             await safe_tool_call(
                 record_action_completion,
-                with_current_db_path({
-                    "action_id": _get_action_id_from_response(action_consolidate_start),
-                    "status": ActionStatus.COMPLETED.value,
-                    "tool_result": consolidation_res,
-                    "summary": "Consolidated insights stored.",
-                }),
+                with_current_db_path(
+                    {
+                        "action_id": _get_action_id_from_response(action_consolidate_start),
+                        "status": ActionStatus.COMPLETED.value,
+                        "tool_result": consolidation_res,
+                        "summary": "Consolidated insights stored.",
+                    }
+                ),
                 "Complete: Consolidate",
             )
             if (
@@ -1705,12 +1819,14 @@ async def run_scenario_2_web_research():
         # --- 6. Save State & Demonstrate Working Memory ---
         action_save_state_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.MEMORY_OPERATION.value,
-                "title": "Save Cognitive State",
-                "reasoning": "Checkpoint before final report.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.MEMORY_OPERATION.value,
+                    "title": "Save Cognitive State",
+                    "reasoning": "Checkpoint before final report.",
+                }
+            ),
             "Start: Save State",
         )
         current_wm_ids = collected_summaries_mem_ids + (
@@ -1719,7 +1835,9 @@ async def run_scenario_2_web_research():
         # Note: MemoryType.GOAL doesn't exist in the enum, so use a general query instead
         current_goal_mem = await safe_tool_call(
             query_memories,
-            with_current_db_path({"workflow_id": wf_id, "memory_type": MemoryType.FACT.value, "limit": 1}),
+            with_current_db_path(
+                {"workflow_id": wf_id, "memory_type": MemoryType.FACT.value, "limit": 1}
+            ),
             "Fetch Goal Memory",
         )  # Use FACT instead of GOAL which isn't in the enum
         goal_mem_id = (
@@ -1729,25 +1847,33 @@ async def run_scenario_2_web_research():
         )
         save_res = await safe_tool_call(
             save_cognitive_state,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "title": "After Research Consolidation",
-                "working_memory_ids": current_wm_ids,
-                "focus_area_ids": [consolidation_mem_id] if consolidation_mem_id else [],
-                "current_goal_thought_ids": [goal_mem_id] if goal_mem_id else [],
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "title": "After Research Consolidation",
+                    "working_memory_ids": current_wm_ids,
+                    "focus_area_ids": [consolidation_mem_id] if consolidation_mem_id else [],
+                    "current_goal_thought_ids": [goal_mem_id] if goal_mem_id else [],
+                }
+            ),
             "Execute: Save Cognitive State",
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_save_state_start),
-                "status": ActionStatus.COMPLETED.value,
-                "summary": "Saved state.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_save_state_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "summary": "Saved state.",
+                }
+            ),
             "Complete: Save State",
         )
-        state_id = extract_id_or_fallback(save_res, "state_id") if save_res and save_res.get("success") else None
+        state_id = (
+            extract_id_or_fallback(save_res, "state_id")
+            if save_res and save_res.get("success")
+            else None
+        )
 
         if state_id:
             # Get working memory for the saved state
@@ -1952,11 +2078,13 @@ if __name__ == "__main__":
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_read_start),
-                "status": ActionStatus.COMPLETED.value,
-                "summary": "Read code.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_read_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "summary": "Read code.",
+                }
+            ),
             "Complete: Read Code",
         )
         assert read_res and read_res.get("success"), "Failed to read code"
@@ -2048,13 +2176,15 @@ result = {
 """
         action_test1_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.TOOL_USE.value,
-                "title": "Test Original Code",
-                "tool_name": "execute_python",
-                "reasoning": "Verify bug.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.TOOL_USE.value,
+                    "title": "Test Original Code",
+                    "tool_name": "execute_python",
+                    "reasoning": "Verify bug.",
+                }
+            ),
             "Start: Test Original",
         )
         test1_res = await safe_tool_call(
@@ -2065,55 +2195,63 @@ result = {
         test1_sandbox_res = test1_res.get("result", {})
         test1_exec_res = test1_sandbox_res.get("result", {})
         test1_error_msg = (
-            test1_exec_res.get("exception", "") or 
-            test1_exec_res.get("error", "") or
-            test1_sandbox_res.get("stderr", "")
+            test1_exec_res.get("exception", "")
+            or test1_exec_res.get("error", "")
+            or test1_sandbox_res.get("stderr", "")
         )
-        
+
         # We need better error detection - we're looking for TypeError specifically
-        expected_error = "TypeError" in str(test1_error_msg) or "cannot concatenate" in str(test1_error_msg)
-        
+        expected_error = "TypeError" in str(test1_error_msg) or "cannot concatenate" in str(
+            test1_error_msg
+        )
+
         # If we had any kind of error, consider it success for this test
         # The bug is in the original code, so any error means we're on the right track
         if not expected_error and test1_error_msg:
-            console.print(f"[yellow]Warning: Got error but not TypeError: {test1_error_msg}[/yellow]")
+            console.print(
+                f"[yellow]Warning: Got error but not TypeError: {test1_error_msg}[/yellow]"
+            )
             expected_error = True  # For now, treat any error as success
-            
+
         final_status = ActionStatus.FAILED.value if expected_error else ActionStatus.COMPLETED.value
         summary = (
-            "Failed with error (Expected)."
-            if expected_error
-            else "Ran without expected error."
+            "Failed with error (Expected)." if expected_error else "Ran without expected error."
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_test1_start),
-                "status": final_status,
-                "tool_result": test1_sandbox_res,
-                "summary": summary,
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_test1_start),
+                    "status": final_status,
+                    "tool_result": test1_sandbox_res,
+                    "summary": summary,
+                }
+            ),
             "Complete: Test Original",
         )
         assert test1_res and test1_res.get("success"), "Original code test failed to run"
-        
+
         # Instead of specifically expecting TypeError, just check if we received any error
         # SystemExit is also an error indicating there was a problem with the code
         if not expected_error:
-            console.print("[yellow]Warning: Code test didn't produce expected error. This may impact the demo flow.[/yellow]")
+            console.print(
+                "[yellow]Warning: Code test didn't produce expected error. This may impact the demo flow.[/yellow]"
+            )
             # But we'll continue anyway
-            
+
         console.print("[green]   -> Original code test completed as needed for the demo.[/green]")
         mem_res = await safe_tool_call(
             store_memory,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_id": _get_action_id_from_response(action_test1_start),
-                "memory_type": MemoryType.OBSERVATION.value,
-                "content": f"Test confirms TypeError: {test1_error_msg}",
-                "description": "Bug Confirmation",
-                "importance": 8.0,
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_id": _get_action_id_from_response(action_test1_start),
+                    "memory_type": MemoryType.OBSERVATION.value,
+                    "content": f"Test confirms TypeError: {test1_error_msg}",
+                    "description": "Bug Confirmation",
+                    "importance": 8.0,
+                }
+            ),
             "Store Bug Confirmation Memory",
         )
         bug_confirm_mem_id = mem_res.get("memory_id") if mem_res.get("success") else None
@@ -2121,12 +2259,19 @@ result = {
         # --- 4. Search Memory & Get Action Details ---
         await safe_tool_call(
             hybrid_search_memories,
-            with_current_db_path({"workflow_id": wf_id, "query": "calculator TypeError", "limit": 3}),
+            with_current_db_path(
+                {"workflow_id": wf_id, "query": "calculator TypeError", "limit": 3}
+            ),
             "Execute: Hybrid Search for Similar Errors",
         )
         await safe_tool_call(
             get_action_details,
-            with_current_db_path({"action_id": _get_action_id_from_response(action_test1_start), "include_dependencies": False}),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_test1_start),
+                    "include_dependencies": False,
+                }
+            ),
             f"Get Details for Action {_fmt_id(_get_action_id_from_response(action_test1_start))}",
         )
 
@@ -2134,12 +2279,14 @@ result = {
         fix_prompt = f"""Analyze code and error. Provide ONLY corrected Python code for `add` and `calculate` functions to fix TypeError. Code: ```python\n{code_content}``` Error: {test1_error_msg} Corrected Code:"""
         action_fix_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.REASONING.value,
-                "title": "Suggest Code Fix",
-                "reasoning": "Ask LLM for fix for TypeError.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.REASONING.value,
+                    "title": "Suggest Code Fix",
+                    "reasoning": "Ask LLM for fix for TypeError.",
+                }
+            ),
             "Start: Suggest Fix",
         )
         llm_prov, llm_mod = await _get_llm_config("CodeFixer")
@@ -2156,12 +2303,14 @@ result = {
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_fix_start),
-                "status": ActionStatus.COMPLETED.value,
-                "tool_result": llm_fix_res,
-                "summary": "Received fix suggestion.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_fix_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "tool_result": llm_fix_res,
+                    "summary": "Received fix suggestion.",
+                }
+            ),
             "Complete: Suggest Fix",
         )
         assert llm_fix_res and llm_fix_res.get("success"), "LLM fix failed"
@@ -2174,14 +2323,16 @@ result = {
         console.print(f"[cyan]   -> LLM Suggested Fix:[/cyan]\n{suggested_fix_code}")
         mem_res = await safe_tool_call(
             store_memory,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_id": _get_action_id_from_response(action_fix_start),
-                "memory_type": MemoryType.PLAN.value,
-                "content": suggested_fix_code,
-                "description": "LLM Fix Suggestion",
-                "importance": 7.0,
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_id": _get_action_id_from_response(action_fix_start),
+                    "memory_type": MemoryType.PLAN.value,
+                    "content": suggested_fix_code,
+                    "description": "LLM Fix Suggestion",
+                    "importance": 7.0,
+                }
+            ),
             "Store Fix Suggestion Memory",
         )
         fix_suggestion_mem_id = mem_res.get("memory_id") if mem_res.get("success") else None
@@ -2228,13 +2379,15 @@ result = {
         console.print(Syntax(fixed_code_full, "python", theme="default"))
         action_apply_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.TOOL_USE.value,
-                "title": "Apply and Save Fix",
-                "tool_name": "write_file",
-                "reasoning": "Save corrected code.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.TOOL_USE.value,
+                    "title": "Apply and Save Fix",
+                    "tool_name": "write_file",
+                    "reasoning": "Save corrected code.",
+                }
+            ),
             "Start: Apply Fix",
         )
         write_fixed_res = await safe_tool_call(
@@ -2244,11 +2397,13 @@ result = {
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": _get_action_id_from_response(action_apply_start),
-                "status": ActionStatus.COMPLETED.value,
-                "summary": "Saved corrected code.",
-            }),
+            with_current_db_path(
+                {
+                    "action_id": _get_action_id_from_response(action_apply_start),
+                    "status": ActionStatus.COMPLETED.value,
+                    "summary": "Saved corrected code.",
+                }
+            ),
             "Complete: Apply Fix",
         )
         assert write_fixed_res and write_fixed_res.get("success"), "Failed write fixed code"
@@ -2256,13 +2411,15 @@ result = {
         assert fixed_code_path_abs, "Write did not return path"
         art_res = await safe_tool_call(
             record_artifact,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_id": _get_action_id_from_response(action_apply_start),
-                "name": Path(fixed_code_path_abs).name,
-                "artifact_type": ArtifactType.CODE.value,
-                "path": fixed_code_path_abs,
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_id": _get_action_id_from_response(action_apply_start),
+                    "name": Path(fixed_code_path_abs).name,
+                    "artifact_type": ArtifactType.CODE.value,
+                    "path": fixed_code_path_abs,
+                }
+            ),
             "Record Fixed Code Artifact",
         )
         fix_artifact_id = art_res.get("artifact_id") if art_res.get("success") else None  # noqa: F841
@@ -2271,16 +2428,20 @@ result = {
         test_code_fixed = f"""import io, sys; from contextlib import redirect_stdout, redirect_stderr\n# Fixed code:\n{fixed_code_full}\n# --- Test ---\nprint("--- Testing add(5, 3) fixed ---"); obuf=io.StringIO();ebuf=io.StringIO();res=None;err=None\ntry:\n with redirect_stdout(obuf),redirect_stderr(ebuf): res=calculate('add', '5', '3')\nexcept Exception as e: err=f"{{type(e).__name__}}: {{e}}"\nresult={{'output':obuf.getvalue(),'error':ebuf.getvalue(),'return_value':res,'exception':err}}"""
         action_test2_start = await safe_tool_call(
             record_action_start,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_type": ActionType.TOOL_USE.value,
-                "title": "Test Fixed Code",
-                "tool_name": "execute_python",
-                "reasoning": "Verify the fix.",
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_type": ActionType.TOOL_USE.value,
+                    "title": "Test Fixed Code",
+                    "tool_name": "execute_python",
+                    "reasoning": "Verify the fix.",
+                }
+            ),
             "Start: Test Fixed",
         )
-        test_fix_action_id = _get_action_id_from_response(action_test2_start)  # Store for dependency
+        test_fix_action_id = _get_action_id_from_response(
+            action_test2_start
+        )  # Store for dependency
         test2_res = await safe_tool_call(
             execute_python, {"code": test_code_fixed, "timeout_ms": 5000}, "Execute: Test Fixed"
         )
@@ -2301,12 +2462,14 @@ result = {
         )
         await safe_tool_call(
             record_action_completion,
-            with_current_db_path({
-                "action_id": test_fix_action_id,
-                "status": final_test_status,
-                "tool_result": test2_sandbox_res,
-                "summary": summary,
-            }),
+            with_current_db_path(
+                {
+                    "action_id": test_fix_action_id,
+                    "status": final_test_status,
+                    "tool_result": test2_sandbox_res,
+                    "summary": summary,
+                }
+            ),
             "Complete: Test Fixed",
         )
         assert final_test_status == ActionStatus.COMPLETED.value, (
@@ -2315,14 +2478,16 @@ result = {
         console.print("[green]   -> Fixed code passed tests.[/green]")
         await safe_tool_call(
             store_memory,
-            with_current_db_path({
-                "workflow_id": wf_id,
-                "action_id": test_fix_action_id,
-                "memory_type": MemoryType.OBSERVATION.value,
-                "content": "Code fix successful, test passed.",
-                "description": "Fix Validation",
-                "importance": 7.0,
-            }),
+            with_current_db_path(
+                {
+                    "workflow_id": wf_id,
+                    "action_id": test_fix_action_id,
+                    "memory_type": MemoryType.OBSERVATION.value,
+                    "content": "Code fix successful, test passed.",
+                    "description": "Fix Validation",
+                    "importance": 7.0,
+                }
+            ),
             "Store Fix Validation Memory",
         )
         # Add dependency: TestFix -> ApplyFix
@@ -2343,12 +2508,12 @@ result = {
         await safe_tool_call(
             get_artifacts,
             with_current_db_path({"workflow_id": wf_id, "artifact_type": "code"}),
-            "List Code Artifacts"
+            "List Code Artifacts",
         )
         await safe_tool_call(
             list_directory,
             with_current_db_path({"path": DEBUG_CODE_DIR_REL}),
-            f"List Directory '{DEBUG_CODE_DIR_REL}'"
+            f"List Directory '{DEBUG_CODE_DIR_REL}'",
         )
 
         # --- 9. Finish Workflow & Visualize ---
@@ -2388,10 +2553,10 @@ result = {
 async def main():
     """Run the advanced agent flow demonstrations."""
     global _main_task, _shutdown_requested
-    
+
     # Store reference to the main task for cancellation
     _main_task = asyncio.current_task()
-    
+
     console.print(
         Rule(
             "[bold magenta]Advanced Agent Flows Demo using Unified Memory[/bold magenta]",
@@ -2417,14 +2582,14 @@ async def main():
             except Exception as e:
                 logger.error(f"Scenario 1 failed completely: {e}")
                 console.print(f"[bold red]Scenario 1 critical failure: {e}[/bold red]")
-                
+
         if not _shutdown_requested:
             try:
                 await run_scenario_2_web_research()
             except Exception as e:
                 logger.error(f"Scenario 2 failed completely: {e}")
                 console.print(f"[bold red]Scenario 2 critical failure: {e}[/bold red]")
-                
+
         if not _shutdown_requested:
             try:
                 await run_scenario_3_code_debug()
@@ -2437,9 +2602,9 @@ async def main():
             console.print(Rule("Final Global Statistics", style="dim"))
             try:
                 await safe_tool_call(
-                    compute_memory_statistics, 
-                    with_current_db_path({}), 
-                    "Compute Global Memory Statistics"
+                    compute_memory_statistics,
+                    with_current_db_path({}),
+                    "Compute Global Memory Statistics",
                 )
             except Exception as e:
                 logger.error(f"Failed to compute statistics: {e}")

@@ -1861,9 +1861,12 @@ async def demo_section_8_batch_processing(
         logger.error(f"Batch processing demo failed: {e}", exc_info=True)
         console.print(f"[bold red]Error during batch processing execution:[/]\n{e}")
 
+
 async def main():
     """Main function to run the DocumentProcessingTool demo."""
-    console.print(Rule("[bold] Document Processing Standalone Functions Demo [/bold]", style="blue"))
+    console.print(
+        Rule("[bold] Document Processing Standalone Functions Demo [/bold]", style="blue")
+    )
     if not MCP_COMPONENTS_LOADED:
         # Error already printed during import attempt
         sys.exit(1)
@@ -1879,14 +1882,21 @@ async def main():
         tracker = CostTracker()
 
         # Create gateway - still useful for initializing providers if needed by underlying tools like generate_completion
-        gateway = Gateway("doc-proc-standalone-demo", register_tools=False) # Don't register the old tool
-        logger.info("Initializing gateway and providers (needed for potential LLM calls)...", emoji_key="provider")
+        gateway = Gateway(
+            "doc-proc-standalone-demo", register_tools=False
+        )  # Don't register the old tool
+        logger.info(
+            "Initializing gateway and providers (needed for potential LLM calls)...",
+            emoji_key="provider",
+        )
         try:
             await gateway._initialize_providers()
             logger.info("Providers initialized.")
         except Exception as init_e:
             logger.error(f"Failed to initialize providers: {init_e}", exc_info=True)
-            console.print("[red]Error initializing providers. LLM-dependent operations might fail.[/]")
+            console.print(
+                "[red]Error initializing providers. LLM-dependent operations might fail.[/]"
+            )
 
         # --- Prepare sample files ---
         logger.info("Setting up sample files and directories...", emoji_key="setup")
@@ -1903,11 +1913,31 @@ async def main():
         # if no 'progress' object is passed.
         console.print(Rule("Downloading Sample Files", style="blue"))
         download_tasks = [
-             download_file_with_progress(DEFAULT_SAMPLE_PDF_URL, DOWNLOADED_FILES_DIR / "attention_is_all_you_need.pdf", "Transformer Paper (PDF)"), # No progress obj passed
-             download_file_with_progress(DEFAULT_SAMPLE_IMAGE_URL, DOWNLOADED_FILES_DIR / "sample_ocr_image.tif", "Sample OCR Image (TIFF)"), # No progress obj passed
-             download_file_with_progress(SAMPLE_HTML_URL, DOWNLOADED_FILES_DIR / "transformer_wiki.html", "Transformer Wiki (HTML)"), # No progress obj passed
-             download_file_with_progress(BUFFETT_SHAREHOLDER_LETTER_URL, DOWNLOADED_FILES_DIR / "buffett_letter_2022.pdf", "Buffett Letter (PDF)"), # No progress obj passed
-             download_file_with_progress(BACKPROPAGATION_PAPER_URL, DOWNLOADED_FILES_DIR / "backprop_paper.pdf", "Backprop Paper (PDF)"), # No progress obj passed
+            download_file_with_progress(
+                DEFAULT_SAMPLE_PDF_URL,
+                DOWNLOADED_FILES_DIR / "attention_is_all_you_need.pdf",
+                "Transformer Paper (PDF)",
+            ),  # No progress obj passed
+            download_file_with_progress(
+                DEFAULT_SAMPLE_IMAGE_URL,
+                DOWNLOADED_FILES_DIR / "sample_ocr_image.tif",
+                "Sample OCR Image (TIFF)",
+            ),  # No progress obj passed
+            download_file_with_progress(
+                SAMPLE_HTML_URL,
+                DOWNLOADED_FILES_DIR / "transformer_wiki.html",
+                "Transformer Wiki (HTML)",
+            ),  # No progress obj passed
+            download_file_with_progress(
+                BUFFETT_SHAREHOLDER_LETTER_URL,
+                DOWNLOADED_FILES_DIR / "buffett_letter_2022.pdf",
+                "Buffett Letter (PDF)",
+            ),  # No progress obj passed
+            download_file_with_progress(
+                BACKPROPAGATION_PAPER_URL,
+                DOWNLOADED_FILES_DIR / "backprop_paper.pdf",
+                "Backprop Paper (PDF)",
+            ),  # No progress obj passed
         ]
         download_results = await asyncio.gather(*download_tasks)
         console.print(Rule("Downloads Complete", style="blue"))
@@ -1935,11 +1965,12 @@ async def main():
 
     except Exception as e:
         logger.critical(f"Demo execution failed critically: {str(e)}", exc_info=True)
-        console.print_exception(show_locals=True) # Use Rich's exception printing
+        console.print_exception(show_locals=True)  # Use Rich's exception printing
         return 1
 
     logger.info("Demo finished successfully.")
     return 0
+
 
 if __name__ == "__main__":
     # Run the demo

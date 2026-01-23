@@ -2,10 +2,11 @@
 """
 Advanced Research Assistant Workflow Demo
 
-This script demonstrates a realistic research workflow using the DAG-based 
-workflow execution system. It processes research documents through multiple 
+This script demonstrates a realistic research workflow using the DAG-based
+workflow execution system. It processes research documents through multiple
 analysis stages and produces visualizations of the results.
 """
+
 import asyncio
 import os
 import sys
@@ -35,7 +36,10 @@ console = Console()
 logger = get_logger("example.research_workflow")
 
 # Create a simple structure for cost tracking from dict (tokens might be missing)
-TrackableResult = namedtuple("TrackableResult", ["cost", "input_tokens", "output_tokens", "provider", "model", "processing_time"])
+TrackableResult = namedtuple(
+    "TrackableResult",
+    ["cost", "input_tokens", "output_tokens", "provider", "model", "processing_time"],
+)
 
 # Sample research documents
 SAMPLE_DOCS = [
@@ -81,7 +85,6 @@ SAMPLE_DOCS = [
     6. Chen, R. (2021). Social dimensions of community relocation programs
     7. World Health Organization. (2021). Climate change health vulnerability assessments
     """,
-    
     """
     # Renewable Energy Transition: Economic Implications and Policy Frameworks
     
@@ -139,7 +142,6 @@ SAMPLE_DOCS = [
     10. Warren, E. (2022). Carbon pricing efficiency and distributional impacts
     11. Resources for the Future. (2023). IRA Impact Assessment
     """,
-    
     """
     # Artificial Intelligence Applications in Healthcare Diagnostics: Implementation Challenges and Economic Analysis
     
@@ -247,7 +249,6 @@ SAMPLE_DOCS = [
     11. Centers for Medicare & Medicaid Services. (2023). Healthcare AI economic impact analysis
     12. FDA. (2023). Proposed framework for AI/ML-based SaMD. Regulatory Science Forum
     """,
-    
     """
     # Quantum Computing Applications in Pharmaceutical Discovery: Capabilities, Limitations, and Industry Transformation
     
@@ -345,7 +346,6 @@ SAMPLE_DOCS = [
     12. MIT-Takeda Quantum Research. (2022). Mapping retrosynthesis to quantum walks
     13. PhRMA Quantum Computing Working Group. (2023). Pharmaceutical R&D impact analysis
     """,
-    
     """
     # Neuroplasticity in Cognitive Rehabilitation: Mechanisms, Interventions, and Clinical Applications
     
@@ -457,16 +457,17 @@ SAMPLE_DOCS = [
     16. Feeney, D. M., & Sutton, R. L. (2022). Pharmacological enhancement of rehabilitation
     17. ETH Zurich Rehabilitation Engineering Group. (2023). Virtual reality cognitive training
     18. Northwestern Memory & Cognition Laboratory. (2022). Sleep-enhanced memory consolidation
-    """
+    """,
 ]
+
 
 async def display_workflow_diagram(workflow):
     """Display a visual representation of the workflow DAG."""
     console.print("\n[bold cyan]Workflow Execution Plan[/bold cyan]")
-    
+
     # Create a tree representation of the workflow
     tree = Tree("[bold yellow]Research Analysis Workflow[/bold yellow]")
-    
+
     # Track dependencies for visualization
     dependencies = {}
     for stage in workflow:
@@ -476,60 +477,60 @@ async def display_workflow_diagram(workflow):
             if dep not in dependencies:
                 dependencies[dep] = []
             dependencies[dep].append(stage_id)
-    
+
     # Add stages without dependencies first (roots)
     root_stages = [s for s in workflow if not s.get("depends_on")]
     stage_map = {s["stage_id"]: s for s in workflow}
-    
+
     def add_stage_to_tree(parent_tree, stage_id):
         stage = stage_map[stage_id]
         tool = stage["tool_name"]
         node_text = f"[bold green]{stage_id}[/bold green] ([cyan]{tool}[/cyan])"
-        
+
         if "iterate_on" in stage:
             node_text += " [italic](iterative)[/italic]"
-            
+
         stage_node = parent_tree.add(node_text)
-        
+
         # Add children (stages that depend on this one)
         children = dependencies.get(stage_id, [])
         for child in children:
             add_stage_to_tree(stage_node, child)
-    
+
     # Build the tree
     for root in root_stages:
         add_stage_to_tree(tree, root["stage_id"])
-    
+
     # Print the tree
     console.print(tree)
-    
+
     # Display additional workflow statistics
     table = Table(title="Workflow Statistics")
     table.add_column("Metric", style="cyan")
     table.add_column("Value", style="green")
-    
+
     table.add_row("Total Stages", str(len(workflow)))
     table.add_row("Parallel Stages", str(len(root_stages)))
     table.add_row("Iterative Stages", str(sum(1 for s in workflow if "iterate_on" in s)))
-    
+
     console.print(table)
+
 
 async def display_execution_progress(workflow_future):
     """Display a live progress indicator while the workflow executes."""
     with Progress(
-        SpinnerColumn(),
-        TextColumn("[bold blue]{task.description}"),
-        console=console
+        SpinnerColumn(), TextColumn("[bold blue]{task.description}"), console=console
     ) as progress:
         task = progress.add_task("[yellow]Executing workflow...", total=None)
         result = await workflow_future
         progress.update(task, completed=True, description="[green]Workflow completed!")
         return result
 
+
 async def visualize_results(results):
     """Create visualizations of the workflow results."""
     console.print("\n[bold magenta]Research Analysis Results[/bold magenta]")
-    
+
     # Set up layout
     layout = Layout()
     layout.split_column(
@@ -538,54 +539,49 @@ async def visualize_results(results):
         Layout(name="summaries"),
         Layout(name="extracted_entities"),
     )
-    
+
     # Header
-    layout["header"].update(Panel(
-        "[bold]Advanced Research Assistant Results[/bold]",
-        style="blue"
-    ))
-    
+    layout["header"].update(Panel("[bold]Advanced Research Assistant Results[/bold]", style="blue"))
+
     # Statistics
     stats_table = Table(title="Document Processing Statistics")
     stats_table.add_column("Document", style="cyan")
     stats_table.add_column("Word Count", style="green")
     stats_table.add_column("Entity Count", style="yellow")
-    
+
     try:
         chunking_result = results["results"]["chunking_stage"]["output"]
         entity_results = results["results"]["entity_extraction_stage"]["output"]
-        
+
         for i, doc_stats in enumerate(chunking_result.get("document_stats", [])):
             entity_count = len(entity_results[i].get("entities", []))
             stats_table.add_row(
-                f"Document {i+1}", 
-                str(doc_stats.get("word_count", "N/A")),
-                str(entity_count)
+                f"Document {i + 1}", str(doc_stats.get("word_count", "N/A")), str(entity_count)
             )
     except (KeyError, IndexError) as e:
         console.print(f"[red]Error displaying statistics: {e}[/red]")
-    
+
     layout["statistics"].update(stats_table)
-    
+
     # Summaries
     summary_panels = []
     try:
         summaries = results["results"]["summary_stage"]["output"]
         for i, summary in enumerate(summaries):
-            summary_panels.append(Panel(
-                summary.get("summary", "No summary available"),
-                title=f"Document {i+1} Summary",
-                border_style="green"
-            ))
+            summary_panels.append(
+                Panel(
+                    summary.get("summary", "No summary available"),
+                    title=f"Document {i + 1} Summary",
+                    border_style="green",
+                )
+            )
     except (KeyError, IndexError) as e:
-        summary_panels.append(Panel(
-            f"Error retrieving summaries: {e}",
-            title="Summary Error",
-            border_style="red"
-        ))
-    
+        summary_panels.append(
+            Panel(f"Error retrieving summaries: {e}", title="Summary Error", border_style="red")
+        )
+
     layout["summaries"].update(summary_panels)
-    
+
     # Extracted entities
     try:
         final_analysis = results["results"]["final_analysis_stage"]["output"]
@@ -593,28 +589,27 @@ async def visualize_results(results):
             str(final_analysis.get("analysis", "No analysis available")),
             "json",
             theme="monokai",
-            line_numbers=True
+            line_numbers=True,
         )
-        layout["extracted_entities"].update(Panel(
-            json_str,
-            title="Final Analysis",
-            border_style="magenta"
-        ))
+        layout["extracted_entities"].update(
+            Panel(json_str, title="Final Analysis", border_style="magenta")
+        )
     except (KeyError, IndexError) as e:
-        layout["extracted_entities"].update(Panel(
-            f"Error retrieving final analysis: {e}",
-            title="Analysis Error",
-            border_style="red"
-        ))
-    
+        layout["extracted_entities"].update(
+            Panel(
+                f"Error retrieving final analysis: {e}", title="Analysis Error", border_style="red"
+            )
+        )
+
     # Print layout
     console.print(layout)
-    
+
     # Display execution time
     console.print(
         f"\n[bold green]Total workflow execution time:[/bold green] "
         f"{results.get('total_processing_time', 0):.2f} seconds"
     )
+
 
 def create_research_workflow():
     """Define a complex research workflow with multiple parallel and sequential stages."""
@@ -623,13 +618,8 @@ def create_research_workflow():
         {
             "stage_id": "chunking_stage",
             "tool_name": "chunk_document",
-            "params": {
-                "text": "${documents}",
-                "chunk_size": 1000,
-                "get_stats": True
-            }
+            "params": {"text": "${documents}", "chunk_size": 1000, "get_stats": True},
         },
-        
         # Entity extraction runs in parallel with summarization
         {
             "stage_id": "entity_extraction_stage",
@@ -638,10 +628,9 @@ def create_research_workflow():
                 "text": "${documents}",
                 "entity_types": ["organization", "person", "concept", "location", "technology"],
                 "include_relations": True,
-                "confidence_threshold": 0.7
-            }
+                "confidence_threshold": 0.7,
+            },
         },
-        
         # Summarization stage (iterate over each document)
         {
             "stage_id": "summary_stage",
@@ -649,10 +638,9 @@ def create_research_workflow():
             "params": {
                 "text": "${documents}",
                 "max_length": 150,
-                "focus_on": "key findings and implications"
-            }
+                "focus_on": "key findings and implications",
+            },
         },
-        
         # Classification of document topics
         {
             "stage_id": "classification_stage",
@@ -661,19 +649,18 @@ def create_research_workflow():
             "params": {
                 "text": "${chunking_stage.document_text}",
                 "categories": [
-                    "Climate & Environment", 
-                    "Technology", 
-                    "Healthcare", 
-                    "Economy", 
+                    "Climate & Environment",
+                    "Technology",
+                    "Healthcare",
+                    "Economy",
                     "Social Policy",
-                    "Scientific Research"
+                    "Scientific Research",
                 ],
                 "provider": Provider.OPENAI.value,
                 "multi_label": True,
-                "confidence_threshold": 0.6
-            }
+                "confidence_threshold": 0.6,
+            },
         },
-        
         # Generate structured insights from entity analysis
         {
             "stage_id": "entity_insights_stage",
@@ -684,12 +671,11 @@ def create_research_workflow():
                 "schema": {
                     "key_entities": "array",
                     "primary_relationships": "array",
-                    "research_domains": "array"
+                    "research_domains": "array",
                 },
-                "include_reasoning": True
-            }
+                "include_reasoning": True,
+            },
         },
-        
         # Cost-optimized final analysis
         {
             "stage_id": "model_selection_stage",
@@ -700,83 +686,88 @@ def create_research_workflow():
                 "expected_input_length": 3000,
                 "expected_output_length": 1000,
                 "required_capabilities": ["reasoning", "knowledge"],
-                "priority": "balanced"
-            }
+                "priority": "balanced",
+            },
         },
-        
         # Final analysis and synthesis
         {
             "stage_id": "final_analysis_stage",
             "tool_name": "chat_completion",
-            "depends_on": ["model_selection_stage", "summary_stage", "classification_stage", "entity_insights_stage"],
+            "depends_on": [
+                "model_selection_stage",
+                "summary_stage",
+                "classification_stage",
+                "entity_insights_stage",
+            ],
             "params": {
                 "messages": [
                     {
                         "role": "system",
-                        "content": "You are a research assistant synthesizing information from multiple documents."
+                        "content": "You are a research assistant synthesizing information from multiple documents.",
                     },
                     {
                         "role": "user",
-                        "content": "Analyze the following research summaries, classifications, and entity insights. Provide a comprehensive analysis that identifies cross-document patterns, contradictions, and key insights. Format the response as structured JSON.\n\nSummaries: ${summary_stage.summary}\n\nClassifications: ${classification_stage.classifications}\n\nEntity Insights: ${entity_insights_stage.content}"
-                    }
+                        "content": "Analyze the following research summaries, classifications, and entity insights. Provide a comprehensive analysis that identifies cross-document patterns, contradictions, and key insights. Format the response as structured JSON.\n\nSummaries: ${summary_stage.summary}\n\nClassifications: ${classification_stage.classifications}\n\nEntity Insights: ${entity_insights_stage.content}",
+                    },
                 ],
                 "model": "${model_selection_stage.recommendations[0].model}",
-                "response_format": {"type": "json_object"}
-            }
-        }
+                "response_format": {"type": "json_object"},
+            },
+        },
     ]
-    
+
     return workflow
+
 
 async def main():
     """Run the complete research assistant workflow demo."""
     console.print(Rule("[bold magenta]Advanced Research Workflow Demo[/bold magenta]"))
-    tracker = CostTracker() # Instantiate tracker
+    tracker = CostTracker()  # Instantiate tracker
 
     try:
         # Display header
-        console.print(Panel.fit(
-            "[bold cyan]Advanced Research Assistant Workflow Demo[/bold cyan]\n"
-            "Powered by NetworkX DAG-based Workflow Engine",
-            title="Ultimate MCP Server",
-            border_style="green"
-        ))
-        
+        console.print(
+            Panel.fit(
+                "[bold cyan]Advanced Research Assistant Workflow Demo[/bold cyan]\n"
+                "Powered by NetworkX DAG-based Workflow Engine",
+                title="Ultimate MCP Server",
+                border_style="green",
+            )
+        )
+
         # Create the workflow definition
         workflow = create_research_workflow()
-        
+
         # Visualize the workflow before execution
         await display_workflow_diagram(workflow)
-        
+
         # Prompt user to continue
         console.print("\n[yellow]Press Enter to execute the workflow...[/yellow]", end="")
         input()
-        
+
         # Execute workflow with progress display
         workflow_future = execute_optimized_workflow(
-            documents=SAMPLE_DOCS,
-            workflow=workflow,
-            max_concurrency=3
+            documents=SAMPLE_DOCS, workflow=workflow, max_concurrency=3
         )
-        
+
         results = await display_execution_progress(workflow_future)
-        
+
         # Track cost if possible
         if results and isinstance(results, dict) and "cost" in results:
-             try:
+            try:
                 total_cost = results.get("cost", {}).get("total_cost", 0.0)
                 processing_time = results.get("total_processing_time", 0.0)
                 # Provider/Model is ambiguous here, use a placeholder
                 trackable = TrackableResult(
                     cost=total_cost,
-                    input_tokens=0, # Not aggregated
-                    output_tokens=0, # Not aggregated
+                    input_tokens=0,  # Not aggregated
+                    output_tokens=0,  # Not aggregated
                     provider="workflow",
                     model="research_workflow",
-                    processing_time=processing_time
+                    processing_time=processing_time,
                 )
                 tracker.add_call(trackable)
-             except Exception as track_err:
+            except Exception as track_err:
                 logger.warning(f"Could not track workflow cost: {track_err}", exc_info=False)
 
         if results:
@@ -787,9 +778,10 @@ async def main():
 
     except Exception as e:
         console.print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
-    
+
     # Display cost summary
     tracker.display_summary(console)
 
+
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

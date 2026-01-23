@@ -60,7 +60,7 @@ async def test_server_connection():
                         model_count = len(status.get("models", []))
                         enabled = status.get("enabled", False)
                         api_key_configured = status.get("api_key_configured", False)
-                        
+
                         status_str = f"{available} {name}: {model_count} models"
                         if not enabled:
                             status_str += " (disabled)"
@@ -68,7 +68,7 @@ async def test_server_connection():
                             status_str += " (no API key)"
                         elif status.get("error"):
                             status_str += f" (error: {status['error'][:50]}...)"
-                        
+
                         print(f"  {status_str}")
             except Exception as e:
                 print(f"❌ Provider status failed: {e}")
@@ -81,7 +81,11 @@ async def test_server_connection():
                     resource_content = await client.read_resource(resource_uri)
                     if resource_content:
                         # FastMCP uses 'text' attribute, not 'content'
-                        content = resource_content[0].text if hasattr(resource_content[0], 'text') else str(resource_content[0])
+                        content = (
+                            resource_content[0].text
+                            if hasattr(resource_content[0], "text")
+                            else str(resource_content[0])
+                        )
                         preview = content[:200] + "..." if len(content) > 200 else content
                         print(f"✅ Resource {resource_uri} content preview:")
                         print(f"  {preview}")
@@ -102,7 +106,7 @@ async def test_server_connection():
                 )
                 if completion_result:
                     result_data = json.loads(completion_result[0].text)
-                    response_text = result_data.get('text', '').strip()
+                    response_text = result_data.get("text", "").strip()
                     if response_text:
                         print(f"✅ Completion response: {response_text}")
                     else:
@@ -125,7 +129,7 @@ async def test_server_connection():
                     )
                     if completion_result:
                         result_data = json.loads(completion_result[0].text)
-                        response_text = result_data.get('text', '').strip()
+                        response_text = result_data.get("text", "").strip()
                         if response_text:
                             print(f"✅ Completion response (anthropic): {response_text}")
                         else:
@@ -180,7 +184,7 @@ async def test_specific_tools():
                     # The field is called 'stdout', not 'output'
                     print(f"  Output: {result_data.get('stdout', 'No output')}")
                     print(f"  Success: {result_data.get('success', False)}")
-                    if result_data.get('result') is not None:
+                    if result_data.get("result") is not None:
                         print(f"  Result: {result_data.get('result')}")
             except Exception as e:
                 print(f"❌ Python execution failed: {e}")
@@ -190,16 +194,17 @@ async def test_specific_tools():
             try:
                 # Test ripgrep if available - tool expects args_str parameter
                 ripgrep_result = await client.call_tool(
-                    "run_ripgrep", {
+                    "run_ripgrep",
+                    {
                         "args_str": "'FastMCP' . -t py",
-                        "input_dir": True  # Since we're searching in a directory
-                    }
+                        "input_dir": True,  # Since we're searching in a directory
+                    },
                 )
                 if ripgrep_result:
                     result_data = json.loads(ripgrep_result[0].text)
-                    if result_data.get('success'):
+                    if result_data.get("success"):
                         print("✅ Ripgrep executed successfully")
-                        stdout = result_data.get('stdout', '')
+                        stdout = result_data.get("stdout", "")
                         if stdout.strip():
                             print(f"  Found matches: {len(stdout.strip().splitlines())} lines")
                         else:
@@ -272,7 +277,9 @@ async def interactive_mode():
                             result = await client.read_resource(resource_uri)
                             if result:
                                 # FastMCP uses 'text' attribute, not 'content'
-                                content = result[0].text if hasattr(result[0], 'text') else str(result[0])
+                                content = (
+                                    result[0].text if hasattr(result[0], "text") else str(result[0])
+                                )
                                 preview = content[:500] + "..." if len(content) > 500 else content
                                 print(f"✅ Resource content: {preview}")
                             else:

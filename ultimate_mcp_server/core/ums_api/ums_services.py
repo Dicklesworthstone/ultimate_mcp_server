@@ -12,6 +12,7 @@ from .ums_models import (
 
 # ---------- Utility Functions ----------
 
+
 def format_file_size(size_bytes: int) -> str:
     """Format file size in human readable format"""
     if size_bytes == 0:
@@ -45,9 +46,7 @@ def _count_values(d: Dict[str, Any]) -> int:
 def calculate_state_complexity(state_data: Dict[str, Any]) -> float:
     if not state_data:
         return 0.0
-    comp = (
-        len(state_data) * 5 + _dict_depth(state_data) * 10 + _count_values(state_data) * 0.5
-    )
+    comp = len(state_data) * 5 + _dict_depth(state_data) * 10 + _count_values(state_data) * 0.5
     return round(min(100.0, comp), 2)
 
 
@@ -72,6 +71,7 @@ def compute_state_diff(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
 
 # ---------- Action Monitor Helper Functions ----------
 
+
 def get_action_status_indicator(status: str, execution_time: float) -> dict:
     """Get status indicator with color and icon for action status"""
     indicators = {
@@ -84,18 +84,12 @@ def get_action_status_indicator(status: str, execution_time: float) -> dict:
         "timeout": {"color": "yellow", "icon": "timer-off", "label": "Timeout"},
     }
 
-    indicator = indicators.get(
-        status, {"color": "gray", "icon": "help", "label": "Unknown"}
-    )
+    indicator = indicators.get(status, {"color": "gray", "icon": "help", "label": "Unknown"})
 
     # Add urgency flag for long-running actions
-    if (
-        status in ["running", "executing", "in_progress"] and execution_time > 120
-    ):  # 2 minutes
+    if status in ["running", "executing", "in_progress"] and execution_time > 120:  # 2 minutes
         indicator["urgency"] = "high"
-    elif (
-        status in ["running", "executing", "in_progress"] and execution_time > 60
-    ):  # 1 minute
+    elif status in ["running", "executing", "in_progress"] and execution_time > 60:  # 1 minute
         indicator["urgency"] = "medium"
     else:
         indicator["urgency"] = "low"
@@ -270,6 +264,7 @@ def generate_performance_insights(
 
 # ---------- Memory Quality Functions ----------
 
+
 def find_cognitive_patterns(
     states: List[Dict[str, Any]], min_length: int, similarity_threshold: float
 ) -> List[Dict[str, Any]]:
@@ -299,9 +294,7 @@ def find_cognitive_patterns(
     return sorted(patterns, key=lambda p: p["similarity"], reverse=True)
 
 
-def calculate_sequence_similarity(
-    seq1: List[Dict[str, Any]], seq2: List[Dict[str, Any]]
-) -> float:
+def calculate_sequence_similarity(seq1: List[Dict[str, Any]], seq2: List[Dict[str, Any]]) -> float:
     """Calculate similarity between two state sequences"""
     if len(seq1) != len(seq2):
         return 0.0
@@ -312,9 +305,7 @@ def calculate_sequence_similarity(
     return total_similarity / len(seq1)
 
 
-def calculate_single_state_similarity(
-    state1: Dict[str, Any], state2: Dict[str, Any]
-) -> float:
+def calculate_single_state_similarity(state1: Dict[str, Any], state2: Dict[str, Any]) -> float:
     """Calculate similarity between two individual states"""
     data1 = state1.get("state_data", {})
     data2 = state2.get("state_data", {})
@@ -364,9 +355,7 @@ def detect_cognitive_anomalies(states: List[Dict[str, Any]]) -> List[Dict[str, A
     ) ** 0.5
     for i, state in enumerate(states):
         complexity = complexities[i]
-        z_score = (
-            (complexity - avg_complexity) / std_complexity if std_complexity > 0 else 0
-        )
+        z_score = (complexity - avg_complexity) / std_complexity if std_complexity > 0 else 0
         if abs(z_score) > 2:
             anomalies.append(
                 {
@@ -383,14 +372,15 @@ def detect_cognitive_anomalies(states: List[Dict[str, Any]]) -> List[Dict[str, A
 
 # ---------- Working Memory System ----------
 
+
 class WorkingMemorySystem:
     """
     Working memory system for managing active memories with focus capabilities.
-    
+
     This system maintains a pool of recent memories with relevance scoring
     and focus mode for filtering based on keywords or patterns.
     """
-    
+
     def __init__(self, capacity: int = 100, focus_threshold: float = 0.7):
         self.capacity = capacity
         self.focus_threshold = focus_threshold
@@ -404,156 +394,163 @@ class WorkingMemorySystem:
         self.initialized_at = datetime.now()
         self.last_optimization = datetime.now()
         self.optimization_count = 0
-        
+
     def add_memory(self, memory_id: str, content: str, category: str, importance: float = 5.0):
         """Add a memory to the working pool"""
         memory = {
-            'memory_id': memory_id,
-            'content': content,
-            'category': category,
-            'importance': importance,
-            'added_at': datetime.now().timestamp(),
-            'last_accessed': datetime.now().timestamp()
+            "memory_id": memory_id,
+            "content": content,
+            "category": category,
+            "importance": importance,
+            "added_at": datetime.now().timestamp(),
+            "last_accessed": datetime.now().timestamp(),
         }
-        
+
         # Remove old memory if exists
         if memory_id in self.memory_index:
             self.remove_memory(memory_id)
-        
+
         # Add to pool
         self.memory_pool.append(memory)
         self.memory_index[memory_id] = memory
         self.category_index[category].append(memory_id)
-        
+
         # Calculate initial relevance
         self._calculate_relevance(memory)
-        
+
     def remove_memory(self, memory_id: str):
         """Remove a memory from the working pool"""
         if memory_id in self.memory_index:
             memory = self.memory_index[memory_id]
             self.memory_pool.remove(memory)
             del self.memory_index[memory_id]
-            self.category_index[memory['category']].remove(memory_id)
+            self.category_index[memory["category"]].remove(memory_id)
             if memory_id in self.relevance_scores:
                 del self.relevance_scores[memory_id]
             if memory_id in self.access_counts:
                 del self.access_counts[memory_id]
-    
+
     def access_memory(self, memory_id: str):
         """Record memory access and update relevance"""
         if memory_id in self.memory_index:
             self.access_counts[memory_id] += 1
-            self.memory_index[memory_id]['last_accessed'] = datetime.now().timestamp()
+            self.memory_index[memory_id]["last_accessed"] = datetime.now().timestamp()
             self._calculate_relevance(self.memory_index[memory_id])
-    
+
     def set_focus_mode(self, enabled: bool, keywords: List[str] = None):
         """Enable or disable focus mode with optional keywords"""
         self.focus_mode_enabled = enabled
         self.focus_keywords = keywords or []
-        
+
         # Recalculate relevance for all memories
         for memory in self.memory_pool:
             self._calculate_relevance(memory)
-    
+
     def _calculate_relevance(self, memory: dict):
         """Calculate relevance score for a memory"""
-        base_score = memory['importance'] / 10.0  # Normalize to 0-1
-        
+        base_score = memory["importance"] / 10.0  # Normalize to 0-1
+
         # Recency factor
-        age_hours = (datetime.now().timestamp() - memory['added_at']) / 3600
+        age_hours = (datetime.now().timestamp() - memory["added_at"]) / 3600
         recency_factor = max(0.1, 1.0 - (age_hours / 24))  # Decay over 24 hours
-        
+
         # Access frequency factor
-        access_factor = min(1.0, self.access_counts[memory['memory_id']] / 10.0)
-        
+        access_factor = min(1.0, self.access_counts[memory["memory_id"]] / 10.0)
+
         # Focus mode factor
         focus_factor = 1.0
         if self.focus_mode_enabled and self.focus_keywords:
-            content_lower = memory['content'].lower()
+            content_lower = memory["content"].lower()
             keyword_matches = sum(1 for kw in self.focus_keywords if kw.lower() in content_lower)
             focus_factor = min(2.0, 1.0 + (keyword_matches * 0.5))
-        
+
         # Calculate final score
         relevance = base_score * recency_factor * (0.5 + 0.5 * access_factor) * focus_factor
-        self.relevance_scores[memory['memory_id']] = min(1.0, relevance)
-    
+        self.relevance_scores[memory["memory_id"]] = min(1.0, relevance)
+
     def get_active_memories(self, limit: int = None) -> List[dict]:
         """Get active memories sorted by relevance"""
         memories = list(self.memory_pool)
-        
+
         # Filter by focus threshold if in focus mode
         if self.focus_mode_enabled:
-            memories = [m for m in memories if self.relevance_scores.get(m['memory_id'], 0) >= self.focus_threshold]
-        
+            memories = [
+                m
+                for m in memories
+                if self.relevance_scores.get(m["memory_id"], 0) >= self.focus_threshold
+            ]
+
         # Sort by relevance
-        memories.sort(key=lambda m: self.relevance_scores.get(m['memory_id'], 0), reverse=True)
-        
+        memories.sort(key=lambda m: self.relevance_scores.get(m["memory_id"], 0), reverse=True)
+
         if limit:
             memories = memories[:limit]
-        
+
         return memories
-    
+
     def get_statistics(self) -> dict:
         """Get working memory statistics"""
         active_memories = self.get_active_memories()
-        
+
         # Category distribution
         category_dist = {}
         for category, memory_ids in self.category_index.items():
             category_dist[category] = len(memory_ids)
-        
+
         # Calculate average relevance
         relevance_values = list(self.relevance_scores.values())
         avg_relevance = sum(relevance_values) / len(relevance_values) if relevance_values else 0
-        
+
         return {
-            'total_memories': len(self.memory_pool),
-            'active_memories': len(active_memories),
-            'capacity_used': len(self.memory_pool) / self.capacity * 100,
-            'avg_relevance_score': avg_relevance,
-            'category_distribution': category_dist,
-            'total_accesses': sum(self.access_counts.values()),
-            'optimization_suggestions': self._get_optimization_suggestions()
+            "total_memories": len(self.memory_pool),
+            "active_memories": len(active_memories),
+            "capacity_used": len(self.memory_pool) / self.capacity * 100,
+            "avg_relevance_score": avg_relevance,
+            "category_distribution": category_dist,
+            "total_accesses": sum(self.access_counts.values()),
+            "optimization_suggestions": self._get_optimization_suggestions(),
         }
-    
+
     def _get_optimization_suggestions(self) -> int:
         """Count optimization suggestions"""
         suggestions = 0
-        
+
         # Check for low relevance memories
         low_relevance = sum(1 for score in self.relevance_scores.values() if score < 0.3)
         if low_relevance > self.capacity * 0.2:  # More than 20% low relevance
             suggestions += 1
-        
+
         # Check for stale memories
         now = datetime.now().timestamp()
-        stale_memories = sum(1 for m in self.memory_pool if (now - m['last_accessed']) > 3600)  # 1 hour
+        stale_memories = sum(
+            1 for m in self.memory_pool if (now - m["last_accessed"]) > 3600
+        )  # 1 hour
         if stale_memories > self.capacity * 0.3:  # More than 30% stale
             suggestions += 1
-        
+
         # Check for unbalanced categories
         if self.category_index:
             sizes = [len(ids) for ids in self.category_index.values()]
             if max(sizes) > sum(sizes) * 0.5:  # One category has more than 50%
                 suggestions += 1
-        
+
         return suggestions
-    
+
     def optimize(self):
         """Optimize working memory by removing low-relevance memories"""
         # Remove memories below threshold
         to_remove = [
-            m['memory_id'] for m in self.memory_pool 
-            if self.relevance_scores.get(m['memory_id'], 0) < 0.2
+            m["memory_id"]
+            for m in self.memory_pool
+            if self.relevance_scores.get(m["memory_id"], 0) < 0.2
         ]
-        
+
         for memory_id in to_remove:
             self.remove_memory(memory_id)
-        
+
         self.last_optimization = datetime.now()
         self.optimization_count += 1
-        
+
         return len(to_remove)
 
 
@@ -565,7 +562,7 @@ _working_memory_lock = Lock()
 def get_working_memory_system() -> WorkingMemorySystem:
     """Get or create the global working memory system instance"""
     global _working_memory_system
-    
+
     with _working_memory_lock:
         if _working_memory_system is None:
             _working_memory_system = WorkingMemorySystem()
@@ -573,6 +570,7 @@ def get_working_memory_system() -> WorkingMemorySystem:
 
 
 # ---------- Timeline Analysis Functions ----------
+
 
 def generate_timeline_segments(
     timeline_data: List[Dict[str, Any]], granularity: str, hours: int
@@ -600,9 +598,9 @@ def generate_timeline_segments(
                     "avg_complexity": sum(s["complexity_score"] for s in seg_states)
                     / len(seg_states),
                     "max_change_magnitude": max(s["change_magnitude"] for s in seg_states),
-                    "dominant_type": Counter(
-                        s["state_type"] for s in seg_states
-                    ).most_common(1)[0][0],
+                    "dominant_type": Counter(s["state_type"] for s in seg_states).most_common(1)[0][
+                        0
+                    ],
                 }
             )
         current = seg_end
@@ -629,50 +627,45 @@ def calculate_timeline_stats(timeline_data: List[Dict[str, Any]]) -> Dict[str, A
 
 # ---------- Flame Graph Functions ----------
 
+
 def build_flame_graph_structure(actions: List[Dict], workflow_id: str) -> Dict:
     """Build hierarchical flame graph structure from actions"""
-    total_duration = sum(action.get('duration', 0) for action in actions if action.get('duration'))
-    
-    flame_graph_data = {
-        'name': f'Workflow {workflow_id}',
-        'value': total_duration,
-        'children': []
-    }
-    
+    total_duration = sum(action.get("duration", 0) for action in actions if action.get("duration"))
+
+    flame_graph_data = {"name": f"Workflow {workflow_id}", "value": total_duration, "children": []}
+
     # Group actions by tool for flame graph hierarchy
     tool_groups = {}
     for action in actions:
-        tool_name = action.get('tool_name', 'unknown')
+        tool_name = action.get("tool_name", "unknown")
         if tool_name not in tool_groups:
             tool_groups[tool_name] = []
         tool_groups[tool_name].append(action)
-    
+
     # Build hierarchical structure
     for tool_name, tool_actions in tool_groups.items():
-        tool_duration = sum(action.get('duration', 0) for action in tool_actions if action.get('duration'))
-        
-        tool_node = {
-            'name': tool_name,
-            'value': tool_duration,
-            'children': []
-        }
-        
+        tool_duration = sum(
+            action.get("duration", 0) for action in tool_actions if action.get("duration")
+        )
+
+        tool_node = {"name": tool_name, "value": tool_duration, "children": []}
+
         # Add individual actions as children
         for action in tool_actions:
-            if action.get('duration'):
+            if action.get("duration"):
                 action_node = {
-                    'name': f"Action {action['action_id']}",
-                    'value': action['duration'],
-                    'action_id': action['action_id'],
-                    'status': action.get('status'),
-                    'reasoning': action.get('reasoning', ''),
-                    'started_at': action.get('started_at'),
-                    'completed_at': action.get('completed_at')
+                    "name": f"Action {action['action_id']}",
+                    "value": action["duration"],
+                    "action_id": action["action_id"],
+                    "status": action.get("status"),
+                    "reasoning": action.get("reasoning", ""),
+                    "started_at": action.get("started_at"),
+                    "completed_at": action.get("completed_at"),
                 }
-                tool_node['children'].append(action_node)
-        
-        flame_graph_data['children'].append(tool_node)
-    
+                tool_node["children"].append(action_node)
+
+        flame_graph_data["children"].append(tool_node)
+
     return flame_graph_data
 
 
@@ -680,84 +673,92 @@ def calculate_critical_path(actions: List[Dict]) -> List[Dict]:
     """Calculate the critical path through the workflow"""
     if not actions:
         return []
-    
+
     # Sort actions by start time
-    sorted_actions = sorted(actions, key=lambda x: x.get('started_at', 0))
-    
+    sorted_actions = sorted(actions, key=lambda x: x.get("started_at", 0))
+
     critical_path = []
-    current_time = min(action['started_at'] for action in sorted_actions if action.get('started_at'))
-    workflow_end = max(action['completed_at'] for action in sorted_actions if action.get('completed_at'))
-    
+    current_time = min(
+        action["started_at"] for action in sorted_actions if action.get("started_at")
+    )
+    workflow_end = max(
+        action["completed_at"] for action in sorted_actions if action.get("completed_at")
+    )
+
     while current_time < workflow_end:
         # Find action that was running at current_time and ends latest
         running_actions = [
-            a for a in sorted_actions 
-            if a.get('started_at', 0) <= current_time and a.get('completed_at', 0) > current_time
+            a
+            for a in sorted_actions
+            if a.get("started_at", 0) <= current_time and a.get("completed_at", 0) > current_time
         ]
-        
+
         if running_actions:
             # Find the action that ends latest (most critical)
-            critical_action = max(running_actions, key=lambda x: x.get('completed_at', 0))
-            if critical_action not in [cp['action_id'] for cp in critical_path]:
-                critical_path.append({
-                    'action_id': critical_action['action_id'],
-                    'tool_name': critical_action.get('tool_name'),
-                    'duration': critical_action.get('duration', 0),
-                    'start_time': critical_action.get('started_at'),
-                    'end_time': critical_action.get('completed_at')
-                })
-            current_time = critical_action.get('completed_at', current_time + 1)
+            critical_action = max(running_actions, key=lambda x: x.get("completed_at", 0))
+            if critical_action not in [cp["action_id"] for cp in critical_path]:
+                critical_path.append(
+                    {
+                        "action_id": critical_action["action_id"],
+                        "tool_name": critical_action.get("tool_name"),
+                        "duration": critical_action.get("duration", 0),
+                        "start_time": critical_action.get("started_at"),
+                        "end_time": critical_action.get("completed_at"),
+                    }
+                )
+            current_time = critical_action.get("completed_at", current_time + 1)
         else:
             # No action running, find next action start
-            future_actions = [a for a in sorted_actions if a.get('started_at', 0) > current_time]
+            future_actions = [a for a in sorted_actions if a.get("started_at", 0) > current_time]
             if future_actions:
-                current_time = min(a['started_at'] for a in future_actions)
+                current_time = min(a["started_at"] for a in future_actions)
             else:
                 break
-    
+
     return critical_path
 
 
 def convert_to_model(node: Dict) -> FlameGraphNode:
     """Convert flame graph dictionary to Pydantic model"""
     return FlameGraphNode(
-        name=node['name'],
-        value=node['value'],
-        children=[convert_to_model(child) for child in node.get('children', [])],
-        action_id=node.get('action_id'),
-        status=node.get('status'),
-        reasoning=node.get('reasoning'),
-        started_at=node.get('started_at'),
-        completed_at=node.get('completed_at')
+        name=node["name"],
+        value=node["value"],
+        children=[convert_to_model(child) for child in node.get("children", [])],
+        action_id=node.get("action_id"),
+        status=node.get("status"),
+        reasoning=node.get("reasoning"),
+        started_at=node.get("started_at"),
+        completed_at=node.get("completed_at"),
     )
 
 
 # ---------- Performance Recommendation Functions ----------
 
+
 def calculate_tool_reliability_score(tool_stats: dict) -> float:
     """Calculate reliability score for a tool"""
-    total_calls = tool_stats.get('total_calls', 0)
-    successful_calls = tool_stats.get('successful_calls', 0)
-    
+    total_calls = tool_stats.get("total_calls", 0)
+    successful_calls = tool_stats.get("successful_calls", 0)
+
     if total_calls == 0:
         return 0.0
-    
+
     success_rate = successful_calls / total_calls
     volume_factor = min(1.0, total_calls / 100)  # Normalize by 100 calls
-    
+
     return round(success_rate * volume_factor * 100, 2)
 
 
 def categorize_tool_performance(avg_execution_time: float) -> str:
     """Categorize tool performance based on average execution time"""
     if avg_execution_time is None:
-        return 'unknown'
-    
+        return "unknown"
+
     if avg_execution_time <= 5:
-        return 'fast'
+        return "fast"
     elif avg_execution_time <= 15:
-        return 'normal'
+        return "normal"
     elif avg_execution_time <= 30:
-        return 'slow'
+        return "slow"
     else:
-        return 'very_slow' 
+        return "very_slow"

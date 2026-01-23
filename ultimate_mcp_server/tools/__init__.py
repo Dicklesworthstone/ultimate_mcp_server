@@ -180,8 +180,7 @@ __all__ = [
     "with_tool_metrics",
     "with_retry",
     "with_error_handling",
-    "register_tool", 
-    
+    "register_tool",
     # LLM Completion tools
     "generate_completion",
     "stream_completion",
@@ -189,7 +188,6 @@ __all__ = [
     "multi_completion",
     "get_provider_status",
     "list_models",
-
     # Extraction tools
     # "extract_json",
     # "extract_table",
@@ -197,7 +195,6 @@ __all__ = [
     # "extract_semantic_schema",
     # "extract_entity_graph",
     # "extract_code_from_response",
-
     # Knowledge base tools
     # "create_knowledge_base",
     # "list_knowledge_bases",
@@ -206,14 +203,12 @@ __all__ = [
     # "retrieve_context",
     # "generate_with_rag",
     # "text_classification",
-
     # Cost optimization tools
     "estimate_cost",
     "compare_models",
     "recommend_model",
     "execute_optimized_workflow",
     "refine_tool_documentation",
-    
     # Filesystem tools
     "read_file",
     "read_multiple_files",
@@ -227,7 +222,6 @@ __all__ = [
     "get_file_info",
     "list_allowed_directories",
     "get_unique_filepath",
-
     # Local Text Tools
     "run_ripgrep",
     "run_awk",
@@ -238,17 +232,14 @@ __all__ = [
     "run_sed_stream",
     "run_jq_stream",
     "get_workspace_dir",
-
     # SQL databases tools
     # "manage_database",
     # "execute_sql",
     # "explore_database",
     # "access_audit_log",
-
     # Python sandbox tools
     "execute_python",
     "repl_python",
-
     # Smart Browser Standalone Functions
     "click",
     "browse",
@@ -260,7 +251,6 @@ __all__ = [
     "parallel",
     "run_macro",
     "autopilot",
-    
     # Document conversion and processing tools
     "convert_document",
     "chunk_document",
@@ -280,33 +270,26 @@ __all__ = [
     "process_document_batch",
     "extract_entities",
     "extract_tables",
-
     # Text Redline tools
     # "compare_documents_redline",
     # "create_html_redline",
-
     # Meta API tools
     # "register_api_meta_tools",
-
     # Marqo tool
     # "marqo_fused_search",
-
     # Tournament tools
     # "create_tournament",
     # "get_tournament_status",
     # "list_tournaments",
     # "get_tournament_results",
     # "cancel_tournament",
-
     # Audio tools
     # "transcribe_audio",
     # "extract_audio_transcript_key_points",
     # "chat_with_transcript",
-    
     # Sentiment analysis tool
     "analyze_business_sentiment",
     "analyze_business_text_batch",
-    
     # Unified Memory System tools
     "create_workflow",
     "get_workflow_details",
@@ -357,7 +340,8 @@ __all__ = [
 logger = get_logger("ultimate_mcp_server.tools")
 
 
-# --- Tool Registration --- 
+# --- Tool Registration ---
+
 
 # Generate STANDALONE_TOOL_FUNCTIONS by filtering __all__ for actual function objects
 # This eliminates the redundancy between __all__ and STANDALONE_TOOL_FUNCTIONS
@@ -365,21 +349,27 @@ def _get_standalone_tool_functions():
     """Dynamically generates list of standalone tool functions from __all__."""
     current_module = sys.modules[__name__]
     standalone_functions = []
-    
+
     for item_name in __all__:
-        if item_name in ["BaseTool", "with_tool_metrics", "with_retry", 
-                         "with_error_handling", "register_tool"]:
+        if item_name in [
+            "BaseTool",
+            "with_tool_metrics",
+            "with_retry",
+            "with_error_handling",
+            "register_tool",
+        ]:
             # Skip base classes and decorators
             continue
-            
+
         # Get the actual item from the module
         item = getattr(current_module, item_name, None)
-        
+
         # Only include callable async functions (not classes or other exports)
         if callable(item) and inspect.iscoroutinefunction(item):
             standalone_functions.append(item)
-            
+
     return standalone_functions
+
 
 # Get the list of standalone functions to register
 STANDALONE_TOOL_FUNCTIONS = _get_standalone_tool_functions()
@@ -395,59 +385,66 @@ def register_all_tools(mcp_server) -> Dict[str, Any]:
         Dictionary containing information about registered tools.
     """
     from ultimate_mcp_server.config import get_config
+
     cfg = get_config()
     filter_enabled = cfg.tool_registration.filter_enabled
     included_tools = cfg.tool_registration.included_tools
     excluded_tools = cfg.tool_registration.excluded_tools
-    
+
     logger.info("Registering tools based on configuration...")
     if filter_enabled:
         if included_tools:
-            logger.info(f"Tool filtering enabled: including only {len(included_tools)} specified tools")
+            logger.info(
+                f"Tool filtering enabled: including only {len(included_tools)} specified tools"
+            )
         if excluded_tools:
             logger.info(f"Tool filtering enabled: excluding {len(excluded_tools)} specified tools")
-    
+
     registered_tools: Dict[str, Any] = {}
-    
+
     # --- Register Standalone Functions ---
     standalone_count = 0
     for tool_func in STANDALONE_TOOL_FUNCTIONS:
         if not callable(tool_func) or not inspect.iscoroutinefunction(tool_func):
-            logger.warning(f"Item {getattr(tool_func, '__name__', repr(tool_func))} in STANDALONE_TOOL_FUNCTIONS is not a callable async function.")
+            logger.warning(
+                f"Item {getattr(tool_func, '__name__', repr(tool_func))} in STANDALONE_TOOL_FUNCTIONS is not a callable async function."
+            )
             continue
-            
+
         tool_name = tool_func.__name__
-        
+
         # Apply tool filtering logic
         if filter_enabled:
             # Skip if not in included_tools when included_tools is specified
             if included_tools and tool_name not in included_tools:
                 logger.debug(f"Skipping tool {tool_name} (not in included_tools)")
                 continue
-                
+
             # Skip if in excluded_tools
             if tool_name in excluded_tools:
                 logger.debug(f"Skipping tool {tool_name} (in excluded_tools)")
                 continue
-        
+
         # Register the tool
         mcp_server.tool(name=tool_name)(tool_func)
         registered_tools[tool_name] = {
             "description": inspect.getdoc(tool_func) or "",
-            "type": "standalone_function"
+            "type": "standalone_function",
         }
         logger.info(f"Registered tool function: {tool_name}", emoji_key="⚙️")
         standalone_count += 1
-    
 
     # --- Register Class-Based Tools ---
 
     # Register Meta API Tool
-    if (not filter_enabled or 
-        "meta_api_tool" in included_tools or 
-        (not included_tools and "meta_api_tool" not in excluded_tools)):
+    if (
+        not filter_enabled
+        or "meta_api_tool" in included_tools
+        or (not included_tools and "meta_api_tool" not in excluded_tools)
+    ):
         try:
             from ultimate_mcp_server.tools.meta_api_tool import register_api_meta_tools
+
             register_api_meta_tools(mcp_server)
             logger.info("Registered API Meta-Tool functions", emoji_key="⚙️")
             standalone_count += 1
@@ -455,23 +452,28 @@ def register_all_tools(mcp_server) -> Dict[str, Any]:
             logger.warning("Meta API tools not found (ultimate_mcp_server.tools.meta_api_tool)")
         except Exception as e:
             logger.error(f"Failed to register Meta API tools: {e}", exc_info=True)
-    
+
     # Register Excel Spreadsheet Automation Tool
-    if (not filter_enabled or 
-        "excel_spreadsheet_automation" in included_tools or 
-        (not included_tools and "excel_spreadsheet_automation" not in excluded_tools)):
+    if (
+        not filter_enabled
+        or "excel_spreadsheet_automation" in included_tools
+        or (not included_tools and "excel_spreadsheet_automation" not in excluded_tools)
+    ):
         try:
             from ultimate_mcp_server.tools.excel_spreadsheet_automation import (
                 WINDOWS_EXCEL_AVAILABLE,
                 register_excel_spreadsheet_tools,
             )
+
             if WINDOWS_EXCEL_AVAILABLE:
                 register_excel_spreadsheet_tools(mcp_server)
                 logger.info("Registered Excel spreadsheet tools", emoji_key="⚙️")
                 standalone_count += 1
             else:
                 # Automatically exclude Excel tools if not available
-                logger.warning("Excel automation tools are only available on Windows with Excel installed. These tools will not be registered.")
+                logger.warning(
+                    "Excel automation tools are only available on Windows with Excel installed. These tools will not be registered."
+                )
                 # If not already explicitly excluded, add to excluded_tools
                 if "excel_spreadsheet_automation" not in excluded_tools:
                     if not cfg.tool_registration.filter_enabled:
@@ -480,14 +482,13 @@ def register_all_tools(mcp_server) -> Dict[str, Any]:
                         cfg.tool_registration.excluded_tools = []
                     cfg.tool_registration.excluded_tools.append("excel_spreadsheet_automation")
         except ImportError:
-            logger.warning("Excel spreadsheet tools not found (ultimate_mcp_server.tools.excel_spreadsheet_automation)")
+            logger.warning(
+                "Excel spreadsheet tools not found (ultimate_mcp_server.tools.excel_spreadsheet_automation)"
+            )
         except Exception as e:
             logger.error(f"Failed to register Excel spreadsheet tools: {e}", exc_info=True)
-    
-    logger.info(
-        f"Completed tool registration. Registered {standalone_count} tools.", 
-        emoji_key="⚙️"
-    )
-    
+
+    logger.info(f"Completed tool registration. Registered {standalone_count} tools.", emoji_key="⚙️")
+
     # Return info about registered tools
     return registered_tools

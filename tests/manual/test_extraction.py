@@ -38,25 +38,24 @@ async def test_extract_json():
     
     Let me know if you need any more information.
     """
-    
+
     result = await extract_json(
-        text=sample_text,
-        provider=Provider.OPENAI.value,
-        model="gpt-3.5-turbo"
+        text=sample_text, provider=Provider.OPENAI.value, model="gpt-3.5-turbo"
     )
-    
+
     print(f"Success: {result.get('success', False)}")
     print(f"Model used: {result.get('model', 'unknown')}")
     print(f"Tokens: {result.get('tokens', {})}")
     print(f"Processing time: {result.get('processing_time', 0):.2f}s")
-    
+
     # Pretty print the extracted data
-    if result.get('data'):
+    if result.get("data"):
         print("Extracted JSON:")
-        print(json.dumps(result['data'], indent=2))
+        print(json.dumps(result["data"], indent=2))
     else:
         print("Failed to extract JSON")
         print(f"Error: {result.get('error', 'unknown error')}")
+
 
 async def test_extract_table():
     """Test the extract_table function with a simple table."""
@@ -71,32 +70,33 @@ async def test_extract_table():
     
     As you can see, Widget A performed best in Q2.
     """
-    
+
     result = await extract_table(
         text=sample_text,
         return_formats=["json"],  # Just request json to keep it simple
         provider=Provider.OPENAI.value,
-        model="gpt-3.5-turbo"
+        model="gpt-3.5-turbo",
     )
-    
+
     print(f"Success: {result.get('success', False)}")
     print(f"Model used: {result.get('model', 'unknown')}")
     print(f"Tokens: {result.get('tokens', {})}")
     print(f"Processing time: {result.get('processing_time', 0):.2f}s")
-    
+
     # Print the extracted data
-    if result.get('data'):
+    if result.get("data"):
         print("Extracted Table Data:")
-        if isinstance(result['data'], dict) and "json" in result['data']:
+        if isinstance(result["data"], dict) and "json" in result["data"]:
             print("JSON Format:")
-            print(json.dumps(result['data']["json"], indent=2))
+            print(json.dumps(result["data"]["json"], indent=2))
         else:
-            print(json.dumps(result['data'], indent=2))
+            print(json.dumps(result["data"], indent=2))
     else:
         print("Failed to extract table")
         print(f"Error: {result.get('error', 'unknown error')}")
-        if result.get('raw_text'):
+        if result.get("raw_text"):
             print(f"Raw text: {result.get('raw_text')[:200]}...")
+
 
 async def test_extract_key_value_pairs():
     """Test the extract_key_value_pairs function."""
@@ -113,36 +113,36 @@ async def test_extract_key_value_pairs():
     Allergies: Penicillin, Shellfish
     Primary Care Physician: Dr. Robert Chen
     """
-    
+
     result = await extract_key_value_pairs(
-        text=sample_text,
-        provider=Provider.OPENAI.value,
-        model="gpt-3.5-turbo"
+        text=sample_text, provider=Provider.OPENAI.value, model="gpt-3.5-turbo"
     )
-    
+
     print(f"Success: {result.get('success', False)}")
     print(f"Model used: {result.get('model', 'unknown')}")
     print(f"Tokens: {result.get('tokens', {})}")
     print(f"Processing time: {result.get('processing_time', 0):.2f}s")
-    
+
     # Print the extracted data
-    if result.get('data'):
+    if result.get("data"):
         print("Extracted Key-Value Pairs:")
-        for key, value in result['data'].items():
+        for key, value in result["data"].items():
             print(f"  {key}: {value}")
     else:
         print("Failed to extract key-value pairs")
         print(f"Error: {result.get('error', 'unknown error')}")
 
+
 async def main():
     """Run all tests."""
     print("Testing extraction tools with standardized completion...")
-    
+
     await test_extract_json()
     await test_extract_table()
     await test_extract_key_value_pairs()
-    
+
     print("\nAll tests completed.")
 
+
 if __name__ == "__main__":
-    asyncio.run(main()) 
+    asyncio.run(main())

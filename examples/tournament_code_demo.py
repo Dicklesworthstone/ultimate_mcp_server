@@ -253,7 +253,8 @@ async def setup_gateway_for_demo():
 
         # For a script, direct instantiation:
         gateway = Gateway(
-            name="code_tournament_demo_gateway", register_tools=False  # Changed: register_tools=False, removed load_all_tools
+            name="code_tournament_demo_gateway",
+            register_tools=False,  # Changed: register_tools=False, removed load_all_tools
         )
         # In a script, you might need to manually initialize providers if not done by Gateway constructor
         if not gateway.providers:  # Check if providers are already initialized
@@ -378,6 +379,7 @@ async def poll_tournament_status_enhanced(
 # --- Robust result processing for demo ---
 async def robust_process_mcp_result(result_raw, storage_path=None):
     from ultimate_mcp_server.utils import process_mcp_result
+
     try:
         processed = await process_mcp_result(result_raw)
         # If no error, or error is not about JSON, return as is
@@ -453,7 +455,14 @@ async def run_code_tournament_demo(tracker: CostTracker, args: argparse.Namespac
     code_prompt_template = PromptTemplate(
         template=TEMPLATE_CODE,
         template_id="demo_code_prompt",
-        required_vars=["code_type", "task_description", "context", "requirements", "example_inputs", "example_outputs"]
+        required_vars=[
+            "code_type",
+            "task_description",
+            "context",
+            "requirements",
+            "example_inputs",
+            "example_outputs",
+        ],
     )
     try:
         initial_prompt = code_prompt_template.render(task_vars)
@@ -494,7 +503,9 @@ async def run_code_tournament_demo(tracker: CostTracker, args: argparse.Namespac
 
         # Corrected error handling, similar to tournament_text_demo.py
         if "error" in create_data:
-            error_msg = create_data.get("error_message", create_data.get("error", "Unknown error creating tournament"))
+            error_msg = create_data.get(
+                "error_message", create_data.get("error", "Unknown error creating tournament")
+            )
             logger.error(f"Failed to create tournament: {error_msg}", emoji_key="cross_mark")
             console.print(f"[bold red]Error creating tournament:[/bold red] {escape(error_msg)}")
             return 1
@@ -530,22 +541,24 @@ async def run_code_tournament_demo(tracker: CostTracker, args: argparse.Namespac
             )
             results_input = {"tournament_id": tournament_id}
             results_raw = await gateway.mcp.call_tool("get_tournament_results", results_input)
-            processed_results_dict = await robust_process_mcp_result(
-                results_raw, storage_path
-            )
+            processed_results_dict = await robust_process_mcp_result(results_raw, storage_path)
 
             results_data_dict = processed_results_dict
             workaround_applied_successfully = False
 
             # If process_mcp_result itself signals an error
             # (This will be true if JSON parsing failed and LLM repair also failed to produce valid JSON)
-            if "error" in processed_results_dict: # Simpler check for any error from process_mcp_result
-                original_error_msg = processed_results_dict.get("error", "Unknown error processing results")
+            if (
+                "error" in processed_results_dict
+            ):  # Simpler check for any error from process_mcp_result
+                original_error_msg = processed_results_dict.get(
+                    "error", "Unknown error processing results"
+                )
                 logger.warning(
                     f"Initial processing of 'get_tournament_results' failed with: {original_error_msg}"
                 )
 
-                # Attempt workaround if it's a code tournament, storage path is known, 
+                # Attempt workaround if it's a code tournament, storage path is known,
                 # AND the initial processing via MCP failed.
                 current_tournament_type = create_input.get("tournament_type", "unknown")
                 if current_tournament_type == "code" and storage_path:
@@ -556,7 +569,7 @@ async def run_code_tournament_demo(tracker: CostTracker, args: argparse.Namespac
                     state_file_path = Path(storage_path) / "tournament_state.json"
                     if state_file_path.exists():
                         try:
-                            with open(state_file_path, 'r', encoding='utf-8') as f:
+                            with open(state_file_path, "r", encoding="utf-8") as f:
                                 results_data_dict = json.load(f)  # Override with data from file
                             logger.success(
                                 f"Workaround successful: Loaded results from {state_file_path}"
@@ -574,26 +587,30 @@ async def run_code_tournament_demo(tracker: CostTracker, args: argparse.Namespac
                         # results_data_dict remains processed_results_dict (the error dict from initial processing)
                 # If not a code tournament, or no storage path, or workaround failed,
                 # results_data_dict is still the original error dict from processed_results_dict
-            
+
             # Now, check the final results_data_dict (either from tool or successful workaround)
             # This outer check sees if results_data_dict *still* has an error after potential workaround
-            if "error" in results_data_dict: 
+            if "error" in results_data_dict:
                 # This block will be hit if:
                 # 1. Original tool call failed AND it wasn't the specific known issue for the workaround.
                 # 2. Original tool call failed with the known issue, BUT the workaround also failed (e.g., file not found, parse error).
-                final_error_msg = results_data_dict.get("error_message", results_data_dict.get("error", "Unknown error"))
+                final_error_msg = results_data_dict.get(
+                    "error_message", results_data_dict.get("error", "Unknown error")
+                )
                 logger.error(
                     f"Failed to get tournament results (workaround_applied_successfully={workaround_applied_successfully}): {final_error_msg}",
-                    emoji_key="cross_mark"
+                    emoji_key="cross_mark",
                 )
-                console.print(f"[bold red]Error fetching results:[/bold red] {escape(final_error_msg)}")
+                console.print(
+                    f"[bold red]Error fetching results:[/bold red] {escape(final_error_msg)}"
+                )
             else:
                 # Successfully got data, either from tool or workaround
                 if workaround_applied_successfully:
                     console.print(
                         "[yellow i](Workaround applied: Results loaded directly from tournament_state.json)[/yellow i]"
                     )
-                
+
                 # Pass the full dictionary results_data_dict to display_tournament_results
                 display_tournament_results(
                     results_data_dict, console
@@ -653,9 +670,7 @@ async def run_code_tournament_demo(tracker: CostTracker, args: argparse.Namespac
             if final_status_val == TournamentStatus.FAILED.value:
                 results_input = {"tournament_id": tournament_id}
                 results_raw = await gateway.mcp.call_tool("get_tournament_results", results_input)
-                results_data_dict = await robust_process_mcp_result(
-                    results_raw, storage_path
-                )
+                results_data_dict = await robust_process_mcp_result(results_raw, storage_path)
                 if results_data_dict and not results_data_dict.get(
                     "error_message"
                 ):  # Check success of get_tournament_results

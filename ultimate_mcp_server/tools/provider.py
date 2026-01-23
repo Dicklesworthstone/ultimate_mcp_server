@@ -1,4 +1,5 @@
 """Provider tools for Ultimate MCP Server."""
+
 from typing import Any, Dict, Optional
 
 # Import ToolError explicitly
@@ -11,14 +12,16 @@ from .base import with_error_handling, with_tool_metrics
 
 logger = get_logger("ultimate_mcp_server.tools.provider")
 
+
 def _get_provider_status_dict() -> Dict[str, Any]:
     """Reliably gets the provider_status dictionary from the gateway instance."""
     provider_status = {}
     # Import here to avoid circular dependency at module load time
     try:
         from ultimate_mcp_server.core import get_gateway_instance
+
         gateway = get_gateway_instance()
-        if gateway and hasattr(gateway, 'provider_status'):
+        if gateway and hasattr(gateway, "provider_status"):
             provider_status = gateway.provider_status
             if provider_status:
                 logger.debug("Retrieved provider status via global instance.")
@@ -27,13 +30,15 @@ def _get_provider_status_dict() -> Dict[str, Any]:
         logger.error(f"Failed to import get_gateway_instance: {e}")
     except Exception as e:
         logger.error(f"Error accessing global gateway instance: {e}")
-        
+
     if not provider_status:
         logger.warning("Could not retrieve provider status from global gateway instance.")
-        
+
     return provider_status
 
+
 # --- Tool Functions (Standalone, Decorated) ---
+
 
 @with_tool_metrics
 @with_error_handling
@@ -76,7 +81,10 @@ async def get_provider_status() -> Dict[str, Any]:
 
     if not provider_status:
         # Raise ToolError if status cannot be retrieved
-        raise ToolError(status_code=503, detail="Provider status information is currently unavailable. The server might be initializing or an internal error occurred.")
+        raise ToolError(
+            status_code=503,
+            detail="Provider status information is currently unavailable. The server might be initializing or an internal error occurred.",
+        )
 
     return {
         "providers": {
@@ -85,17 +93,16 @@ async def get_provider_status() -> Dict[str, Any]:
                 "available": status.available,
                 "api_key_configured": status.api_key_configured,
                 "error": status.error,
-                "models_count": len(status.models)
+                "models_count": len(status.models),
             }
             for name, status in provider_status.items()
         }
     }
 
+
 @with_tool_metrics
 @with_error_handling
-async def list_models(
-    provider: Optional[str] = None
-) -> Dict[str, Any]:
+async def list_models(provider: Optional[str] = None) -> Dict[str, Any]:
     """Lists available LLM models, optionally filtered by provider.
 
     Use this tool to discover specific models offered by the configured and available LLM providers.
@@ -148,20 +155,26 @@ async def list_models(
     provider_status = _get_provider_status_dict()
 
     if not provider_status:
-        raise ToolError(status_code=503, detail="Provider status information is currently unavailable. Cannot list models.")
+        raise ToolError(
+            status_code=503,
+            detail="Provider status information is currently unavailable. Cannot list models.",
+        )
 
     models = {}
     if provider:
         if provider not in provider_status:
             valid_providers = list(provider_status.keys())
-            raise ToolError(status_code=404, detail=f"Invalid provider specified: '{provider}'. Valid options: {valid_providers}")
+            raise ToolError(
+                status_code=404,
+                detail=f"Invalid provider specified: '{provider}'. Valid options: {valid_providers}",
+            )
 
         status = provider_status[provider]
         if not status.available:
             # Return empty list for the provider but include a warning message
             return {
                 "models": {provider: []},
-                "warning": f"Provider '{provider}' is configured but currently unavailable. Reason: {status.error or 'Unknown error'}"
+                "warning": f"Provider '{provider}' is configured but currently unavailable. Reason: {status.error or 'Unknown error'}",
             }
         # Use model details directly from the ProviderStatus object
         models[provider] = [m for m in status.models] if status.models else []
@@ -171,19 +184,19 @@ async def list_models(
         for name, status in provider_status.items():
             if status.available:
                 any_available = True
-                 # Use model details directly from the ProviderStatus object
+                # Use model details directly from the ProviderStatus object
                 models[name] = [m for m in status.models] if status.models else []
             # else: Provider not available, don't include it unless specifically requested
 
         if not any_available:
             return {
                 "models": {},
-                "warning": "No providers are currently available. Check provider status using get_provider_status."
+                "warning": "No providers are currently available. Check provider status using get_provider_status.",
             }
         elif all(len(model_list) == 0 for model_list in models.values()):
-             return {
+            return {
                 "models": models,
-                "warning": "No models listed for any available provider. Check provider status or configuration."
+                "warning": "No models listed for any available provider. Check provider status or configuration.",
             }
 
-    return {"models": models} 
+    return {"models": models}

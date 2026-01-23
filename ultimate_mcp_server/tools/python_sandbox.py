@@ -108,6 +108,7 @@ except ImportError as e:
     class TaskType:
         CODE_EXECUTION = "code_execution"  # Dummy enum value
 
+
 from ultimate_mcp_server.utils.logging.console import console
 
 logger = get_logger("ultimate_mcp_server.tools.python_sandbox")
@@ -171,6 +172,7 @@ except OSError as e:
 ################################################################################
 # level 0 = quiet, 1 = basic req/resp, 2 = full body/hex dumps
 _VERBOSE_SANDBOX_LOGGING = int(os.getenv("PYODIDE_SANDBOX_DEBUG", "0") or 0)
+
 
 def _wire_page_logging(page: "Page", session_id: str) -> None:  # type: ignore
     """
@@ -1301,7 +1303,6 @@ async def _close_all_sandboxes():
         except Exception as e:
             logger.error(f"Error closing Playwright browser: {e}")
     _BROWSER = None
-
 
 
 def display_sandbox_result(

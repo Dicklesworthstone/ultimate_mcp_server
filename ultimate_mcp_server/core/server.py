@@ -394,7 +394,7 @@ class Gateway:
         self.logger.info(f"Starting Ultimate MCP Server '{self.name}'")
 
         # Add a flag to track if this is an SSE instance
-        is_sse_mode = getattr(self, '_sse_mode', False)
+        is_sse_mode = getattr(self, "_sse_mode", False)
         if is_sse_mode:
             self.logger.info("SSE mode detected - using persistent lifespan management")
 
@@ -466,21 +466,21 @@ class Gateway:
 
             await trigger_dynamic_docstring_generation()
             logger.info("Dynamic docstring generation/loading complete.")
-            
+
             if is_sse_mode:
                 # For SSE mode, create a persistent context that doesn't shutdown easily
                 self.logger.info("Creating persistent SSE lifespan context")
-                
+
                 # Add a keepalive task for SSE mode
                 async def sse_lifespan_keepalive():
                     """Keepalive task to maintain SSE server lifespan."""
                     while True:
                         await asyncio.sleep(60)  # Keep alive every minute
                         # This task existing keeps the lifespan active
-                
+
                 # Start the keepalive task
                 keepalive_task = asyncio.create_task(sse_lifespan_keepalive())
-                
+
                 try:
                     yield context
                 finally:
@@ -492,11 +492,11 @@ class Gateway:
                         pass
             else:
                 yield context
-                
+
         finally:
             if is_sse_mode:
                 self.logger.info("SSE mode shutdown initiated")
-                
+
             try:
                 # --- Shutdown SQL Tools State ---
                 await shutdown_sql_tools()
@@ -2318,10 +2318,10 @@ def start_server(
         if transport_mode == "sse":
             # Mark the gateway instance as SSE mode for lifespan management
             _gateway_instance._sse_mode = True
-            
+
             mcp_app = _gateway_instance.mcp.http_app(transport="sse", path="/sse")
             print("Note: Running in legacy SSE mode.", file=sys.stderr)
-            
+
             # Add SSE keepalive mechanism to prevent automatic shutdown
             def sse_keepalive():
                 """Keepalive thread to prevent SSE server from shutting down when no clients are connected."""
@@ -2334,12 +2334,14 @@ def start_server(
                     except Exception:
                         # If there's any error, just continue
                         pass
-            
+
             # Start the keepalive thread as a daemon so it doesn't prevent shutdown
-            keepalive_thread = threading.Thread(target=sse_keepalive, daemon=True, name="SSE-Keepalive")
+            keepalive_thread = threading.Thread(
+                target=sse_keepalive, daemon=True, name="SSE-Keepalive"
+            )
             keepalive_thread.start()
             print("SSE keepalive thread started to prevent automatic shutdown.", file=sys.stderr)
-            
+
         else:  # This path is for streamable-http
             mcp_app = _gateway_instance.mcp.http_app(path="/mcp")
 

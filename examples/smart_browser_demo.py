@@ -33,15 +33,17 @@ from rich.traceback import install as install_rich_traceback  # noqa: E402
 # Initialize Rich console
 console = get_console()
 
+
 # Define a fallback logger in case the import fails
 def create_fallback_logger(name):
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
     handler = logging.StreamHandler()
-    formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+    formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     handler.setFormatter(formatter)
     logger.addHandler(handler)
     return logger
+
 
 # Import Gateway and MCP components
 from ultimate_mcp_server.core.server import Gateway  # noqa: E402
@@ -64,7 +66,7 @@ from ultimate_mcp_server.tools.smart_browser import (  # noqa: E402
 from ultimate_mcp_server.utils import get_logger  # noqa: E402
 from ultimate_mcp_server.utils.display import CostTracker  # noqa: E402
 
-# Initialize logger 
+# Initialize logger
 logger = get_logger("demo.smart_browser")
 
 # Install rich tracebacks
@@ -552,6 +554,7 @@ async def safe_tool_call(
 
 # --- Demo Sections ---
 
+
 async def demo_section_1_browse(gateway, tracker: CostTracker) -> None:
     console.print(Rule("[bold green]Demo 1: Basic Browsing[/]", style="green"))
     logger.info("Starting Demo Section 1: Basic Browsing")
@@ -655,16 +658,21 @@ async def demo_section_4_download(gateway, tracker: CostTracker) -> None:
     logger.info("Starting Demo Section 4: File Download")
 
     # Ensure local demo output dir exists
-    DEMO_OUTPUTS_DIR_ABS = DEMO_OUTPUTS_DIR.resolve(strict=False) # Resolve to absolute, allow non-existent
-    DEMO_OUTPUTS_DIR_ABS.mkdir(parents=True, exist_ok=True) # Ensure it exists after resolving
+    DEMO_OUTPUTS_DIR_ABS = DEMO_OUTPUTS_DIR.resolve(
+        strict=False
+    )  # Resolve to absolute, allow non-existent
+    DEMO_OUTPUTS_DIR_ABS.mkdir(parents=True, exist_ok=True)  # Ensure it exists after resolving
 
     # Create the parent directory for PDF downloads if it doesn't exist
     pdf_parent_dir = "storage/smart_browser_site_pdfs"
     console.print(f"[cyan]Creating parent directory for PDFs: {pdf_parent_dir}[/cyan]")
     from ultimate_mcp_server.tools.filesystem import create_directory
+
     parent_dir_result = await create_directory(path=pdf_parent_dir)
     if not parent_dir_result.get("success", False):
-        console.print(f"[yellow]Warning: Could not create parent directory: {parent_dir_result.get('error', 'Unknown error')}[/yellow]")
+        console.print(
+            f"[yellow]Warning: Could not create parent directory: {parent_dir_result.get('error', 'Unknown error')}[/yellow]"
+        )
     else:
         console.print(f"[green]Successfully created parent directory: {pdf_parent_dir}[/green]")
 
@@ -700,12 +708,12 @@ async def demo_section_4_download(gateway, tracker: CostTracker) -> None:
 
         console.print("\n--- Scenario: Click a link to download a file ---")
         success, result = await safe_tool_call(
-        "Click to Download PDF",
-        download,
-        url=local_url,
-        task_hint="The 'Download Dummy PDF Now' link",
-        dest_dir="storage/sb_demo_outputs/clicked_downloads", # Adjusted path
-        tracker=tracker,
+            "Click to Download PDF",
+            download,
+            url=local_url,
+            task_hint="The 'Download Dummy PDF Now' link",
+            dest_dir="storage/sb_demo_outputs/clicked_downloads",  # Adjusted path
+            tracker=tracker,
         )
         display_result("Click to Download PDF", result)
     except Exception as e:
@@ -848,11 +856,11 @@ async def main() -> int:
         gateway = Gateway("smart-browser-demo")
         console.print("[cyan]Initializing Providers (for LLM tools)...[/]")
         await gateway._initialize_providers()
-        
+
         # --- Initialize Smart Browser module ---
         console.print("[cyan]Initializing Smart Browser tool...[/]")
         # await initialize()
-        
+
         # Initialize CostTracker
         tracker = CostTracker()
 
@@ -862,7 +870,7 @@ async def main() -> int:
         await demo_section_3_search(gateway, tracker)
         await demo_section_4_download(gateway, tracker)
         await demo_section_5_macro(gateway, tracker)
-        await demo_section_6_autopilot(gateway, tracker) # Uncomment to run autopilot
+        await demo_section_6_autopilot(gateway, tracker)  # Uncomment to run autopilot
         # console.print(
         #     "[yellow]Skipping Autopilot demo section (can be intensive). Uncomment to run.[/]"
         # )

@@ -422,7 +422,7 @@ async def register_api(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Registers an API with the MCP server by fetching its OpenAPI spec.
 
@@ -461,9 +461,7 @@ async def register_api(
 
     # Check if API name has invalid characters
     if not re.match(r"^[a-zA-Z0-9_]+$", api_name):
-        raise ToolInputError(
-            "api_name must contain only alphanumeric characters and underscores"
-        )
+        raise ToolInputError("api_name must contain only alphanumeric characters and underscores")
 
     if not openapi_url:
         raise ToolInputError("openapi_url cannot be empty")
@@ -506,7 +504,7 @@ async def register_api(
     logger.info(f"Extracted {len(endpoints)} endpoints from OpenAPI spec")
 
     # Get MCP server from context
-    mcp = ctx.get('mcp')
+    mcp = ctx.get("mcp")
     if not mcp:
         raise ToolError("MCP server context not available")
 
@@ -600,14 +598,12 @@ async def register_api(
         "processing_time": processing_time,
     }
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
 async def list_registered_apis(
-    ctx: Optional[Dict[str, Any]] = None,
-    get_state=None,
-    set_state=None,
-    delete_state=None
+    ctx: Optional[Dict[str, Any]] = None, get_state=None, set_state=None, delete_state=None
 ) -> Dict[str, Any]:
     """Lists all registered APIs and their endpoints.
 
@@ -656,6 +652,7 @@ async def list_registered_apis(
 
     return result
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
@@ -664,7 +661,7 @@ async def get_api_details(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Gets detailed information about a registered API.
 
@@ -731,6 +728,7 @@ async def get_api_details(
         "endpoints_count": len(endpoints),
     }
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
@@ -739,7 +737,7 @@ async def unregister_api(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Unregisters an API and all its tools from the MCP server.
 
@@ -770,7 +768,7 @@ async def unregister_api(
     tools = api_info["tools"]
 
     # Get MCP server from context
-    mcp = ctx.get('mcp')
+    mcp = ctx.get("mcp")
     if not mcp:
         raise ToolError("MCP server context not available")
 
@@ -809,6 +807,7 @@ async def unregister_api(
         "tools_count": len(tools),
     }
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
@@ -818,7 +817,7 @@ async def call_dynamic_tool(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Calls a dynamically registered tool by name.
 
@@ -837,7 +836,7 @@ async def call_dynamic_tool(
         The result of the tool call
     """
     # Get MCP server from context
-    mcp = ctx.get('mcp')
+    mcp = ctx.get("mcp")
     if not mcp:
         raise ToolError("MCP server context not available")
 
@@ -898,6 +897,7 @@ async def call_dynamic_tool(
     logger.info(f"Called dynamic tool {tool_name} in {processing_time:.4f}s")
     return result
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
@@ -908,7 +908,7 @@ async def refresh_api(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Refreshes an API by re-fetching its OpenAPI spec and updating tools.
 
@@ -948,7 +948,9 @@ async def refresh_api(
     base_url = update_base_url or api_info["base_url"]
 
     # First, unregister the API
-    await unregister_api(api_name, ctx=ctx, get_state=get_state, set_state=set_state, delete_state=delete_state)
+    await unregister_api(
+        api_name, ctx=ctx, get_state=get_state, set_state=set_state, delete_state=delete_state
+    )
 
     # Re-register with the same parameters but potentially updated base URL
     result = await register_api(
@@ -961,7 +963,7 @@ async def refresh_api(
         ctx=ctx,
         get_state=get_state,
         set_state=set_state,
-        delete_state=delete_state
+        delete_state=delete_state,
     )
 
     # Determine which tools were added, updated, or removed
@@ -984,6 +986,7 @@ async def refresh_api(
         "tools_count": len(new_tools),
     }
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
@@ -992,7 +995,7 @@ async def get_tool_details(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Gets detailed information about a dynamically registered tool.
 
@@ -1062,6 +1065,7 @@ async def get_tool_details(
         "source_code": source_code,
     }
 
+
 @with_tool_metrics
 @with_error_handling
 @with_state_management(namespace="meta_api")
@@ -1070,7 +1074,7 @@ async def list_available_tools(
     ctx: Optional[Dict[str, Any]] = None,
     get_state=None,
     set_state=None,
-    delete_state=None
+    delete_state=None,
 ) -> Dict[str, Any]:
     """Lists all available tools registered via the API Meta-Tool.
 
@@ -1129,9 +1133,11 @@ async def list_available_tools(
 
     return {"success": True, "tools": tools, "tools_count": len(tools)}
 
+
 # Now we have all our stateless functions defined:
 # register_api, list_registered_apis, get_api_details, unregister_api
 # call_dynamic_tool, refresh_api, get_tool_details, list_available_tools
+
 
 def register_api_meta_tools(mcp_server):
     """Registers API Meta-Tool with the MCP server.
@@ -1177,6 +1183,7 @@ if __name__ == "__main__":
         # In FastMCP 2.0+, access the MCP server directly from the Gateway instance
         # The create_app() should return the gateway instance or we need to get it differently
         from ultimate_mcp_server.core import _gateway_instance
+
         mcp_server = _gateway_instance.mcp if _gateway_instance else None
         if not mcp_server:
             raise RuntimeError("Gateway instance not initialized or MCP server not available")
@@ -1190,10 +1197,7 @@ if __name__ == "__main__":
         # Process commands
         if args.register and args.url:
             result = await register_api(
-                api_name=args.register, 
-                openapi_url=args.url, 
-                base_url=args.base_url,
-                ctx=ctx
+                api_name=args.register, openapi_url=args.url, base_url=args.base_url, ctx=ctx
             )
             print(f"Registered API {args.register} with {result['tools_count']} tools")
             print(f"Tools: {', '.join(result['tools_registered'])}")
@@ -1219,9 +1223,7 @@ if __name__ == "__main__":
             print(f"Unregistered API {args.unregister} with {result['tools_count']} tools")
         elif args.refresh:
             result = await refresh_api(
-                api_name=args.refresh, 
-                update_base_url=args.base_url,
-                ctx=ctx
+                api_name=args.refresh, update_base_url=args.base_url, ctx=ctx
             )
             print(
                 f"Refreshed API {args.refresh}: {len(result['tools_added'])} added, {len(result['tools_removed'])} removed, {len(result['tools_updated'])} updated"

@@ -18,10 +18,10 @@ def get_database_path() -> str:
 def get_db_connection() -> sqlite3.Connection:
     """
     Return a SQLite connection with row factory.
-    
+
     This function creates a connection to the unified agent memory database
     and configures it with a row factory for easier data access.
-    
+
     Returns:
         sqlite3.Connection: Database connection with row factory configured
     """
@@ -33,26 +33,26 @@ def get_db_connection() -> sqlite3.Connection:
 def execute_query(query: str, params: tuple = None) -> list:
     """
     Execute a SELECT query and return results as a list of dictionaries.
-    
+
     Args:
         query: SQL SELECT query to execute
         params: Optional parameters for the query
-        
+
     Returns:
         List of dictionaries representing the query results
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         if params:
             cursor.execute(query, params)
         else:
             cursor.execute(query)
-        
+
         columns = [description[0] for description in cursor.description]
         results = [dict(zip(columns, row, strict=False)) for row in cursor.fetchall()]
-        
+
         return results
     finally:
         conn.close()
@@ -61,23 +61,23 @@ def execute_query(query: str, params: tuple = None) -> list:
 def execute_update(query: str, params: tuple = None) -> int:
     """
     Execute an INSERT, UPDATE, or DELETE query and return the number of affected rows.
-    
+
     Args:
         query: SQL query to execute
         params: Optional parameters for the query
-        
+
     Returns:
         Number of rows affected by the query
     """
     conn = get_db_connection()
     cursor = conn.cursor()
-    
+
     try:
         if params:
             cursor.execute(query, params)
         else:
             cursor.execute(query)
-        
+
         conn.commit()
         return cursor.rowcount
     finally:
@@ -87,7 +87,7 @@ def execute_update(query: str, params: tuple = None) -> int:
 def ensure_database_exists() -> bool:
     """
     Ensure the database file exists and is accessible.
-    
+
     Returns:
         True if the database exists and is accessible, False otherwise
     """
@@ -95,12 +95,16 @@ def ensure_database_exists() -> bool:
         db_path = get_database_path()
         return Path(db_path).exists()
     except Exception:
-        return False 
+        return False
+
+
 # ---------- Helper Functions for Data Processing ----------
 def _dict_depth(d: Dict[str, Any], depth: int = 0) -> int:
     if not isinstance(d, dict) or not d:
         return depth
     return max(_dict_depth(v, depth + 1) for v in d.values())
+
+
 def _count_values(d: Dict[str, Any]) -> int:
     cnt = 0
     for v in d.values():
@@ -111,13 +115,15 @@ def _count_values(d: Dict[str, Any]) -> int:
         else:
             cnt += 1
     return cnt
+
+
 def calculate_state_complexity(state_data: Dict[str, Any]) -> float:
     if not state_data:
         return 0.0
-    comp = (
-        len(state_data) * 5 + _dict_depth(state_data) * 10 + _count_values(state_data) * 0.5
-    )
+    comp = len(state_data) * 5 + _dict_depth(state_data) * 10 + _count_values(state_data) * 0.5
     return round(min(100.0, comp), 2)
+
+
 def compute_state_diff(a: Dict[str, Any], b: Dict[str, Any]) -> Dict[str, Any]:
     diff = {"added": {}, "removed": {}, "modified": {}, "magnitude": 0.0}
     keys = set(a) | set(b)
@@ -164,13 +170,15 @@ def generate_timeline_segments(
                     "avg_complexity": sum(s["complexity_score"] for s in seg_states)
                     / len(seg_states),
                     "max_change_magnitude": max(s["change_magnitude"] for s in seg_states),
-                    "dominant_type": Counter(
-                        s["state_type"] for s in seg_states
-                    ).most_common(1)[0][0],
+                    "dominant_type": Counter(s["state_type"] for s in seg_states).most_common(1)[0][
+                        0
+                    ],
                 }
             )
         current = seg_end
     return segments
+
+
 def calculate_timeline_stats(timeline_data: List[Dict[str, Any]]) -> Dict[str, Any]:
     """Return aggregate stats about timeline complexity / changes."""
     if not timeline_data:
@@ -188,6 +196,7 @@ def calculate_timeline_stats(timeline_data: List[Dict[str, Any]]) -> Dict[str, A
         "type_distribution": dict(stypes),
     }
 
+
 # ---------- Action Monitoring Helper Functions ----------
 def get_action_status_indicator(status: str, execution_time: float) -> dict:
     """Get status indicator with color and icon for action status"""
@@ -201,23 +210,19 @@ def get_action_status_indicator(status: str, execution_time: float) -> dict:
         "timeout": {"color": "yellow", "icon": "timer-off", "label": "Timeout"},
     }
 
-    indicator = indicators.get(
-        status, {"color": "gray", "icon": "help", "label": "Unknown"}
-    )
+    indicator = indicators.get(status, {"color": "gray", "icon": "help", "label": "Unknown"})
 
     # Add urgency flag for long-running actions
-    if (
-        status in ["running", "executing", "in_progress"] and execution_time > 120
-    ):  # 2 minutes
+    if status in ["running", "executing", "in_progress"] and execution_time > 120:  # 2 minutes
         indicator["urgency"] = "high"
-    elif (
-        status in ["running", "executing", "in_progress"] and execution_time > 60
-    ):  # 1 minute
+    elif status in ["running", "executing", "in_progress"] and execution_time > 60:  # 1 minute
         indicator["urgency"] = "medium"
     else:
         indicator["urgency"] = "low"
 
     return indicator
+
+
 def categorize_action_performance(execution_time: float, estimated_duration: float) -> str:
     """Categorize action performance based on execution time vs estimate"""
     if estimated_duration <= 0:
@@ -235,10 +240,14 @@ def categorize_action_performance(execution_time: float, estimated_duration: flo
         return "slow"
     else:
         return "very_slow"
+
+
 def get_action_resource_usage(action_id: str) -> dict:
     """Get resource usage for an action (placeholder implementation)"""
     # This is a placeholder - in a real implementation, you'd fetch actual metrics
     return {"cpu_usage": 0.0, "memory_usage": 0.0, "network_io": 0.0, "disk_io": 0.0}
+
+
 def estimate_wait_time(position: int, queue: list) -> float:
     """Estimate wait time based on queue position and historical data"""
     if position == 0:
@@ -246,6 +255,8 @@ def estimate_wait_time(position: int, queue: list) -> float:
     # Average action time of 30 seconds (this could be calculated from historical data)
     avg_action_time = 30.0
     return position * avg_action_time
+
+
 def get_priority_label(priority: int) -> str:
     """Get human-readable priority label"""
     if priority <= 1:
@@ -258,6 +269,8 @@ def get_priority_label(priority: int) -> str:
         return "Low"
     else:
         return "Very Low"
+
+
 def calculate_action_performance_score(action: dict) -> float:
     """Calculate performance score for a completed action"""
     if action["status"] != "completed":
@@ -279,6 +292,8 @@ def calculate_action_performance_score(action: dict) -> float:
         return 60.0
     else:
         return max(50.0, 100.0 - (execution_time / 10))
+
+
 def calculate_efficiency_rating(execution_time: float, result_size: int) -> str:
     """Calculate efficiency rating based on time and output"""
     if execution_time <= 0:
@@ -295,6 +310,7 @@ def calculate_efficiency_rating(execution_time: float, result_size: int) -> str:
     else:
         return "poor"
 
+
 # ---------- File and Data Utilities ----------
 def format_file_size(size_bytes: int) -> str:
     """Format file size in human readable format"""
@@ -306,6 +322,7 @@ def format_file_size(size_bytes: int) -> str:
     p = math.pow(1024, i)
     s = round(size_bytes / p, 2)
     return f"{s} {size_names[i]}"
+
 
 # ---------- Performance Analysis Functions ----------
 def calculate_performance_summary(actions: list) -> dict:
@@ -324,7 +341,6 @@ def calculate_performance_summary(actions: list) -> dict:
     best_action = max(actions, key=lambda a: a.get("performance_score", 0))
     worst_action = min(actions, key=lambda a: a.get("performance_score", 0))
 
-
     efficiency_counts = Counter(a.get("efficiency_rating", "unknown") for a in actions)
 
     return {
@@ -339,6 +355,8 @@ def calculate_performance_summary(actions: list) -> dict:
         },
         "efficiency_distribution": dict(efficiency_counts),
     }
+
+
 def generate_performance_insights(
     overall_stats: dict, tool_stats: list, hourly_metrics: list
 ) -> list:
@@ -413,9 +431,9 @@ def find_cognitive_patterns(
                             }
                         )
     return sorted(patterns, key=lambda p: p["similarity"], reverse=True)
-def calculate_sequence_similarity(
-    seq1: List[Dict[str, Any]], seq2: List[Dict[str, Any]]
-) -> float:
+
+
+def calculate_sequence_similarity(seq1: List[Dict[str, Any]], seq2: List[Dict[str, Any]]) -> float:
     """Calculate similarity between two state sequences"""
     if len(seq1) != len(seq2):
         return 0.0
@@ -424,9 +442,9 @@ def calculate_sequence_similarity(
         state_sim = calculate_single_state_similarity(s1, s2)
         total_similarity += state_sim
     return total_similarity / len(seq1)
-def calculate_single_state_similarity(
-    state1: Dict[str, Any], state2: Dict[str, Any]
-) -> float:
+
+
+def calculate_single_state_similarity(state1: Dict[str, Any], state2: Dict[str, Any]) -> float:
     """Calculate similarity between two individual states"""
     data1 = state1.get("state_data", {})
     data2 = state2.get("state_data", {})
@@ -443,6 +461,8 @@ def calculate_single_state_similarity(
         matching_values = sum(1 for key in common_keys if data1[key] == data2[key])
         value_similarity = matching_values / len(common_keys)
     return (key_similarity + value_similarity) / 2
+
+
 def analyze_state_transitions(states: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Analyze transitions between cognitive states"""
 
@@ -461,6 +481,8 @@ def analyze_state_transitions(states: List[Dict[str, Any]]) -> List[Dict[str, An
         }
         for transition, count in sorted_transitions
     ]
+
+
 def detect_cognitive_anomalies(states: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Detect anomalous cognitive states"""
     anomalies = []
@@ -473,9 +495,7 @@ def detect_cognitive_anomalies(states: List[Dict[str, Any]]) -> List[Dict[str, A
     ) ** 0.5
     for i, state in enumerate(states):
         complexity = complexities[i]
-        z_score = (
-            (complexity - avg_complexity) / std_complexity if std_complexity > 0 else 0
-        )
+        z_score = (complexity - avg_complexity) / std_complexity if std_complexity > 0 else 0
         if abs(z_score) > 2:
             anomalies.append(
                 {
@@ -488,5 +508,6 @@ def detect_cognitive_anomalies(states: List[Dict[str, Any]]) -> List[Dict[str, A
                 }
             )
     return anomalies
+
 
 # ---------- Pattern analysis models ----------
