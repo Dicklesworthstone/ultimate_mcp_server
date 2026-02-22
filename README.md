@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Python 3.13+](https://img.shields.io/badge/python-3.13+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: MIT](https://img.shields.io/badge/License-MIT%2BOpenAI%2FAnthropic%20Rider-blue.svg)](./LICENSE)
 [![MCP Protocol](https://img.shields.io/badge/Protocol-MCP-purple.svg)](https://github.com/modelcontextprotocol)
 
 ### A comprehensive Model Context Protocol (MCP) server providing advanced AI agents with dozens of powerful capabilities for cognitive augmentation, tool use, and intelligent orchestration
@@ -2798,7 +2798,7 @@ When deploying and operating the Ultimate MCP Server, security must be a primary
 
 ## 📃 License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details.
+This project is licensed under the MIT License (with OpenAI/Anthropic Rider) - see the `LICENSE` file for details.
 
 ---
 
