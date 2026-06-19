@@ -223,7 +223,7 @@ async def list_providers(check_keys: bool = False, list_models: bool = False) ->
                 if status and status.api_key_configured:
                     try:
                         # Get provider instance
-                        provider = get_provider(provider_name)
+                        provider = await get_provider(provider_name)
 
                         # Check API key
                         valid = await provider.check_api_key()
@@ -323,7 +323,7 @@ async def test_provider(
 
     try:
         # Get provider instance
-        provider_instance = get_provider(provider)
+        provider_instance = await get_provider(provider)
 
         # Initialize provider
         await provider_instance.initialize()
@@ -401,7 +401,7 @@ async def generate_completion(
     """
     try:
         # Get provider instance
-        provider_instance = get_provider(provider)
+        provider_instance = await get_provider(provider)
 
         # Initialize provider
         await provider_instance.initialize()
@@ -606,7 +606,7 @@ async def benchmark_providers(
     total_benchmarks = 0
     for provider_name in providers:
         try:
-            provider_instance = get_provider(provider_name)
+            provider_instance = await get_provider(provider_name)
             await provider_instance.initialize()
 
             # Get available models
@@ -640,7 +640,7 @@ async def benchmark_providers(
         for provider_name in providers:
             try:
                 # Get provider instance
-                provider_instance = get_provider(provider_name)
+                provider_instance = await get_provider(provider_name)
                 await provider_instance.initialize()
 
                 # Get available models
