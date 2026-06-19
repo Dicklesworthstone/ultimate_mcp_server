@@ -557,9 +557,10 @@ class Gateway:
                 continue
 
             provider_config = getattr(cfg.providers, provider_name, None)
-            # Special exception for Ollama: it doesn't require an API key since it runs locally
+            # Special exception for Ollama and the generic local provider: they run
+            # locally and don't require an API key.
             if (
-                provider_name == Provider.OLLAMA.value
+                provider_name in (Provider.OLLAMA.value, Provider.LOCAL.value)
                 and provider_config
                 and provider_config.enabled
             ):
@@ -636,11 +637,16 @@ class Gateway:
             if provider_config and provider_config.api_key:
                 api_key = provider_config.api_key
                 api_key_configured = True
-            # Special case for Ollama: doesn't require an API key
-            elif provider_name == Provider.OLLAMA.value and provider_config:
+            # Special case for Ollama and the generic local provider: no API key required
+            elif (
+                provider_name in (Provider.OLLAMA.value, Provider.LOCAL.value)
+                and provider_config
+            ):
                 api_key = None
                 api_key_configured = True
-                self.logger.debug("Initializing Ollama provider without API key (not required)")
+                self.logger.debug(
+                    f"Initializing {provider_name} provider without API key (not required)"
+                )
             else:
                 # This case should ideally not be reached if checks in _initialize_providers are correct,
                 # but handle defensively.
