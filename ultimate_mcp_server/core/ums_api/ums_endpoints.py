@@ -31,9 +31,11 @@ def setup_ums_api(app: FastAPI) -> None:
 
     # ---------- Setup and Helper Functions ----------
 
-    # Legacy alias for older route-registration code
-    app = api_app  # DO NOT REMOVE – keeps backward-compatibility  # noqa: F841
-    # Note: app parameter is passed to this function
+    # NOTE: route registration below uses the `app` parameter passed in by the
+    # caller (see core/server.py: `setup_ums_api(api_app)`). A previous refactor
+    # left a stray `app = api_app` alias here that referenced an undefined name
+    # (`api_app` does not exist in this module's scope), causing a startup-time
+    # `NameError` on `umcp run`. It has been removed.  (#15)
     # -------------------------------------------------
     # UMS Explorer: static assets, DB helpers, and APIs
     # -------------------------------------------------
@@ -167,7 +169,7 @@ def setup_ums_api(app: FastAPI) -> None:
         end_time: Optional[float] = Query(None, ge=0),
         limit: int = Query(100, ge=1, le=1000),
         offset: int = Query(0, ge=0),
-        pattern_type: Optional[str] = Query(None, regex="^[A-Za-z_]+$"),
+        pattern_type: Optional[str] = Query(None, pattern="^[A-Za-z_]+$"),
     ) -> CognitiveStatesResponse:
         try:
             conn = get_db_connection()
@@ -317,7 +319,7 @@ def setup_ums_api(app: FastAPI) -> None:
     )
     async def get_cognitive_timeline(
         hours: int = Query(24, ge=1, le=168),
-        granularity: str = Query("hour", regex="^(second|minute|hour)$"),
+        granularity: str = Query("hour", pattern="^(second|minute|hour)$"),
     ) -> CognitiveTimelineResponse:
         try:
             conn = get_db_connection()
@@ -418,7 +420,7 @@ def setup_ums_api(app: FastAPI) -> None:
         summary="Get detailed cognitive state information",
     )
     async def get_cognitive_state_detail(
-        state_id: str = ApiPath(..., regex="^[A-Za-z0-9_-]+$"),
+        state_id: str = ApiPath(..., pattern="^[A-Za-z0-9_-]+$"),
     ) -> DetailedCognitiveState:
         try:
             conn = get_db_connection()
@@ -1486,7 +1488,7 @@ def setup_ums_api(app: FastAPI) -> None:
         status_filter: Optional[str] = Query(
             None,
             description="Filter by action completion status",
-            regex="^(completed|failed|cancelled|timeout)$",
+            pattern="^(completed|failed|cancelled|timeout)$",
             example="completed",
         ),
         tool_filter: Optional[str] = Query(
@@ -2011,9 +2013,9 @@ def setup_ums_api(app: FastAPI) -> None:
         sort_by: str = Query(
             "created_at",
             description="Field to sort results by",
-            regex="^(created_at|updated_at|name|importance|access_count)$",
+            pattern="^(created_at|updated_at|name|importance|access_count)$",
         ),
-        sort_order: str = Query("desc", description="Sort order direction", regex="^(asc|desc)$"),
+        sort_order: str = Query("desc", description="Sort order direction", pattern="^(asc|desc)$"),
         limit: int = Query(50, description="Maximum number of artifacts to return", ge=1, le=200),
         offset: int = Query(0, description="Number of artifacts to skip for pagination", ge=0),
     ) -> ArtifactsResponse:
@@ -2348,7 +2350,7 @@ def setup_ums_api(app: FastAPI) -> None:
         """Request model for bulk operations"""
 
         operation_type: str = Field(
-            ..., description="Type of bulk operation to perform", regex="^(delete|archive|merge)$"
+            ..., description="Type of bulk operation to perform", pattern="^(delete|archive|merge)$"
         )
         memory_ids: List[str] = Field(
             ..., description="List of memory IDs to operate on", min_items=1
@@ -3629,7 +3631,7 @@ def setup_ums_api(app: FastAPI) -> None:
         granularity: str = Query(
             "hour",
             description="Time granularity for timeline data aggregation",
-            regex="^(minute|hour|day)$",
+            pattern="^(minute|hour|day)$",
             example="hour",
         ),
     ) -> PerformanceOverviewResponse:
@@ -4356,7 +4358,7 @@ def setup_ums_api(app: FastAPI) -> None:
             ...,
             description="Workflow ID to generate flame graph for",
             example="workflow_abc123",
-            regex="^[a-zA-Z0-9_-]+$",
+            pattern="^[a-zA-Z0-9_-]+$",
         ),
         hours_back: int = Query(
             24,
@@ -4577,7 +4579,7 @@ def setup_ums_api(app: FastAPI) -> None:
         metric: str = Query(
             "duration",
             description="Primary metric to analyze for trends",
-            regex="^(duration|success_rate|throughput)$",
+            pattern="^(duration|success_rate|throughput)$",
             example="duration",
         ),
     ) -> PerformanceTrendsResponse:
@@ -5027,7 +5029,7 @@ def setup_ums_api(app: FastAPI) -> None:
         priority_filter: str = Query(
             "all",
             description="Filter recommendations by priority level",
-            regex="^(all|high|medium|low)$",
+            pattern="^(all|high|medium|low)$",
             example="all",
         ),
     ) -> PerformanceRecommendationsResponse:
@@ -5310,7 +5312,7 @@ def setup_ums_api(app: FastAPI) -> None:
 
         restore_mode: str = Field(
             default="full",
-            regex="^(full|partial|snapshot)$",
+            pattern="^(full|partial|snapshot)$",
             description="Type of restoration to perform",
             example="full",
         )
@@ -5385,7 +5387,7 @@ def setup_ums_api(app: FastAPI) -> None:
             ...,
             description="Unique identifier of the workflow to schedule",
             example="workflow_abc123",
-            regex="^[a-zA-Z0-9_-]+$",
+            pattern="^[a-zA-Z0-9_-]+$",
         ),
         request: WorkflowScheduleRequest = WORKFLOW_SCHEDULE_BODY,
     ) -> WorkflowScheduleResponse:
@@ -5466,7 +5468,7 @@ def setup_ums_api(app: FastAPI) -> None:
             ...,
             description="Unique identifier of the cognitive state to restore",
             example="state_abc123xyz789",
-            regex="^[a-zA-Z0-9_-]+$",
+            pattern="^[a-zA-Z0-9_-]+$",
         ),
         request: RestoreStateRequest = RESTORE_STATE_BODY,
     ) -> RestoreStateResponse:
@@ -5567,7 +5569,7 @@ def setup_ums_api(app: FastAPI) -> None:
             ...,
             description="Unique identifier of the artifact to download",
             example="artifact_abc123",
-            regex="^[a-zA-Z0-9_-]+$",
+            pattern="^[a-zA-Z0-9_-]+$",
         ),
     ):
         """Download an artifact"""
