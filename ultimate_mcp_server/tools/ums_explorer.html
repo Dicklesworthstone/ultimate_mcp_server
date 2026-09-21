@@ -8214,7 +8214,7 @@
                     if (typeof marked !== 'undefined' && !this.markdownInitialized) {
                         // Configure marked with highlight.js for syntax highlighting
                         marked.setOptions({
-                            highlight: function(code, lang) {
+                            highlight: (code, lang) => {
                                 if (typeof hljs !== 'undefined' && lang && hljs.getLanguage(lang)) {
                                     try {
                                         return hljs.highlight(code, { language: lang }).value;
@@ -9305,7 +9305,7 @@
 
                 getNodeColor(node) {
                     switch (this.graphSettings.colorBy) {
-                        case 'memory_level':
+                        case 'memory_level': {
                             const levelColors = {
                                 working: '#f59e0b',
                                 episodic: '#3b82f6',
@@ -9313,8 +9313,9 @@
                                 procedural: '#8b5cf6'
                             };
                             return levelColors[node.memory_level] || '#6b7280';
+                        }
                         
-                        case 'memory_type':
+                        case 'memory_type': {
                             // Generate color based on memory type hash
                             const hash = node.memory_type.split('').reduce((a, b) => {
                                 a = ((a << 5) - a) + b.charCodeAt(0);
@@ -9322,8 +9323,9 @@
                             }, 0);
                             const hue = Math.abs(hash) % 360;
                             return `hsl(${hue}, 70%, 60%)`;
+                        }
                         
-                        case 'workflow':
+                        case 'workflow': {
                             if (!node.workflow_id) return '#6b7280';
                             const workflowHash = node.workflow_id.split('').reduce((a, b) => {
                                 a = ((a << 5) - a) + b.charCodeAt(0);
@@ -9331,11 +9333,13 @@
                             }, 0);
                             const workflowHue = Math.abs(workflowHash) % 360;
                             return `hsl(${workflowHue}, 60%, 50%)`;
+                        }
                         
-                        case 'importance':
+                        case 'importance': {
                             const importance = node.importance || 0;
                             const intensity = importance / 10;
                             return d3.interpolateReds(intensity);
+                        }
                         
                         default:
                             return '#3b82f6';
@@ -9368,7 +9372,7 @@
                             );
                             break;
                         
-                        case 'memory_type':
+                        case 'memory_type': {
                             const types = [...new Set(this.graphData.nodes.map(n => n.memory_type))];
                             types.slice(0, 8).forEach(type => {
                                 const hash = type.split('').reduce((a, b) => {
@@ -9383,6 +9387,7 @@
                                 });
                             });
                             break;
+                        }
                         
                         case 'importance':
                             legend.push(
@@ -11182,8 +11187,8 @@
 
                 async performStructuredQuery() {
                     try {
-                        let whereConditions = ['1=1'];
-                        let params = [];
+                        const whereConditions = ['1=1'];
+                        const params = [];
 
                         if (this.semanticQuery) {
                             whereConditions.push('(m.content LIKE ? OR m.memory_type LIKE ? OR m.description LIKE ?)');
@@ -11387,11 +11392,12 @@
                             this.searchFilters.minImportance = 8;
                             this.semanticQuery = 'high importance insights';
                             break;
-                        case 'recent':
+                        case 'recent': {
                             const weekAgo = Date.now() / 1000 - (7 * 24 * 60 * 60);
                             this.searchFilters.dateRange = weekAgo;
                             this.semanticQuery = 'recent memories';
                             break;
+                        }
                         case 'insights':
                             this.searchFilters.memoryType = 'insight';
                             this.semanticQuery = 'insights and discoveries';
@@ -11867,10 +11873,11 @@
                         case 'high':
                             filtered = filtered.filter(m => m.importance >= 8);
                             break;
-                        case 'recent':
+                        case 'recent': {
                             const dayAgo = Date.now() / 1000 - 86400;
                             filtered = filtered.filter(m => m.created_at > dayAgo);
                             break;
+                        }
                         case 'related':
                             if (this.activeWorkingMemories.length > 0) {
                                 const workflowIds = new Set(this.activeWorkingMemories.map(m => m.workflow_id).filter(Boolean));
@@ -14576,7 +14583,7 @@
                     // Count actions in each time slot
                     actions.forEach(action => {
                         const slotKey = Math.floor(action.started_at / 300) * 300;
-                        if (timeSlots.hasOwnProperty(slotKey)) {
+                        if (Object.hasOwn(timeSlots, slotKey)) {
                             timeSlots[slotKey]++;
                         }
                     });
@@ -15511,7 +15518,7 @@
                                 },
                                 tooltip: {
                                     callbacks: {
-                                        label: function(context) {
+                                        label: (context) => {
                                             const tool = toolData[context.dataIndex];
                                             return `${tool.tool_name}: ${tool.usage_count} calls (${tool.avg_duration?.toFixed(2)}s avg)`;
                                         }

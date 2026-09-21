@@ -280,7 +280,7 @@ payload_dict # Return value
                     /* === Step 5: Process Result Proxy === */
                     if (!pyResultProxy || typeof pyResultProxy.toJs !== 'function') { throw new Error(`Runner returned invalid result.`); }
                     console.log(`${handlerLogPrefix} Converting Python result payload...`);
-                    let jsResultPayload = pyResultProxy.toJs({ dict_converter: Object.fromEntries });
+                    const jsResultPayload = pyResultProxy.toJs({ dict_converter: Object.fromEntries });
                     Object.assign(reply, jsResultPayload); // Merge python results
                     reply.ok = jsResultPayload.ok;
 
