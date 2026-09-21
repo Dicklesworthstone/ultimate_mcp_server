@@ -1,107 +1,107 @@
 {
-    "claude-3-5-haiku-20241022": {
-        "total_time_s": 9.66,
-        "output_tokens": 452,
-        "output_tokens_per_second": 46.79
-    },
-    "claude-3-7-sonnet-20250219": {
-        "total_time_s": 8.907,
-        "output_tokens": 469,
-        "output_tokens_per_second": 52.66
-    },
-    "claude-3-opus-20240229": {
-        "total_time_s": 20.186,
-        "output_tokens": 583,
-        "output_tokens_per_second": 28.88
-    },
-    "claude-3-sonnet-20240229": {
-        "total_time_s": 9.072,
-        "output_tokens": 518,
-        "output_tokens_per_second": 57.1
-    },
-    "deepseek-chat": {
-        "total_time_s": 21.641,
-        "output_tokens": 442,
-        "output_tokens_per_second": 20.42
-    },
-    "deepseek-reasoner": {
-        "total_time_s": 39.793,
-        "output_tokens": 1097,
-        "output_tokens_per_second": 27.57
-    },
-    "gemini-2.0-flash": {
-        "total_time_s": 2.59,
-        "output_tokens": 488,
-        "output_tokens_per_second": 188.44
-    },
-    "gemini-2.0-flash-lite": {
-        "total_time_s": 2.93,
-        "output_tokens": 467,
-        "output_tokens_per_second": 159.4
-    },
-    "gemini-2.0-flash-thinking-exp-01-21": {
-        "total_time_s": 6.103,
-        "output_tokens": 460,
-        "output_tokens_per_second": 75.37
-    },
-    "gemini-2.5-pro-preview-03-25": {
-        "total_time_s": 18.481,
-        "output_tokens": 593,
-        "output_tokens_per_second": 32.09
-    },
-    "gpt-4.1": {
-        "total_time_s": 8.908,
-        "output_tokens": 441,
-        "output_tokens_per_second": 49.51
-    },
-    "gpt-4.1-mini": {
-        "total_time_s": 6.184,
-        "output_tokens": 506,
-        "output_tokens_per_second": 81.82
-    },
-    "gpt-4.1-nano": {
-        "total_time_s": 3.315,
-        "output_tokens": 434,
-        "output_tokens_per_second": 130.92
-    },
-    "gpt-4o": {
-        "total_time_s": 10.358,
-        "output_tokens": 446,
-        "output_tokens_per_second": 43.06
-    },
-    "gpt-4o-mini": {
-        "total_time_s": 6.086,
-        "output_tokens": 416,
-        "output_tokens_per_second": 68.36
-    },
-    "grok-3-fast-latest": {
-        "total_time_s": 5.915,
-        "output_tokens": 396,
-        "output_tokens_per_second": 66.95
-    },
-    "grok-3-latest": {
-        "total_time_s": 13.587,
-        "output_tokens": 396,
-        "output_tokens_per_second": 29.15
-    },
-    "grok-3-mini-fast-latest": {
-        "total_time_s": 6.382,
-        "output_tokens": 345,
-        "output_tokens_per_second": 54.06
-    },
-    "grok-3-mini-latest": {
-        "total_time_s": 9.32,
-        "output_tokens": 366,
-        "output_tokens_per_second": 39.27
-    },
-    "o1-preview": {
-        "total_time_s": 19.538,
-        "output_tokens": 1394,
-        "output_tokens_per_second": 71.35
-    },
-    "o3-mini": {
-        "total_time_s": 5.416,
-        "output_tokens": 395,
-        "output_tokens_per_second": 72.93
-    }
+  "claude-3-5-haiku-20241022": {
+    "total_time_s": 9.66,
+    "output_tokens": 452,
+    "output_tokens_per_second": 46.79
+  },
+  "claude-3-7-sonnet-20250219": {
+    "total_time_s": 8.907,
+    "output_tokens": 469,
+    "output_tokens_per_second": 52.66
+  },
+  "claude-3-opus-20240229": {
+    "total_time_s": 20.186,
+    "output_tokens": 583,
+    "output_tokens_per_second": 28.88
+  },
+  "claude-3-sonnet-20240229": {
+    "total_time_s": 9.072,
+    "output_tokens": 518,
+    "output_tokens_per_second": 57.1
+  },
+  "deepseek-chat": {
+    "total_time_s": 21.641,
+    "output_tokens": 442,
+    "output_tokens_per_second": 20.42
+  },
+  "deepseek-reasoner": {
+    "total_time_s": 39.793,
+    "output_tokens": 1097,
+    "output_tokens_per_second": 27.57
+  },
+  "gemini-2.0-flash": {
+    "total_time_s": 2.59,
+    "output_tokens": 488,
+    "output_tokens_per_second": 188.44
+  },
+  "gemini-2.0-flash-lite": {
+    "total_time_s": 2.93,
+    "output_tokens": 467,
+    "output_tokens_per_second": 159.4
+  },
+  "gemini-2.0-flash-thinking-exp-01-21": {
+    "total_time_s": 6.103,
+    "output_tokens": 460,
+    "output_tokens_per_second": 75.37
+  },
+  "gemini-2.5-pro-preview-03-25": {
+    "total_time_s": 18.481,
+    "output_tokens": 593,
+    "output_tokens_per_second": 32.09
+  },
+  "gpt-4.1": {
+    "total_time_s": 8.908,
+    "output_tokens": 441,
+    "output_tokens_per_second": 49.51
+  },
+  "gpt-4.1-mini": {
+    "total_time_s": 6.184,
+    "output_tokens": 506,
+    "output_tokens_per_second": 81.82
+  },
+  "gpt-4.1-nano": {
+    "total_time_s": 3.315,
+    "output_tokens": 434,
+    "output_tokens_per_second": 130.92
+  },
+  "gpt-4o": {
+    "total_time_s": 10.358,
+    "output_tokens": 446,
+    "output_tokens_per_second": 43.06
+  },
+  "gpt-4o-mini": {
+    "total_time_s": 6.086,
+    "output_tokens": 416,
+    "output_tokens_per_second": 68.36
+  },
+  "grok-3-fast-latest": {
+    "total_time_s": 5.915,
+    "output_tokens": 396,
+    "output_tokens_per_second": 66.95
+  },
+  "grok-3-latest": {
+    "total_time_s": 13.587,
+    "output_tokens": 396,
+    "output_tokens_per_second": 29.15
+  },
+  "grok-3-mini-fast-latest": {
+    "total_time_s": 6.382,
+    "output_tokens": 345,
+    "output_tokens_per_second": 54.06
+  },
+  "grok-3-mini-latest": {
+    "total_time_s": 9.32,
+    "output_tokens": 366,
+    "output_tokens_per_second": 39.27
+  },
+  "o1-preview": {
+    "total_time_s": 19.538,
+    "output_tokens": 1394,
+    "output_tokens_per_second": 71.35
+  },
+  "o3-mini": {
+    "total_time_s": 5.416,
+    "output_tokens": 395,
+    "output_tokens_per_second": 72.93
+  }
 }

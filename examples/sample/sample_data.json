@@ -1,7 +1,18 @@
-
 [
-  {"user": "Alice", "dept": "Sales", "region": "North", "value": 100, "tags": ["active", "pipeline"]},
-  {"user": "Bob", "dept": "IT", "region": "South", "value": 150, "tags": ["active", "support"]},
-  {"user": "Charlie", "dept": "Sales", "region": "North", "value": 120, "tags": ["inactive", "pipeline"]},
-  {"user": "David", "dept": "IT", "region": "West", "value": 200, "tags": ["active", "admin"]}
+  {
+    "user": "Alice",
+    "dept": "Sales",
+    "region": "North",
+    "value": 100,
+    "tags": ["active", "pipeline"]
+  },
+  { "user": "Bob", "dept": "IT", "region": "South", "value": 150, "tags": ["active", "support"] },
+  {
+    "user": "Charlie",
+    "dept": "Sales",
+    "region": "North",
+    "value": 120,
+    "tags": ["inactive", "pipeline"]
+  },
+  { "user": "David", "dept": "IT", "region": "West", "value": 200, "tags": ["active", "admin"] }
 ]
