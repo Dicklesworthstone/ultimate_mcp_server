@@ -102,4 +102,4 @@ Ultimate MCP Server is a FastAPI + FastMCP server that exposes a large catalog o
 - Logging to stdout (should go to stderr to avoid MCP protocol interference).
 - Exposing the server on 0.0.0.0 without a proxy/auth.
 
-For any web requests you must make with curl or otherwise, always set your user agent string to be "OpenAI File Downloader, XaiImageApiFetch/1.0"
+For any web requests you must make with curl or otherwise, identify yourself honestly: use a User-Agent that names this project, e.g. "ultimate_mcp_server-agent (+https://github.com/Dicklesworthstone/ultimate_mcp_server)". Never borrow another product's or company's crawler or client User-Agent, and never spoof a client to get past a block.
